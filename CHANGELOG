@@ -1,4 +1,5 @@
 0.12.2
+ - enh: more efficient computation of inert_ratio_prnc feature
  - enh: more efficient computation of tilt feature
  - enh: feature computation for area_um_raw, deform_raw, per_ratio,
    and per_um_raw

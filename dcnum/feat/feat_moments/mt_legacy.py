@@ -83,24 +83,25 @@ def moments_based_features(mask, pixel_size):
         if mu_cvx['mu02'] > 0:  # defaults to zero
             feat_inert_ratio_cvx[ii] = np.sqrt(mu_cvx['mu20'] / mu_cvx['mu02'])
 
-        # inert_ratio_raw
-        if mu_raw['mu02'] > 0:  # defaults to zero
-            feat_inert_ratio_raw[ii] = np.sqrt(mu_raw['mu20'] / mu_raw['mu02'])
+        # moments of inertia of raw contour
+        i_xx = np.float64(mu_raw["mu02"])
+        i_yy = np.float64(mu_raw["mu20"])
+        i_xy = np.float64(mu_raw["mu11"])
 
-        # inert_ratio_prnc
-        # rotate contour
-        orient = 0.5 * np.arctan2(2 * mu_raw['mu11'],
-                                  mu_raw['mu02'] - mu_raw['mu20'])
-        cc = np.array(cont_raw, dtype=np.float32, copy=True)  # float32 [sic]
-        rho = np.sqrt(cc[:, 0] ** 2 + cc[:, 1] ** 2)
-        phi = np.arctan2(cc[:, 1], cc[:, 0]) + orient + np.pi / 2
-        cc[:, 0] = rho * np.cos(phi)
-        cc[:, 1] = rho * np.sin(phi)
-        # compute inertia ratio of rotated contour
-        mprnc = cv2.moments(cc)
-        root_prnc = mprnc["mu20"] / mprnc["mu02"]
-        if root_prnc > 0:  # defaults to zero
-            feat_inert_ratio_prnc[ii] = np.sqrt(root_prnc)
+        # inert_ratio_raw
+        if i_xx > 0:  # defaults to zero
+            feat_inert_ratio_raw[ii] = np.sqrt(i_yy / i_xx)
+
+        # central moments in principal axes
+        i_root_1 = (i_xx - i_yy) ** 2 + 4*(i_xy ** 2)
+        i_root_2 = (i_xx - i_yy) ** 2 + 4*(i_xy ** 2)
+
+        if i_root_1 >= 0 and i_root_2 >= 0:
+            i_1 = 0.5 * (i_xx + i_yy + np.sqrt(i_root_1))
+            i_2 = 0.5 * (i_xx + i_yy - np.sqrt(i_root_2))
+            i_ratio = i_1 / i_2
+            if i_ratio >= 0:
+                feat_inert_ratio_prnc[ii] = np.sqrt(i_ratio)
 
         # specify validity
         valid[ii] = True
