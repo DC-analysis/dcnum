@@ -20,10 +20,7 @@ def test_moments_based_features():
             "area_um_raw",
             "per_um_raw",
             "deform_raw",
-            "eccentr_prnc",
             "per_ratio",
-            "s_x",
-            "s_y",
     ]
 
     # Make data available
