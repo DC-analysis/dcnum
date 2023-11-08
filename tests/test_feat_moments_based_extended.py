@@ -18,9 +18,10 @@ def test_moments_based_features():
 
     feats = [
             "area_um_raw",
-            "per_um_raw",
             "deform_raw",
+            "eccentr_prnc",
             "per_ratio",
+            "per_um_raw",
     ]
 
     # Make data available

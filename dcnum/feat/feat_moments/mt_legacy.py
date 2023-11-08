@@ -18,6 +18,7 @@ def moments_based_features(mask, pixel_size):
     feat_area_um_raw = np.copy(empty)
     feat_aspect = np.copy(empty)
     feat_deform_raw = np.copy(empty)
+    feat_eccentr_prnc = np.copy(empty)
     feat_inert_ratio_prnc = np.copy(empty)
     feat_inert_ratio_raw = np.copy(empty)
     feat_per_ratio = np.copy(empty)
@@ -103,6 +104,8 @@ def moments_based_features(mask, pixel_size):
             if i_ratio >= 0:
                 feat_inert_ratio_prnc[ii] = np.sqrt(i_ratio)
 
+            feat_eccentr_prnc[ii] = np.sqrt((i_1 - i_2) / i_1)
+
         # specify validity
         valid[ii] = True
 
@@ -114,6 +117,7 @@ def moments_based_features(mask, pixel_size):
         "aspect": feat_aspect,
         "deform": feat_deform,
         "deform_raw": feat_deform_raw,
+        "eccentr_prnc": feat_eccentr_prnc,
         "inert_ratio_cvx": feat_inert_ratio_cvx,
         "inert_ratio_prnc": feat_inert_ratio_prnc,
         "inert_ratio_raw": feat_inert_ratio_raw,

@@ -1,8 +1,8 @@
 0.12.2
  - enh: more efficient computation of inert_ratio_prnc feature
  - enh: more efficient computation of tilt feature
- - enh: feature computation for area_um_raw, deform_raw, per_ratio,
-   and per_um_raw
+ - enh: feature computation for area_um_raw, deform_raw, eccentr_prnc,
+   per_ratio, and per_um_raw
 0.12.1
  - fix: avoid NaN-valued features due to invalid contours (#9)
 0.12.0
