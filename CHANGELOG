@@ -3,6 +3,7 @@
  - enh: more efficient computation of tilt feature
  - enh: feature computation for area_um_raw, deform_raw, eccentr_prnc,
    per_ratio, and per_um_raw
+ - ref: increment DCNUM_PPID_GENERATION to 5
 0.12.1
  - fix: avoid NaN-valued features due to invalid contours (#9)
 0.12.0
