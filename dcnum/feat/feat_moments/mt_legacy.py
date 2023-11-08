@@ -54,9 +54,6 @@ def moments_based_features(mask, pixel_size):
         cont_cvx = np.squeeze(cv2.convexHull(cont_raw))
         mu_cvx = cv2.moments(cont_cvx)
         arc_cvx = np.float64(cv2.arcLength(cont_cvx, True))
-        # circ
-        circ = 2 * np.sqrt(np.pi * mu_cvx["m00"]) / arc_cvx
-        feat_deform[ii] = 1 - circ
 
         if mu_cvx["m00"] == 0 or mu_raw["m00"] == 0:
             # contour size too small
@@ -76,18 +73,19 @@ def moments_based_features(mask, pixel_size):
             tilti -= np.pi
         feat_tilt[ii] = np.abs(tilti)
 
-        feat_size_x[ii] = w * pixel_size
-        feat_size_y[ii] = h * pixel_size
-        feat_pos_x[ii] = mu_cvx["m10"] / mu_cvx["m00"] * pixel_size
-        feat_pos_y[ii] = mu_cvx["m01"] / mu_cvx["m00"] * pixel_size
         feat_area_msd[ii] = mu_raw["m00"]
-        feat_area_um_raw[ii] = area_raw * pixel_size**2
         feat_area_ratio[ii] = mu_cvx["m00"] / mu_raw["m00"]
-        feat_area_um[ii] = mu_cvx["m00"] * pixel_size**2
         feat_aspect[ii] = w / h
-        feat_per_um_raw[ii] = arc_raw * pixel_size
+        feat_area_um[ii] = mu_cvx["m00"] * pixel_size**2
+        feat_area_um_raw[ii] = area_raw * pixel_size**2
+        feat_deform[ii] = 1 - 2 * np.sqrt(np.pi * mu_cvx["m00"]) / arc_cvx
         feat_deform_raw[ii] = 1 - 2 * np.sqrt(np.pi * area_raw) / arc_raw
         feat_per_ratio[ii] = arc_raw / arc_cvx
+        feat_per_um_raw[ii] = arc_raw * pixel_size
+        feat_pos_x[ii] = mu_cvx["m10"] / mu_cvx["m00"] * pixel_size
+        feat_pos_y[ii] = mu_cvx["m01"] / mu_cvx["m00"] * pixel_size
+        feat_size_x[ii] = w * pixel_size
+        feat_size_y[ii] = h * pixel_size
 
         # inert_ratio_cvx
         if mu_cvx['mu02'] > 0:  # defaults to zero
@@ -116,22 +114,22 @@ def moments_based_features(mask, pixel_size):
         valid[ii] = True
 
     return {
-        "deform": feat_deform,
-        "size_x": feat_size_x,
-        "size_y": feat_size_y,
-        "pos_x": feat_pos_x,
-        "pos_y": feat_pos_y,
         "area_msd": feat_area_msd,
         "area_ratio": feat_area_ratio,
         "area_um": feat_area_um,
-        "aspect": feat_aspect,
-        "tilt": feat_tilt,
-        "inert_ratio_cvx": feat_inert_ratio_cvx,
-        "inert_ratio_raw": feat_inert_ratio_raw,
-        "inert_ratio_prnc": feat_inert_ratio_prnc,
         "area_um_raw": feat_area_um_raw,
-        "per_um_raw": feat_per_um_raw,
+        "aspect": feat_aspect,
+        "deform": feat_deform,
         "deform_raw": feat_deform_raw,
+        "inert_ratio_cvx": feat_inert_ratio_cvx,
+        "inert_ratio_prnc": feat_inert_ratio_prnc,
+        "inert_ratio_raw": feat_inert_ratio_raw,
         "per_ratio": feat_per_ratio,
+        "per_um_raw": feat_per_um_raw,
+        "pos_x": feat_pos_x,
+        "pos_y": feat_pos_y,
+        "size_x": feat_size_x,
+        "size_y": feat_size_y,
+        "tilt": feat_tilt,
         "valid": valid,
     }
