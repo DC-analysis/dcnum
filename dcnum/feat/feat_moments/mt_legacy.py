@@ -24,10 +24,7 @@ def moments_based_features(mask, pixel_size):
     per_ratio = np.copy(empty)
     inert_ratio_raw = np.copy(empty)
     inert_ratio_prnc = np.copy(empty)
-    eccentr_prnc = np.copy(empty)
     tilt = np.copy(empty)
-    s_x = np.copy(empty)
-    s_y = np.copy(empty)
 
     # features from convex hull
     pos_x = np.copy(empty)
@@ -56,54 +53,41 @@ def moments_based_features(mask, pixel_size):
         # convex hull
         cont_cvx = np.squeeze(cv2.convexHull(cont_raw))
         mu_cvx = cv2.moments(cont_cvx)
-        arc_hull = np.float64(cv2.arcLength(cont_cvx, True))
+        arc_cvx = np.float64(cv2.arcLength(cont_cvx, True))
         # circ
-        circ = 2 * np.sqrt(np.pi * mu_cvx["m00"]) / arc_hull
+        circ = 2 * np.sqrt(np.pi * mu_cvx["m00"]) / arc_cvx
         deform[ii] = 1 - circ
 
         if mu_cvx["m00"] == 0 or mu_raw["m00"] == 0:
             # contour size too small
             continue
 
-        # moments of inetria
-        i_xx = np.float64(mu_raw["mu02"])
-        i_yy = np.float64(mu_raw["mu20"])
-        i_xy = np.float64(mu_raw["mu11"])
-        # central moments in principal axes
-        i_1 = 0.5*(i_xx+i_yy + np.sqrt((i_xx - i_yy) ** 2 + 4*(i_xy ** 2)))
-        i_2 = 0.5*(i_xx+i_yy - np.sqrt((i_xx - i_yy) ** 2 + 4*(i_xy ** 2)))
-
         # bounding box
         x, y, w, h = cv2.boundingRect(cont_raw)
 
         # tilt angle in radians
-        tilt[ii] = np.abs(0.5 * np.arctan2(-2*i_xy, i_yy - i_xx))
+        oii = 0.5 * np.arctan2(2 * mu_raw['mu11'],
+                               mu_raw['mu02'] - mu_raw['mu20'])
+        # +PI/2 because relative to channel axis
+        tilti = oii + np.pi / 2
+        # restrict to interval [0,PI/2]
+        tilti = np.mod(tilti, np.pi)
+        if tilti > np.pi / 2:
+            tilti -= np.pi
+        tilt[ii] = np.abs(tilti)
 
         size_x[ii] = w * pixel_size
         size_y[ii] = h * pixel_size
         pos_x[ii] = mu_cvx["m10"] / mu_cvx["m00"] * pixel_size
         pos_y[ii] = mu_cvx["m01"] / mu_cvx["m00"] * pixel_size
         area_msd[ii] = mu_raw["m00"]
-        area_um_raw[ii] = area_raw*(pixel_size ** 2)
+        area_um_raw[ii] = area_raw * pixel_size**2
         area_ratio[ii] = mu_cvx["m00"] / mu_raw["m00"]
-        area_um[ii] = mu_cvx["m00"] * pixel_size ** 2
+        area_um[ii] = mu_cvx["m00"] * pixel_size**2
         aspect[ii] = w / h
-        per_um_raw[ii] = (arc_raw * pixel_size)
-        deform_raw[ii] = (1 - 2 * np.sqrt(np.pi * area_raw) / arc_raw)
-        per_ratio[ii] = arc_raw / arc_hull
-
-        # b symetry ratio calculation
-        pos_x_pix = mu_raw["m10"] / mu_raw["m00"]
-        pos_y_pix = mu_raw["m01"] / mu_raw["m00"]
-        half_area_midd = np.sum(event_mask[:, round(pos_x_pix)]) / 2
-        area_right = np.sum(event_mask[:, round(pos_x_pix)+1:]) \
-            + half_area_midd
-        area_left = np.sum(event_mask[:, :round(pos_x_pix)]) + half_area_midd
-        s_x[ii] = area_left / area_right
-        half_area_midd = np.sum(event_mask[round(pos_y_pix), :]) / 2
-        area_down = np.sum(event_mask[round(pos_y_pix)+1:, :]) + half_area_midd
-        area_up = np.sum(event_mask[:round(pos_y_pix), :]) + half_area_midd
-        s_y[ii] = area_up / area_down
+        per_um_raw[ii] = arc_raw * pixel_size
+        deform_raw[ii] = 1 - 2 * np.sqrt(np.pi * area_raw) / arc_raw
+        per_ratio[ii] = arc_raw / arc_cvx
 
         # inert_ratio_cvx
         if mu_cvx['mu02'] > 0:  # defaults to zero
@@ -113,9 +97,22 @@ def moments_based_features(mask, pixel_size):
         if mu_raw['mu02'] > 0:  # defaults to zero
             inert_ratio_raw[ii] = np.sqrt(mu_raw['mu20'] / mu_raw['mu02'])
 
-        # inert_ratio_prnc and eccentricity
-        inert_ratio_prnc[ii] = np.sqrt(i_1 / i_2)
-        eccentr_prnc[ii] = np.sqrt((i_1 - i_2) / i_1)
+        # inert_ratio_prnc
+        # rotate contour
+        orient = 0.5 * np.arctan2(2 * mu_raw['mu11'],
+                                  mu_raw['mu02'] - mu_raw['mu20'])
+        cc = np.array(cont_raw, dtype=np.float32, copy=True)  # float32 [sic]
+        rho = np.sqrt(cc[:, 0] ** 2 + cc[:, 1] ** 2)
+        phi = np.arctan2(cc[:, 1], cc[:, 0]) + orient + np.pi / 2
+        cc[:, 0] = rho * np.cos(phi)
+        cc[:, 1] = rho * np.sin(phi)
+        # compute inertia ratio of rotated contour
+        mprnc = cv2.moments(cc)
+        root_prnc = mprnc["mu20"] / mprnc["mu02"]
+        if root_prnc > 0:  # defaults to zero
+            inert_ratio_prnc[ii] = np.sqrt(root_prnc)
+
+        # specify validity
         valid[ii] = True
 
     return {
@@ -135,9 +132,6 @@ def moments_based_features(mask, pixel_size):
         "area_um_raw": area_um_raw,
         "per_um_raw": per_um_raw,
         "deform_raw": deform_raw,
-        "eccentr_prnc": eccentr_prnc,
         "per_ratio": per_ratio,
-        "s_x": s_x,
-        "s_y": s_y,
         "valid": valid,
     }
