@@ -11,45 +11,61 @@ def moments_based_features(mask, pixel_size):
     size = mask.shape[0]
 
     empty = np.full(size, np.nan, dtype=np.float64)
-    deform = np.copy(empty)
-    size_x = np.copy(empty)
-    size_y = np.copy(empty)
-    pos_x = np.copy(empty)
-    pos_y = np.copy(empty)
+
+    # features from raw contour
     area_msd = np.copy(empty)
     area_ratio = np.copy(empty)
-    area_um = np.copy(empty)
+    area_um_raw = np.copy(empty)
     aspect = np.copy(empty)
-    tilt = np.copy(empty)
-    inert_ratio_cvx = np.copy(empty)
-    inert_ratio_raw = np.copy(empty)
+    deform_raw = np.copy(empty)
     inert_ratio_prnc = np.copy(empty)
+    inert_ratio_raw = np.copy(empty)
+    per_ratio = np.copy(empty)
+    per_um_raw = np.copy(empty)
+    size_x = np.copy(empty)
+    size_y = np.copy(empty)
+    tilt = np.copy(empty)
+
+    # features from convex hull
+    area_um = np.copy(empty)
+    deform = np.copy(empty)
+    inert_ratio_cvx = np.copy(empty)
+    pos_x = np.copy(empty)
+    pos_y = np.copy(empty)
+
     # The following valid-array is not a real feature, but only
     # used to figure out which events need to be removed due
     # to invalid computed features, often due to invalid contours.
     valid = np.full(size, False)
 
     for ii in range(size):
+        # raw contour
         cont_raw = contour_single_opencv(mask[ii])
         if len(cont_raw.shape) < 2:
             continue
         if cv2.contourArea(cont_raw) == 0:
             continue
+
         mu_raw = cv2.moments(cont_raw)
+        arc_raw = np.float64(cv2.arcLength(cont_raw, True))
+        area_raw = np.float64(mu_raw["m00"])
 
         # convex hull
         cont_cvx = np.squeeze(cv2.convexHull(cont_raw))
         mu_cvx = cv2.moments(cont_cvx)
+        arc_cvx = np.float64(cv2.arcLength(cont_cvx, True))
+        # circ
+        circ = 2 * np.sqrt(np.pi * mu_cvx["m00"]) / arc_cvx
+        deform[ii] = 1 - circ
 
         if mu_cvx["m00"] == 0 or mu_raw["m00"] == 0:
-            # Contour size too small
+            # contour size too small
             continue
 
-        arc = cv2.arcLength(cont_cvx, True)
-
+        # bounding box
         x, y, w, h = cv2.boundingRect(cont_raw)
 
-        # tilt
+        # tilt angle in radians
         oii = 0.5 * np.arctan2(2 * mu_raw['mu11'],
                                mu_raw['mu02'] - mu_raw['mu20'])
         # +PI/2 because relative to channel axis
@@ -60,18 +76,18 @@ def moments_based_features(mask, pixel_size):
             tilti -= np.pi
         tilt[ii] = np.abs(tilti)
 
-        # circ
-        circ = 2 * np.sqrt(np.pi * mu_cvx["m00"]) / arc
-        deform[ii] = 1 - circ
-
         size_x[ii] = w * pixel_size
         size_y[ii] = h * pixel_size
         pos_x[ii] = mu_cvx["m10"] / mu_cvx["m00"] * pixel_size
         pos_y[ii] = mu_cvx["m01"] / mu_cvx["m00"] * pixel_size
         area_msd[ii] = mu_raw["m00"]
+        area_um_raw[ii] = area_raw * pixel_size**2
         area_ratio[ii] = mu_cvx["m00"] / mu_raw["m00"]
-        area_um[ii] = mu_cvx["m00"] * pixel_size ** 2
+        area_um[ii] = mu_cvx["m00"] * pixel_size**2
         aspect[ii] = w / h
+        per_um_raw[ii] = arc_raw * pixel_size
+        deform_raw[ii] = 1 - 2 * np.sqrt(np.pi * area_raw) / arc_raw
+        per_ratio[ii] = arc_raw / arc_cvx
 
         # inert_ratio_cvx
         if mu_cvx['mu02'] > 0:  # defaults to zero
@@ -95,6 +111,8 @@ def moments_based_features(mask, pixel_size):
         root_prnc = mprnc["mu20"] / mprnc["mu02"]
         if root_prnc > 0:  # defaults to zero
             inert_ratio_prnc[ii] = np.sqrt(root_prnc)
+
+        # specify validity
         valid[ii] = True
 
     return {
@@ -111,5 +129,9 @@ def moments_based_features(mask, pixel_size):
         "inert_ratio_cvx": inert_ratio_cvx,
         "inert_ratio_raw": inert_ratio_raw,
         "inert_ratio_prnc": inert_ratio_prnc,
+        "area_um_raw": area_um_raw,
+        "per_um_raw": per_um_raw,
+        "deform_raw": deform_raw,
+        "per_ratio": per_ratio,
         "valid": valid,
     }
