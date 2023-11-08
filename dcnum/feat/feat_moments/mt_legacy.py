@@ -76,9 +76,6 @@ def moments_based_features(mask, pixel_size):
         feat_pos_y[ii] = mu_cvx["m01"] / mu_cvx["m00"] * pixel_size
         feat_size_x[ii] = w * pixel_size
         feat_size_y[ii] = h * pixel_size
-        feat_tilt[ii] = \
-            np.abs(0.5 * np.arctan2(-2 * mu_raw['mu11'],
-                                    mu_raw['mu20'] - mu_raw['mu02']))
 
         # inert_ratio_cvx
         if mu_cvx['mu02'] > 0:  # defaults to zero
@@ -89,6 +86,9 @@ def moments_based_features(mask, pixel_size):
         i_yy = np.float64(mu_raw["mu20"])
         i_xy = np.float64(mu_raw["mu11"])
 
+        # tilt
+        feat_tilt[ii] = np.abs(0.5 * np.arctan2(-2 * i_xy, i_yy - i_xx))
+
         # inert_ratio_raw
         if i_xx > 0:  # defaults to zero
             feat_inert_ratio_raw[ii] = np.sqrt(i_yy / i_xx)
@@ -97,6 +97,7 @@ def moments_based_features(mask, pixel_size):
         i_root_1 = (i_xx - i_yy) ** 2 + 4*(i_xy ** 2)
         i_root_2 = (i_xx - i_yy) ** 2 + 4*(i_xy ** 2)
 
+        # inert_ratio_prnc and eccentr_prnc
         if i_root_1 >= 0 and i_root_2 >= 0:
             i_1 = 0.5 * (i_xx + i_yy + np.sqrt(i_root_1))
             i_2 = 0.5 * (i_xx + i_yy - np.sqrt(i_root_2))
