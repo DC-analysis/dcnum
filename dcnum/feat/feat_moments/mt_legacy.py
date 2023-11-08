@@ -13,25 +13,26 @@ def moments_based_features(mask, pixel_size):
     empty = np.full(size, np.nan, dtype=np.float64)
 
     # features from raw contour
+    area_msd = np.copy(empty)
+    area_ratio = np.copy(empty)
+    area_um_raw = np.copy(empty)
+    aspect = np.copy(empty)
+    deform_raw = np.copy(empty)
+    inert_ratio_prnc = np.copy(empty)
+    inert_ratio_raw = np.copy(empty)
+    per_ratio = np.copy(empty)
+    per_um_raw = np.copy(empty)
     size_x = np.copy(empty)
     size_y = np.copy(empty)
-    aspect = np.copy(empty)
-    area_msd = np.copy(empty)
-    area_um_raw = np.copy(empty)
-    per_um_raw = np.copy(empty)
-    deform_raw = np.copy(empty)
-    area_ratio = np.copy(empty)
-    per_ratio = np.copy(empty)
-    inert_ratio_raw = np.copy(empty)
-    inert_ratio_prnc = np.copy(empty)
     tilt = np.copy(empty)
 
     # features from convex hull
-    pos_x = np.copy(empty)
-    pos_y = np.copy(empty)
     area_um = np.copy(empty)
     deform = np.copy(empty)
     inert_ratio_cvx = np.copy(empty)
+    pos_x = np.copy(empty)
+    pos_y = np.copy(empty)
+
     # The following valid-array is not a real feature, but only
     # used to figure out which events need to be removed due
     # to invalid computed features, often due to invalid contours.
@@ -48,7 +49,6 @@ def moments_based_features(mask, pixel_size):
         mu_raw = cv2.moments(cont_raw)
         arc_raw = np.float64(cv2.arcLength(cont_raw, True))
         area_raw = np.float64(mu_raw["m00"])
-        event_mask = mask[ii]
 
         # convex hull
         cont_cvx = np.squeeze(cv2.convexHull(cont_raw))
