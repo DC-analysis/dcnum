@@ -6,6 +6,7 @@
  - ref: increment DCNUM_PPID_GENERATION to 5
 0.12.1
  - fix: avoid NaN-valued features due to invalid contours (#9)
+ - ref: increment DCNUM_PPID_GENERATION to 4
 0.12.0
  - ref: always use "spawn" for creating new processes to avoid race
    conditions with Python threading.Lock upon forking on POSIX
