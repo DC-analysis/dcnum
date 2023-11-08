@@ -62,17 +62,6 @@ def moments_based_features(mask, pixel_size):
         # bounding box
         x, y, w, h = cv2.boundingRect(cont_raw)
 
-        # tilt angle in radians
-        oii = 0.5 * np.arctan2(2 * mu_raw['mu11'],
-                               mu_raw['mu02'] - mu_raw['mu20'])
-        # +PI/2 because relative to channel axis
-        tilti = oii + np.pi / 2
-        # restrict to interval [0,PI/2]
-        tilti = np.mod(tilti, np.pi)
-        if tilti > np.pi / 2:
-            tilti -= np.pi
-        feat_tilt[ii] = np.abs(tilti)
-
         feat_area_msd[ii] = mu_raw["m00"]
         feat_area_ratio[ii] = mu_cvx["m00"] / mu_raw["m00"]
         feat_aspect[ii] = w / h
@@ -86,6 +75,9 @@ def moments_based_features(mask, pixel_size):
         feat_pos_y[ii] = mu_cvx["m01"] / mu_cvx["m00"] * pixel_size
         feat_size_x[ii] = w * pixel_size
         feat_size_y[ii] = h * pixel_size
+        feat_tilt[ii] = \
+            np.abs(0.5 * np.arctan2(-2 * mu_raw['mu11'],
+                                    mu_raw['mu20'] - mu_raw['mu02']))
 
         # inert_ratio_cvx
         if mu_cvx['mu02'] > 0:  # defaults to zero
