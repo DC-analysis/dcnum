@@ -97,26 +97,30 @@ class BackgroundSparseMed(Background):
         self.event_count = len(self.input_data)
 
         # time axis
-        if "time" in self.h5in["events"]:
-            # use actual time from dataset
-            self.time = self.h5in["/events/time"][:]
-            self.time -= self.time[0]
-        elif "imaging:frame rate" in self.h5in.attrs:
-            fr = self.h5in.attrs["imaging:frame rate"]
-            if "frame" in self.h5in["/events"]:
-                # compute time from frame rate and frame numbers
-                self.time = self.h5in["/events/frame"] / fr
+        self.time = None
+        if self.h5in is not None:
+            if "time" in self.h5in["events"]:
+                # use actual time from dataset
+                self.time = self.h5in["/events/time"][:]
                 self.time -= self.time[0]
-            else:
-                # compute time using frame rate (approximate)
-                dur = self.event_count / fr * 1.5
-                logger.info(f"Approximating duration: {dur / 60:.1f}min")
-                self.time = np.linspace(0, dur, self.event_count)
-        else:
-            # make an educated guess
+            elif "imaging:frame rate" in self.h5in.attrs:
+                fr = self.h5in.attrs["imaging:frame rate"]
+                if "frame" in self.h5in["/events"]:
+                    # compute time from frame rate and frame numbers
+                    self.time = self.h5in["/events/frame"] / fr
+                    self.time -= self.time[0]
+                else:
+                    # compute time using frame rate (approximate)
+                    dur = self.event_count / fr * 1.5
+                    logger.info(f"Approximating duration: {dur/60:.1f}min")
+                    self.time = np.linspace(0, dur, self.event_count,
+                                            endpoint=True)
+        if self.time is None:
+            # No HDF5 file or no information therein; Make an educated guess.
             dur = self.event_count / 3600 * 1.5
-            logger.info(f"Guessing duration: {dur/60:.1fmin}")
-            self.time = np.linspace(0, dur, self.event_count)
+            logger.info(f"Guessing duration: {dur/60:.1f}min")
+            self.time = np.linspace(0, dur, self.event_count,
+                                    endpoint=True)
 
         #: duration of the measurement
         self.duration = self.time[-1] - self.time[0]
@@ -171,7 +175,9 @@ class BackgroundSparseMed(Background):
             "events/image_bg",
             shape=self.input_data.shape,
             dtype=np.uint8,
-            chunks=(100, self.image_shape[0], self.image_shape[1]),
+            chunks=(min(100, self.event_count),
+                    self.image_shape[0],
+                    self.image_shape[1]),
             fletcher32=True,
             **compression_kwargs,
         )
