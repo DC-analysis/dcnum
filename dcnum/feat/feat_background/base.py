@@ -29,6 +29,11 @@ class Background(abc.ABC):
         kwargs:
             Additional keyword arguments passed to the subclass.
         """
+        # proper conversion to Path objects
+        output_path = pathlib.Path(output_path)
+        if isinstance(input_data, str):
+            input_data = pathlib.Path(input_data)
+        # kwargs checks
         self.check_user_kwargs(**kwargs)
 
         # Using spec is not really necessary here, because kwargs are
