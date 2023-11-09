@@ -43,7 +43,7 @@ class BackgroundSparseMed(Background):
         input_data: array-like or pathlib.Path
             The input data can be either a path to an HDF5 file with
             the "evtens/image" dataset or an array-like object that
-            behaves like an image stack (first axis enumerates events)
+            behaves like an image stack (first axis enumerates events).
         output_path: pathlib.Path
             Path to the output file. If `input_data` is a path, you can
             set `output_path` to the same path to write directly to the
@@ -330,7 +330,9 @@ class BackgroundSparseMed(Background):
         idx_start = np.argmin(np.abs(second - self.time))
         idx_stop = idx_start + self.kernel_size
         if idx_stop >= self.event_count:
-            diff = min(0, idx_stop - self.event_count)
+            # If `idx_stop` is always greater than `self.event_count`,
+            # then `diff` is always greater than zero.
+            diff = idx_stop - self.event_count
             idx_stop -= diff
             idx_start -= diff
             assert idx_start >= 0

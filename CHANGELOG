@@ -1,3 +1,5 @@
+0.12.3
+ - fix: background computation with sparsemed did not work
 0.12.2
  - enh: more efficient computation of inert_ratio_prnc feature (#6)
  - enh: more efficient computation of tilt feature (#6)
