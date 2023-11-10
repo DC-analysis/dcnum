@@ -1,3 +1,8 @@
+import hashlib
+import json
+import pathlib
+from typing import List
+
 import h5py
 import hdf5plugin
 import numpy as np
@@ -68,6 +73,46 @@ class HDF5Writer:
             dset = self.events[feat]
             offset = dset.shape[0]
         return dset, offset
+
+    def store_basin(self,
+                    name: str,
+                    paths: List[str | pathlib.Path],
+                    description: str | None = None,
+                    ):
+        """Write an HDF5-based file basin
+
+        Parameters
+        ----------
+        name: str
+            basin name; Names do not have to be unique.
+        paths: list of str or pathlib.Path
+            location(s) of the basin
+        description: str
+            optional string describing the basin
+        """
+        bdat = {
+            "description": description,
+            "format": "hdf5",
+            "name": name,
+            "paths": [str(pp) for pp in paths],
+            "type": "file",
+        }
+        bstring = json.dumps(bdat, indent=2)
+        # basin key is its hash
+        key = hashlib.md5(bstring.encode("utf-8",
+                                         errors="ignore")).hexdigest()
+        # write json-encoded basin to "basins" group
+        basins = self.h5.require_group("basins")
+        if key not in basins:
+            blines = bstring.split("\n")
+            basins.create_dataset(
+                name=key,
+                data=blines,
+                shape=(len(blines),),
+                # maximum line length
+                dtype=f"S{max([len(b) for b in blines])}",
+                chunks=True,
+                **self.ds_kwds)
 
     def store_feature_chunk(self, feat, data):
         """Store feature data
