@@ -62,9 +62,10 @@ class HDF5Data:
     def __getitem__(self, feat):
         if feat in ["image", "image_bg", "mask"]:
             return self.get_image_cache(feat)
-        elif feat in self._cache_scalar:
+        elif feat in self._cache_scalar:  # check for scalar cached
             return self._cache_scalar[feat]
-        elif len(self.h5["events"][feat].shape) == 1:
+        elif (feat in self.h5["events"]
+              and len(self.h5["events"][feat].shape) == 1):  # cache scalar
             self._cache_scalar[feat] = self.h5["events"][feat][:]
             return self._cache_scalar[feat]
         else:
@@ -183,8 +184,11 @@ class HDF5Data:
     @property
     def image_corr(self):
         if "image_corr" not in self._image_cache:
-            self._image_cache["image_corr"] = ImageCorrCache(self.image,
-                                                             self.image_bg)
+            if self.image is not None and self.image_bg is not None:
+                image_corr = ImageCorrCache(self.image, self.image_bg)
+            else:
+                image_corr = None
+            self._image_cache["image_corr"] = image_corr
         return self._image_cache["image_corr"]
 
     @property
@@ -229,8 +233,9 @@ class HDF5Data:
 
     def close(self):
         """Close the underlying HDF5 file"""
-        for bn, _ in self._basin_data:
-            bn.close()
+        for bn, _ in self._basin_data.values():
+            if bn is not None:
+                bn.close()
         self._image_cache.clear()
         self._basin_data.clear()
         self.h5.close()
@@ -248,22 +253,23 @@ class HDF5Data:
         if index not in self._basin_data:
             bn_dict = self.basins[index]
             pdir = pathlib.Path(self.path).parent
-            for pp in bn_dict["paths"]:
-                # first, try relative path (to avoid getting path from WDIR)
-                prel = pdir / pp
-                if prel.exists():
-                    path = prel
-                    break
-                # second, try absolute path
-                if pathlib.Path(pp).exists():
+            for ff in bn_dict["paths"]:
+                pp = pathlib.Path(ff)
+                if pp.is_absolute() and pp.exists():
                     path = pp
                     break
+                else:
+                    # try relative path (to avoid getting path from WDIR)
+                    prel = pdir / pp
+                    if prel.exists():
+                        path = prel
+                        break
             else:
                 path = None
             if path is None:
                 self._basin_data[index] = (None, None)
             else:
-                h5dat = HDF5Data(self.basins)
+                h5dat = HDF5Data(path)
                 features = bn_dict.get("features")
                 if features is None:
                     features = sorted(h5dat.h5["events"].keys())
@@ -282,9 +288,10 @@ class HDF5Data:
                 # search all basins
                 for idx in range(len(self.basins)):
                     bndat, features = self.get_basin_data(idx)
-                    if feat in features:
-                        ds = bndat.h5[f"events/{feat}"]
-                        break
+                    if features is not None:
+                        if feat in features:
+                            ds = bndat.h5[f"events/{feat}"]
+                            break
                 else:
                     ds = None
 
@@ -301,7 +308,13 @@ class HDF5Data:
 
     def keys(self):
         if self._keys is None:
-            self._keys = sorted(self.h5["/events"].keys())
+            features = sorted(self.h5["/events"].keys())
+            # add basin features
+            for ii in range(len(self.basins)):
+                _, bfeats = self.get_basin_data(ii)
+                if bfeats:
+                    features += bfeats
+            self._keys = sorted(set(features))
         return self._keys
 
 
