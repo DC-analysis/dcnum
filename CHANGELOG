@@ -1,5 +1,6 @@
 0.13.0
  - feat: support writing file-based HDF5 basins
+ - feat: support reading file-based HDF5 basins
  - fix: correctly support passing an ndarray to BackgroundSparseMed
    instead of an input file path
  - fix: BackgroundSparseMed did not work for datasets of length < 100

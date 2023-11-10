@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import io
+import json
 import pathlib
 import tempfile
 from typing import Dict, BinaryIO, List
@@ -21,6 +22,7 @@ class HDF5Data:
                  pixel_size: float = None,
                  md5_5m: str = None,
                  meta: Dict = None,
+                 basins: List[Dict[List[str] | str]] = None,
                  logs: Dict[List[str]] = None,
                  tables: Dict[np.ndarray] = None,
                  image_cache_size: int = 5,
@@ -29,6 +31,10 @@ class HDF5Data:
         self._feats = None
         self._keys = None
         self._len = None
+        self.image_cache_size = image_cache_size
+        self._image_cache = {}
+        # Basin data
+        self._basin_data = {}
         # Init is in __setstate__ so we can pickle this class
         # and use it for multiprocessing.
         if isinstance(path, h5py.File):
@@ -38,6 +44,7 @@ class HDF5Data:
                            "pixel_size": pixel_size,
                            "md5_5m": md5_5m,
                            "meta": meta,
+                           "basins": basins,
                            "logs": logs,
                            "tables": tables,
                            "image_cache_size": image_cache_size,
@@ -53,21 +60,24 @@ class HDF5Data:
         self.close()
 
     def __getitem__(self, feat):
-        if feat == "image":
-            return self.image
-        elif feat == "image_bg":
-            return self.image_bg
-        elif feat == "mask" and self.mask is not None:
-            return self.mask
+        if feat in ["image", "image_bg", "mask"]:
+            return self.get_image_cache(feat)
         elif feat in self._cache_scalar:
             return self._cache_scalar[feat]
         elif len(self.h5["events"][feat].shape) == 1:
             self._cache_scalar[feat] = self.h5["events"][feat][:]
             return self._cache_scalar[feat]
         else:
-            # Not cached (possibly slow)
-            warnings.warn(f"Feature {feat} not cached (possibly slow)")
-            return self.h5["events"][feat]
+            if feat in self.h5["events"]:
+                # Not cached (possibly slow)
+                warnings.warn(f"Feature {feat} not cached (possibly slow)")
+                return self.h5["events"][feat]
+            else:
+                # Check the basins
+                for idx in range(len(self.basins)):
+                    bn, bn_features = self.get_basin_data(idx)
+                    if feat in bn_features:
+                        return bn[feat]
 
     def __getstate__(self):
         return {"path": self.path,
@@ -76,6 +86,7 @@ class HDF5Data:
                 "meta": self.meta,
                 "logs": self.logs,
                 "tables": self.tables,
+                "basins": self.basins,
                 "image_cache_size": self.image.cache_size
                 }
 
@@ -97,33 +108,47 @@ class HDF5Data:
                 self.md5_5m = md5sum(self.path, count=80)
             else:
                 self.md5_5m = str(uuid.uuid4()).replace("-", "")
+        self.meta = state["meta"]
         self.logs = state["logs"]
         self.tables = state["tables"]
-        self.meta = state["meta"]
-        if self.meta is None or self.logs is None or self.tables is None:
+        self.basins = state["basins"]
+        if (self.meta is None
+                or self.logs is None
+                or self.tables is None
+                or self.basins is None):
             self.logs = {}
             self.tables = {}
+            self.basins = []
             # get dataset configuration
             with h5py.File(self.path,
                            libver="latest",
                            locking=False,
                            ) as h5:
+                # meta
                 self.meta = dict(h5.attrs)
                 for key in self.meta:
                     if isinstance(self.meta[key], bytes):
                         self.meta[key] = self.meta[key].decode("utf-8")
+                # logs
                 for key in h5.get("logs", []):
                     alog = list(h5["logs"][key])
                     if alog:
                         if isinstance(alog[0], bytes):
                             alog = [ll.decode("utf") for ll in alog]
                         self.logs[key] = alog
+                # tables
                 for tab in h5.get("tables", []):
                     tabdict = {}
                     for tkey in h5["tables"][tab].dtype.fields.keys():
                         tabdict[tkey] = \
                             np.array(h5["tables"][tab][tkey]).reshape(-1)
                     self.tables[tab] = tabdict
+                # basins
+                for bnkey in h5.get("basins", []):
+                    bn_data = "\n".join(
+                        [s.decode() for s in h5["basins"][bnkey][:].tolist()])
+                    bn_dict = json.loads(bn_data)
+                    self.basins.append(bn_dict)
 
         if state["pixel_size"] is not None:
             self.pixel_size = state["pixel_size"]
@@ -137,33 +162,34 @@ class HDF5Data:
                 # Set default pixel size for Rivercyte devices
                 self.pixel_size = 0.2645
 
+        self.image_cache_size = state["image_cache_size"]
+
         if self.h5 is None:
             self.h5 = h5py.File(self.path, libver="latest")
-        self.image = HDF5ImageCache(
-            self.h5["events/image"],
-            cache_size=state["image_cache_size"])
-
-        if "events/image_bg" in self.h5:
-            self.image_bg = HDF5ImageCache(
-                self.h5["events/image_bg"],
-                cache_size=state["image_cache_size"])
-        else:
-            self.image_bg = None
-
-        if "events/mask" in self.h5:
-            self.mask = HDF5ImageCache(
-                self.h5["events/mask"],
-                cache_size=state["image_cache_size"],
-                boolean=True)
-        else:
-            self.mask = None
-
-        self.image_corr = ImageCorrCache(self.image, self.image_bg)
 
     def __len__(self):
         if self._len is None:
             self._len = self.h5.attrs["experiment:event count"]
         return self._len
+
+    @property
+    def image(self):
+        return self.get_image_cache("image")
+
+    @property
+    def image_bg(self):
+        return self.get_image_cache("image_bg")
+
+    @property
+    def image_corr(self):
+        if "image_corr" not in self._image_cache:
+            self._image_cache["image_corr"] = ImageCorrCache(self.image,
+                                                             self.image_bg)
+        return self._image_cache["image_corr"]
+
+    @property
+    def mask(self):
+        return self.get_image_cache("mask")
 
     @property
     def meta_nest(self):
@@ -185,15 +211,6 @@ class HDF5Data:
     def pixel_size(self, pixel_size):
         self.meta["imaging:pixel size"] = pixel_size
 
-    def close(self):
-        """Close the underlying HDF5 file"""
-        self.h5.close()
-
-    def keys(self):
-        if self._keys is None:
-            self._keys = sorted(self.h5["/events"].keys())
-        return self._keys
-
     @property
     def features_scalar_frame(self):
         """Scalar features that apply to all events in a frame
@@ -209,6 +226,83 @@ class HDF5Data:
                     feats.append(feat)
             self._feats = feats
         return self._feats
+
+    def close(self):
+        """Close the underlying HDF5 file"""
+        for bn, _ in self._basin_data:
+            bn.close()
+        self._image_cache.clear()
+        self._basin_data.clear()
+        self.h5.close()
+
+    def get_basin_data(self, index):
+        """Return HDF5Data info for a basin index in `self.basins`
+
+        Returns
+        -------
+        data: HDF5Data
+            Data instance
+        features: list of str
+            List of features made available by this data instance
+        """
+        if index not in self._basin_data:
+            bn_dict = self.basins[index]
+            pdir = pathlib.Path(self.path).parent
+            for pp in bn_dict["paths"]:
+                # first, try relative path (to avoid getting path from WDIR)
+                prel = pdir / pp
+                if prel.exists():
+                    path = prel
+                    break
+                # second, try absolute path
+                if pathlib.Path(pp).exists():
+                    path = pp
+                    break
+            else:
+                path = None
+            if path is None:
+                self._basin_data[index] = (None, None)
+            else:
+                h5dat = HDF5Data(self.basins)
+                features = bn_dict.get("features")
+                if features is None:
+                    features = sorted(h5dat.h5["events"].keys())
+                self._basin_data[index] = (h5dat, features)
+        return self._basin_data[index]
+
+    def get_image_cache(self, feat):
+        """Create an HDF5ImageCache object for the current dataset
+
+        This method also tries to find image data in `self.basins`.
+        """
+        if feat not in self._image_cache:
+            if f"events/{feat}" in self.h5:
+                ds = self.h5[f"events/{feat}"]
+            else:
+                # search all basins
+                for idx in range(len(self.basins)):
+                    bndat, features = self.get_basin_data(idx)
+                    if feat in features:
+                        ds = bndat.h5[f"events/{feat}"]
+                        break
+                else:
+                    ds = None
+
+            if ds is not None:
+                image = HDF5ImageCache(
+                    h5ds=ds,
+                    cache_size=self.image_cache_size,
+                    boolean=feat == "mask")
+            else:
+                image = None
+            self._image_cache[feat] = image
+
+        return self._image_cache[feat]
+
+    def keys(self):
+        if self._keys is None:
+            self._keys = sorted(self.h5["/events"].keys())
+        return self._keys
 
 
 def concatenated_hdf5_data(paths: List[pathlib.Path],
