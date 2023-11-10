@@ -56,6 +56,7 @@ def test_basin_file():
         assert data_dict["description"] == "A basin-only dataset"
         assert data_dict["type"] == "file"
         assert data_dict["format"] == "hdf5"
+        assert "features" not in data_dict
 
 
 def test_basin_file_relative():
@@ -66,6 +67,7 @@ def test_basin_file_relative():
         hw.store_basin(name="get-out",
                        paths=[path.name],
                        description="A basin-only dataset",
+                       features=["deform", "area_um"],
                        )
         hw.h5.attrs.update(h5.attrs)
 
@@ -83,3 +85,4 @@ def test_basin_file_relative():
         assert data_dict["description"] == "A basin-only dataset"
         assert data_dict["type"] == "file"
         assert data_dict["format"] == "hdf5"
+        assert data_dict["features"] == ["deform", "area_um"]

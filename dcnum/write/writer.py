@@ -77,6 +77,7 @@ class HDF5Writer:
     def store_basin(self,
                     name: str,
                     paths: List[str | pathlib.Path],
+                    features: List[str] = None,
                     description: str | None = None,
                     ):
         """Write an HDF5-based file basin
@@ -87,6 +88,8 @@ class HDF5Writer:
             basin name; Names do not have to be unique.
         paths: list of str or pathlib.Path
             location(s) of the basin
+        features: list of str
+            list of features provided by `paths`
         description: str
             optional string describing the basin
         """
@@ -97,6 +100,8 @@ class HDF5Writer:
             "paths": [str(pp) for pp in paths],
             "type": "file",
         }
+        if features is not None and len(features):
+            bdat["features"] = features
         bstring = json.dumps(bdat, indent=2)
         # basin key is its hash
         key = hashlib.md5(bstring.encode("utf-8",
