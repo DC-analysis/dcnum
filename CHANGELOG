@@ -4,6 +4,7 @@
    instead of an input file path
  - fix: BackgroundSparseMed did not work for datasets of length < 100
  - fix: bad f-string in BackgroundSparseMed
+ - ref: remove functools.cache decorator from HDF5Data
  - tests: add tests for BackgroundSparseMed
 0.12.3
  - fix: background computation with sparsemed did not work

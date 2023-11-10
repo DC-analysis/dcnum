@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import functools
 import io
 import pathlib
 import tempfile
@@ -26,6 +25,10 @@ class HDF5Data:
                  tables: Dict[np.ndarray] = None,
                  image_cache_size: int = 5,
                  ):
+        # Cached properties
+        self._feats = None
+        self._keys = None
+        self._len = None
         # Init is in __setstate__ so we can pickle this class
         # and use it for multiprocessing.
         if isinstance(path, h5py.File):
@@ -157,9 +160,10 @@ class HDF5Data:
 
         self.image_corr = ImageCorrCache(self.image, self.image_bg)
 
-    @functools.cache
     def __len__(self):
-        return self.h5.attrs["experiment:event count"]
+        if self._len is None:
+            self._len = self.h5.attrs["experiment:event count"]
+        return self._len
 
     @property
     def meta_nest(self):
@@ -185,12 +189,12 @@ class HDF5Data:
         """Close the underlying HDF5 file"""
         self.h5.close()
 
-    @functools.cache
     def keys(self):
-        return sorted(self.h5["/events"].keys())
+        if self._keys is None:
+            self._keys = sorted(self.h5["/events"].keys())
+        return self._keys
 
     @property
-    @functools.cache
     def features_scalar_frame(self):
         """Scalar features that apply to all events in a frame
 
@@ -198,11 +202,13 @@ class HDF5Data:
         over to new processed datasets. Return a list of all features
         that describe a frame (e.g. temperature or time).
         """
-        feats = []
-        for feat in self.h5["events"]:
-            if feat in PROTECTED_FEATURES:
-                feats.append(feat)
-        return feats
+        if self._feats is None:
+            feats = []
+            for feat in self.h5["events"]:
+                if feat in PROTECTED_FEATURES:
+                    feats.append(feat)
+            self._feats = feats
+        return self._feats
 
 
 def concatenated_hdf5_data(paths: List[pathlib.Path],
