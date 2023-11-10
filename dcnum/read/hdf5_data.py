@@ -252,15 +252,14 @@ class HDF5Data:
         """
         if index not in self._basin_data:
             bn_dict = self.basins[index]
-            pdir = pathlib.Path(self.path).parent
             for ff in bn_dict["paths"]:
                 pp = pathlib.Path(ff)
                 if pp.is_absolute() and pp.exists():
                     path = pp
                     break
                 else:
-                    # try relative path (to avoid getting path from WDIR)
-                    prel = pdir / pp
+                    # try relative path
+                    prel = pathlib.Path(self.path).parent / pp
                     if prel.exists():
                         path = prel
                         break
