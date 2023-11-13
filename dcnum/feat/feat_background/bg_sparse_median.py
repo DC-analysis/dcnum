@@ -2,9 +2,7 @@ import logging
 import multiprocessing as mp
 import queue
 import time
-import uuid
 
-import hdf5plugin
 import numpy as np
 from scipy import ndimage
 
@@ -73,6 +71,7 @@ class BackgroundSparseMed(Background):
         super(BackgroundSparseMed, self).__init__(
             input_data=input_data,
             output_path=output_path,
+            compress=compress,
             num_cpus=num_cpus,
             kernel_size=kernel_size,
             split_time=split_time,
@@ -87,14 +86,6 @@ class BackgroundSparseMed(Background):
         self.thresh_cleansing = thresh_cleansing
         #: keep at least this many background images from the series
         self.frac_cleansing = frac_cleansing
-
-        #: unique identifier
-        self.name = str(uuid.uuid4())
-        #: shape of event images
-        self.image_shape = self.input_data[0].shape
-
-        #: total number of events
-        self.event_count = len(self.input_data)
 
         # time axis
         self.time = None
@@ -165,25 +156,6 @@ class BackgroundSparseMed(Background):
                                            self.kernel_size)
                         for _ in range(self.num_cpus)]
         [w.start() for w in self.workers]
-
-        # Initialize background data
-        if compress:
-            compression_kwargs = hdf5plugin.Zstd(clevel=5)
-        else:
-            compression_kwargs = {}
-        h5bg = self.h5out.require_dataset(
-            "events/image_bg",
-            shape=self.input_data.shape,
-            dtype=np.uint8,
-            chunks=(min(100, self.event_count),
-                    self.image_shape[0],
-                    self.image_shape[1]),
-            fletcher32=True,
-            **compression_kwargs,
-        )
-        h5bg.attrs.create('CLASS', np.string_('IMAGE'))
-        h5bg.attrs.create('IMAGE_VERSION', np.string_('1.2'))
-        h5bg.attrs.create('IMAGE_SUBCLASS', np.string_('IMAGE_GRAYSCALE'))
 
     def __enter__(self):
         return self

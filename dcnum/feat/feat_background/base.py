@@ -2,15 +2,19 @@ import abc
 import inspect
 import multiprocessing as mp
 import pathlib
+import uuid
 
 import h5py
+import hdf5plugin
+import numpy as np
 
 from ...meta import ppid
 from ...write import create_with_basins
 
 
 class Background(abc.ABC):
-    def __init__(self, input_data, output_path, num_cpus=None, **kwargs):
+    def __init__(self, input_data, output_path, compress=True, num_cpus=None,
+                 **kwargs):
         """
 
         Parameters
@@ -24,6 +28,9 @@ class Background(abc.ABC):
             set `output_path` to the same path to write directly to the
             input file. The data are written in the "events/image_bg"
             dataset in the output file.
+        compress: bool
+            Whether to compress background data. Set this to False
+            for faster processing.
         num_cpus: int
             Number of CPUs to use for median computation. Defaults to
             `multiprocessing.cpu_count()`.
@@ -70,6 +77,13 @@ class Background(abc.ABC):
         else:
             self.input_data = input_data
 
+        #: unique identifier
+        self.name = str(uuid.uuid4())
+        #: shape of event images
+        self.image_shape = self.input_data[0].shape
+        #: total number of events
+        self.event_count = len(self.input_data)
+
         if self.h5out is None:
             if not output_path.exists():
                 # If the output path does not exist, then we create
@@ -78,9 +92,27 @@ class Background(abc.ABC):
                                    basin_paths=self.paths_ref)
             # TODO:
             #  - properly setup HDF5 caching
-            #  - create image_bg here instead of in subclasses
-            # "a", because output file is already an .rtdc file
+            # "a", because output file already exists
             self.h5out = h5py.File(output_path, "a", libver="latest")
+
+            # Initialize background data
+            if compress:
+                compression_kwargs = hdf5plugin.Zstd(clevel=5)
+            else:
+                compression_kwargs = {}
+            h5bg = self.h5out.require_dataset(
+                "events/image_bg",
+                shape=self.input_data.shape,
+                dtype=np.uint8,
+                chunks=(min(100, self.event_count),
+                        self.image_shape[0],
+                        self.image_shape[1]),
+                fletcher32=True,
+                **compression_kwargs,
+            )
+            h5bg.attrs.create('CLASS', np.string_('IMAGE'))
+            h5bg.attrs.create('IMAGE_VERSION', np.string_('1.2'))
+            h5bg.attrs.create('IMAGE_SUBCLASS', np.string_('IMAGE_GRAYSCALE'))
 
     @staticmethod
     def get_kwargs_from_ppid(bg_ppid):
