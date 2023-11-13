@@ -286,13 +286,15 @@ class BackgroundSparseMed(Background):
         # Assign each frame to a certain background index
         bg_idx = np.zeros(self.event_count, dtype=int)
         idx0 = 0
+        idx1 = None
         for ii in range(len(step_times)):
             t1 = step_times[ii]
             idx1 = np.argmin(np.abs(self.time - t1 + self.split_time/2))
             bg_idx[idx0:idx1] = ii
             idx0 = idx1
-        # Fill up remainder of index array with last entry
-        bg_idx[idx1:] = ii
+        if idx1 is not None:
+            # Fill up remainder of index array with last entry
+            bg_idx[idx1:] = ii
 
         # Write background data
         pos = 0
