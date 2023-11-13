@@ -6,6 +6,7 @@
    instead of an input file path
  - fix: BackgroundSparseMed did not work for datasets of length < 100
  - fix: bad f-string in BackgroundSparseMed
+ - enh: create a default basin-based output file for background computation
  - ref: remove functools.cache decorator from HDF5Data
  - tests: add tests for BackgroundSparseMed
 0.12.3

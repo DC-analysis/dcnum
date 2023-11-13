@@ -6,6 +6,7 @@ import pathlib
 import h5py
 
 from ...meta import ppid
+from ...write import create_with_basins
 
 
 class Background(abc.ABC):
@@ -70,10 +71,15 @@ class Background(abc.ABC):
             self.input_data = input_data
 
         if self.h5out is None:
-            # "a", because output file is already an .rtdc file
+            if not output_path.exists():
+                # If the output path does not exist, then we create
+                # an output file with basins (for user convenience).
+                create_with_basins(path_out=output_path,
+                                   basin_paths=self.paths_ref)
             # TODO:
             #  - properly setup HDF5 caching
             #  - create image_bg here instead of in subclasses
+            # "a", because output file is already an .rtdc file
             self.h5out = h5py.File(output_path, "a", libver="latest")
 
     @staticmethod
