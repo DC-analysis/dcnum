@@ -114,6 +114,16 @@ class Background(abc.ABC):
             h5bg.attrs.create('IMAGE_VERSION', np.string_('1.2'))
             h5bg.attrs.create('IMAGE_SUBCLASS', np.string_('IMAGE_GRAYSCALE'))
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, type, value, tb):
+        # Close h5in and h5out
+        if self.h5in is not None:
+            self.h5in.close()
+        if self.h5in is not self.h5out and self.h5out is not None:
+            self.h5out.close()
+
     @staticmethod
     def get_kwargs_from_ppid(bg_ppid):
         """Return keyword arguments for any subclass from a PPID string"""

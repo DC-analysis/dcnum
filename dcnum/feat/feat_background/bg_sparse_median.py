@@ -161,15 +161,11 @@ class BackgroundSparseMed(Background):
         return self
 
     def __exit__(self, type, value, tb):
-        # Close h5in and h5out
-        if self.h5in is not None:
-            self.h5in.close()
-        if self.h5in is not self.h5out and self.h5out is not None:
-            self.h5out.close()
         self.worker_counter.value = -1000
         [w.join() for w in self.workers]
         self.pool.terminate()
         self.pool.join()
+        super(BackgroundSparseMed, self).__exit__(type, value, tb)
 
     @staticmethod
     def check_user_kwargs(*,
