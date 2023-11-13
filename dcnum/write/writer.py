@@ -7,6 +7,8 @@ import h5py
 import hdf5plugin
 import numpy as np
 
+from .._version import version
+
 
 class HDF5Writer:
     def __init__(self, path, mode="a", ds_kwds=None):
@@ -133,3 +135,104 @@ class HDF5Writer:
         dsize = data.shape[0]
         ds.resize(offset + dsize, axis=0)
         ds[offset:offset + dsize] = data
+
+
+def create_with_basins(
+        path_out: str | pathlib.Path,
+        basin_paths: List[str | pathlib.Path] | List[List[str | pathlib.Path]]
+        ):
+    """Create an .rtdc file with basins
+
+    Parameters
+    ----------
+    path_out:
+        The output .rtdc file where basins are written to
+    basin_paths:
+        The paths to the basins written to `path_out`. This can be
+        either a list of paths (to different basins) or a list of
+        lists for paths (for basins containing the same information,
+        commonly used for relative and absolute paths).
+    """
+    path_out = pathlib.Path(path_out)
+    with HDF5Writer(path_out, mode="w") as hw:
+        # Get the metadata from the first available basin path
+
+        for bp in basin_paths:
+            if isinstance(bp, (str, pathlib.Path)):
+                # We have a single basin file
+                bps = [bp]
+            else:  # list or tuple
+                bps = bp
+
+            # We need to make sure that we are not resolving a relative
+            # path to the working directory when we copy over data. Get
+            # a representative path for metadata extraction.
+            for pp in bps:
+                pp = pathlib.Path(pp)
+                if pp.is_absolute() and pp.exists():
+                    prep = pp
+                    break
+                else:
+                    # try relative path
+                    prel = pathlib.Path(path_out).parent / pp
+                    if prel.exists():
+                        prep = prel
+                        break
+            else:
+                prep = None
+
+            # Copy the metadata from the representative path.
+            if prep is not None:
+                # copy metadata
+                with h5py.File(prep) as h5:
+                    copy_metadata(h5_src=h5, h5_dst=hw.h5)
+                    # extract features
+                    features = sorted(h5["events"].keys())
+                name = prep.name
+            else:
+                features = None
+                name = bps[0]
+
+            # Finally, write the basin.
+            hw.store_basin(name=name,
+                           paths=bps,
+                           features=features,
+                           description=f"Created by dcnum {version}",
+                           )
+
+
+def copy_metadata(h5_src: h5py.File,
+                  h5_dst: h5py.File):
+    """Copy attributes, tables, logs, and basins from one H5File to another
+
+    Notes
+    -----
+    Metadata in `h5_dst` are never overridden, only metadata that
+    are not defined are added.
+    """
+    # compress data
+    ds_kwds = {}
+    for key, val in dict(hdf5plugin.Zstd(clevel=5)).items():
+        ds_kwds.setdefault(key, val)
+    ds_kwds.setdefault("fletcher32", True)
+    # set attributes
+    src_attrs = dict(h5_src.attrs)
+    for kk in src_attrs:
+        h5_dst.attrs.setdefault(kk, src_attrs[kk])
+    # copy other metadata
+    for topic in ["basins", "logs", "tables"]:
+        if topic in h5_src:
+            for key in h5_src[topic]:
+                h5_dst.require_group(topic)
+                if key not in h5_dst[topic]:
+                    ds = h5_dst[topic].create_dataset(
+                        name=key,
+                        data=h5_src[topic][key][:],
+                        **ds_kwds
+                    )
+                    # help with debugging and add some meta-metadata
+                    ds.attrs.update(h5_src[topic][key].attrs)
+                    soft_strings = [ds.attrs.get("software"),
+                                    f"dcnum {version}"]
+                    soft_strings = [s for s in soft_strings if s is not None]
+                    ds.attrs["software"] = " | ".join(soft_strings)

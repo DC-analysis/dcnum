@@ -77,8 +77,10 @@ class HDF5Data:
                 # Check the basins
                 for idx in range(len(self.basins)):
                     bn, bn_features = self.get_basin_data(idx)
-                    if feat in bn_features:
+                    if bn_features and feat in bn_features:
                         return bn[feat]
+        # If we got here, then the feature data does not exist.
+        raise KeyError(f"Feature '{feat}' not found in {self}!")
 
     def __getstate__(self):
         return {"path": self.path,

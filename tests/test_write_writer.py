@@ -2,10 +2,117 @@ import hashlib
 import json
 
 import h5py
+import numpy as np
+import pytest
 
-from dcnum import write
+from dcnum import read, write
+from dcnum import __version__ as version
 
 from helper_methods import retrieve_data
+
+
+def test_create_with_basins_absolute():
+    path = retrieve_data(
+        "fmt-hdf5_cytoshot_full-features_legacy_allev_2023.zip")
+    path_wrt = path.with_name("written.hdf5")
+    write.create_with_basins(path_out=path_wrt, basin_paths=[path.resolve()])
+    with h5py.File(path_wrt) as h5:
+        assert h5.attrs["setup:software version"].count("CytoShot 0.0.6")
+        assert h5.attrs["experiment:event count"] == 11
+        assert "basins" in h5
+        assert len(h5["events"].keys()) == 0
+    with read.HDF5Data(path_wrt) as hd:
+        assert len(hd.basins) == 1
+        assert len(hd.basins[0]["features"]) == 48
+        assert len(hd.basins[0]["paths"]) == 1
+        assert np.allclose(hd["deform"][0], 0.07405636775888857)
+
+
+def test_create_with_basins_invalid_file():
+    path = retrieve_data(
+        "fmt-hdf5_cytoshot_full-features_legacy_allev_2023.zip")
+    path_wrt = path.with_name("written.hdf5")
+    write.create_with_basins(path_out=path_wrt, basin_paths=[["fake.rtdc"
+                                                              ]])
+    with h5py.File(path_wrt) as h5:
+        assert not h5.attrs
+        assert "basins" in h5
+        assert len(h5["events"].keys()) == 0
+    with read.HDF5Data(path_wrt) as hd:
+        assert len(hd.basins) == 1
+        assert "features" not in hd.basins[0]
+        assert len(hd.basins[0]["paths"]) == 1
+        with pytest.raises(KeyError, match="'deform' not found"):
+            assert hd["deform"][0]
+
+
+def test_create_with_basins_invalid_and_relative_file():
+    path = retrieve_data(
+        "fmt-hdf5_cytoshot_full-features_legacy_allev_2023.zip")
+    path_wrt = path.with_name("written.hdf5")
+    write.create_with_basins(path_out=path_wrt, basin_paths=[["fake.rtdc",
+                                                              path.name,
+                                                              ]])
+    with h5py.File(path_wrt) as h5:
+        assert h5.attrs["setup:software version"].count("CytoShot 0.0.6")
+        assert h5.attrs["experiment:event count"] == 11
+        assert "basins" in h5
+        assert len(h5["events"].keys()) == 0
+    with read.HDF5Data(path_wrt) as hd:
+        assert len(hd.basins) == 1
+        assert len(hd.basins[0]["features"]) == 48
+        assert len(hd.basins[0]["paths"]) == 2
+        assert np.allclose(hd["deform"][0], 0.07405636775888857)
+
+
+def test_create_with_basins_relative():
+    path = retrieve_data(
+        "fmt-hdf5_cytoshot_full-features_legacy_allev_2023.zip")
+    path_wrt = path.with_name("written.hdf5")
+    write.create_with_basins(path_out=path_wrt, basin_paths=[path.name])
+    with h5py.File(path_wrt) as h5:
+        assert h5.attrs["setup:software version"].count("CytoShot 0.0.6")
+        assert h5.attrs["experiment:event count"] == 11
+        assert "basins" in h5
+        assert len(h5["events"].keys()) == 0
+    with read.HDF5Data(path_wrt) as hd:
+        assert len(hd.basins) == 1
+        assert len(hd.basins[0]["features"]) == 48
+        assert len(hd.basins[0]["paths"]) == 1
+        assert np.allclose(hd["deform"][0], 0.07405636775888857)
+
+
+def test_create_with_basins_relative_and_absolute():
+    path = retrieve_data(
+        "fmt-hdf5_cytoshot_full-features_legacy_allev_2023.zip")
+    path_wrt = path.with_name("written.hdf5")
+    write.create_with_basins(path_out=path_wrt, basin_paths=[[path.name,
+                                                              path.resolve()]])
+    with h5py.File(path_wrt) as h5:
+        assert h5.attrs["setup:software version"].count("CytoShot 0.0.6")
+        assert h5.attrs["experiment:event count"] == 11
+        assert "basins" in h5
+        assert len(h5["events"].keys()) == 0
+    with read.HDF5Data(path_wrt) as hd:
+        assert len(hd.basins) == 1
+        assert len(hd.basins[0]["features"]) == 48
+        assert len(hd.basins[0]["paths"]) == 2
+        assert np.allclose(hd["deform"][0], 0.07405636775888857)
+
+
+def test_copy_metadata_logs():
+    path = retrieve_data(
+        "fmt-hdf5_cytoshot_full-features_legacy_allev_2023.zip")
+    path_wrt = path.with_name("written.hdf5")
+    with h5py.File(path, "r") as h5_src, h5py.File(path_wrt, "w") as h5_dst:
+        write.copy_metadata(h5_src=h5_src, h5_dst=h5_dst)
+        # Make sure that worked
+        assert dict(h5_src.attrs) == dict(h5_dst.attrs)
+        assert len(h5_src["logs"]) == 2
+        for key in h5_src["logs"]:
+            assert np.all(h5_src[f"logs/{key}"][:] == h5_dst[f"logs/{key}"][:])
+            assert h5_dst[f"logs/{key}"].attrs["software"] \
+                   == f"dcnum {version}"
 
 
 def test_writer_basic():
@@ -31,7 +138,7 @@ def test_writer_basic():
         assert events["image"].shape[1:] == image.shape[1:]
 
 
-def test_basin_file():
+def test_writer_basin_file():
     path = retrieve_data("fmt-hdf5_cytoshot_full-features_2023.zip")
     path_test = path.parent / "test.h5"
     # We basically create a file that consists only of the metadata.
@@ -59,7 +166,7 @@ def test_basin_file():
         assert "features" not in data_dict
 
 
-def test_basin_file_relative():
+def test_writer_basin_file_relative():
     path = retrieve_data("fmt-hdf5_cytoshot_full-features_2023.zip")
     path_test = path.parent / "test.h5"
     # We basically create a file that consists only of the metadata.
