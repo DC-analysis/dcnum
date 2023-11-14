@@ -170,13 +170,13 @@ class QueueCollectorThread(threading.Thread):
         # our queue thread if we are told to stop.
         self.event_queue.cancel_join_thread()
         # Indexes the current frame in `self.data`.
-        cur_frame = 0
+        last_idx = 0
         self.logger.debug("Started collector thread.")
         while True:
             # Slice of the shared nevents array. If it contains -1 values,
             # this means that some of the frames have not yet been processed.
             cur_nevents = self.feat_nevents[
-                          cur_frame:cur_frame + self.write_threshold]
+                          last_idx:last_idx + self.write_threshold]
             if np.any(np.array(cur_nevents) < 0):
                 # We are not yet ready to write any new data to the queue.
                 time.sleep(.01)
@@ -185,16 +185,18 @@ class QueueCollectorThread(threading.Thread):
             if len(cur_nevents) == 0:
                 self.logger.info(
                     "Reached the end of the current dataset (frame "
-                    f"{cur_frame + 1} of {len(self.feat_nevents)}).")
+                    # `last_idx` is the size of the dataset in the end,
+                    # because `len(cur_nevents)` is always added to it.
+                    f"{last_idx} of {len(self.feat_nevents)}).")
                 break
 
             # We have reached the writer threshold. This means the extractor
             # has analyzed at least `write_threshold` frames (not events).
-            self.logger.debug(f"Current frame: {cur_frame}")
+            self.logger.debug(f"Current frame: {last_idx}")
 
             # Create an event stash
             stash = EventStash(
-                index_offset=cur_frame,
+                index_offset=last_idx,
                 feat_nevents=cur_nevents
             )
 
@@ -202,7 +204,7 @@ class QueueCollectorThread(threading.Thread):
             # that we possibly populated earlier.
             for ii in range(len(self.buffer_dq)):
                 idx, events = self.buffer_dq.popleft()
-                if cur_frame <= idx < cur_frame + self.write_threshold:
+                if last_idx <= idx < last_idx + self.write_threshold:
                     stash.add_events(index=idx, events=events)
                 else:
                     # Put it back into the buffer (this should not happen
@@ -221,7 +223,7 @@ class QueueCollectorThread(threading.Thread):
                         # No time.sleep here, because we are already using
                         # a timeout in event_queue.get.
                         continue
-                    if cur_frame <= idx < cur_frame + self.write_threshold:
+                    if last_idx <= idx < last_idx + self.write_threshold:
                         stash.add_events(index=idx, events=events)
                     else:
                         # Goes onto the buffer stack (might happen if a
@@ -270,4 +272,4 @@ class QueueCollectorThread(threading.Thread):
             self.written_frames += stash.num_frames
 
             # Increment current frame index.
-            cur_frame += len(cur_nevents)
+            last_idx += len(cur_nevents)
