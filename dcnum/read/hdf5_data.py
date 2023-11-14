@@ -27,14 +27,6 @@ class HDF5Data:
                  tables: Dict[np.ndarray] = None,
                  image_cache_size: int = 5,
                  ):
-        # Cached properties
-        self._feats = None
-        self._keys = None
-        self._len = None
-        self.image_cache_size = image_cache_size
-        self._image_cache = {}
-        # Basin data
-        self._basin_data = {}
         # Init is in __setstate__ so we can pickle this class
         # and use it for multiprocessing.
         if isinstance(path, h5py.File):
@@ -97,6 +89,18 @@ class HDF5Data:
         # Make sure these properties exist (we rely on __init__, because
         # we want this class to be pickable and __init__ is not called by
         # `pickle.load`.
+        # Cached properties
+        self._feats = None
+        self._keys = None
+        self._len = None
+        self.image_cache_size = state["image_cache_size"]
+        # Image cache
+        if not hasattr(self, "_image_cache"):
+            self._image_cache = {}
+        # Basin data
+        if not hasattr(self, "_basin_data"):
+            self._basin_data = {}
+        # Scalar feature cache
         if not hasattr(self, "_cache_scalar"):
             self._cache_scalar = {}
         if not hasattr(self, "h5"):
@@ -125,7 +129,6 @@ class HDF5Data:
             # get dataset configuration
             with h5py.File(self.path,
                            libver="latest",
-                           locking=False,
                            ) as h5:
                 # meta
                 self.meta = dict(h5.attrs)
