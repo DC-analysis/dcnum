@@ -9,6 +9,7 @@ import hdf5plugin
 import numpy as np
 
 from ...meta import ppid
+from ...read import HDF5Data
 from ...write import create_with_basins
 
 
@@ -59,6 +60,8 @@ class Background(abc.ABC):
         #: number of frames
         self.event_count = None
 
+        #: HDF5Data instance for input data
+        self.hdin = None
         #: input h5py.File
         self.h5in = None
         #: output h5py.File
@@ -73,7 +76,13 @@ class Background(abc.ABC):
             else:
                 self.paths_ref.append(input_data)
                 self.h5in = h5py.File(input_data, "r", libver="latest")
-            self.input_data = self.h5in["events/image"]
+            # TODO: Properly setup HDF5 caching.
+            #       Right now, we are accessing the raw h5ds property of
+            #       the ImageCache. We have to go via the ImageCache route,
+            #       because HDF5Data properly resolves basins and the image
+            #       feature might be in a basin.
+            self.hdin = HDF5Data(self.h5in)
+            self.input_data = self.hdin.image.h5ds
         else:
             self.input_data = input_data
 
@@ -90,37 +99,35 @@ class Background(abc.ABC):
                 # an output file with basins (for user convenience).
                 create_with_basins(path_out=output_path,
                                    basin_paths=self.paths_ref)
-            # TODO:
-            #  - properly setup HDF5 caching
             # "a", because output file already exists
             self.h5out = h5py.File(output_path, "a", libver="latest")
 
-            # Initialize background data
-            if compress:
-                compression_kwargs = hdf5plugin.Zstd(clevel=5)
-            else:
-                compression_kwargs = {}
-            h5bg = self.h5out.require_dataset(
-                "events/image_bg",
-                shape=self.input_data.shape,
-                dtype=np.uint8,
-                chunks=(min(100, self.event_count),
-                        self.image_shape[0],
-                        self.image_shape[1]),
-                fletcher32=True,
-                **compression_kwargs,
-            )
-            h5bg.attrs.create('CLASS', np.string_('IMAGE'))
-            h5bg.attrs.create('IMAGE_VERSION', np.string_('1.2'))
-            h5bg.attrs.create('IMAGE_SUBCLASS', np.string_('IMAGE_GRAYSCALE'))
+        # Initialize background data
+        if compress:
+            compression_kwargs = hdf5plugin.Zstd(clevel=5)
+        else:
+            compression_kwargs = {}
+        h5bg = self.h5out.require_dataset(
+            "events/image_bg",
+            shape=self.input_data.shape,
+            dtype=np.uint8,
+            chunks=(min(100, self.event_count),
+                    self.image_shape[0],
+                    self.image_shape[1]),
+            fletcher32=True,
+            **compression_kwargs,
+        )
+        h5bg.attrs.create('CLASS', np.string_('IMAGE'))
+        h5bg.attrs.create('IMAGE_VERSION', np.string_('1.2'))
+        h5bg.attrs.create('IMAGE_SUBCLASS', np.string_('IMAGE_GRAYSCALE'))
 
     def __enter__(self):
         return self
 
     def __exit__(self, type, value, tb):
         # Close h5in and h5out
-        if self.h5in is not None:
-            self.h5in.close()
+        if self.hdin is not None:  # we have an input file
+            self.hdin.close()  # this closes self.h5in
         if self.h5in is not self.h5out and self.h5out is not None:
             self.h5out.close()
 

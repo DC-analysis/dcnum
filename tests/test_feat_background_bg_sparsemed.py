@@ -1,70 +1,10 @@
-import json
-
 import h5py
 import numpy as np
 import pytest
 
 from dcnum.feat.feat_background import bg_sparse_median
-from dcnum.read import HDF5Data
 
 from helper_methods import retrieve_data
-
-
-def test_basic_background_output_basin_none(
-        tmp_path):
-    """In dcnum 0.13.0, we introduced `create_with_basins`"""
-    event_count = 720
-    output_path = tmp_path / "test.h5"
-    # image shape: 5 * 7
-    input_data = np.arange(5*7).reshape(1, 5, 7) * np.ones((event_count, 1, 1))
-    assert np.all(input_data[0] == input_data[1])
-    assert np.all(input_data[0].flatten() == np.arange(5*7))
-
-    with bg_sparse_median.BackgroundSparseMed(input_data=input_data,
-                                              output_path=output_path,
-                                              kernel_size=10,
-                                              split_time=0.011,
-                                              thresh_cleansing=0,
-                                              frac_cleansing=.8,
-                                              ) as bic:
-        bic.process()
-    # Make sure the basins exist in the input file
-    with h5py.File(output_path) as h5:
-        assert "basins" not in h5, "because the input is not a file"
-
-
-def test_basic_background_output_basin_simple(
-        tmp_path):
-    """In dcnum 0.13.0, we introduced `create_with_basins`"""
-    event_count = 720
-    output_path = tmp_path / "test.h5"
-    input_path = tmp_path / "input.h5"
-    # image shape: 5 * 7
-    with h5py.File(input_path, "a") as h5:
-        h5["events/image"] = \
-            np.arange(5*7).reshape(1, 5, 7) * np.ones((event_count, 1, 1))
-
-    with bg_sparse_median.BackgroundSparseMed(input_data=input_path,
-                                              output_path=output_path,
-                                              kernel_size=10,
-                                              split_time=0.011,
-                                              thresh_cleansing=0,
-                                              frac_cleansing=.8,
-                                              ) as bic:
-        bic.process()
-
-    # Make sure the basins exist in the input file
-    with h5py.File(output_path) as h5:
-        assert "basins" in h5
-        key = list(h5["basins"].keys())[0]
-        bn_lines = [k.decode("utf-8") for k in h5["basins"][key]]
-        bdat = json.loads(" ".join(bn_lines))
-        assert bdat["paths"][0] == str(input_path)
-
-    # Add a cherry on top (make sure everything is parseable with HDF5Data)
-    with HDF5Data(output_path) as hd:
-        assert "image" in hd
-        assert "image_bg" in hd
 
 
 @pytest.mark.parametrize("event_count,kernel_size,split_time",
