@@ -137,7 +137,7 @@ class QueueEventExtractor:
         # "h" is signed short (np.int16)
         args["label_array"] = mp_spawn.RawArray(
             np.ctypeslib.ctypes.c_int16,
-            int(np.product(data.image.chunk_shape)))
+            int(np.prod(data.image.chunk_shape)))
         args["finalize_extraction"] = mp_spawn.Value("b", False)
         return args
 
