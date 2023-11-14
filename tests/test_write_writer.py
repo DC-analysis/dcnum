@@ -113,6 +113,8 @@ def test_copy_metadata_logs():
             assert np.all(h5_src[f"logs/{key}"][:] == h5_dst[f"logs/{key}"][:])
             assert h5_dst[f"logs/{key}"].attrs["software"] \
                    == f"dcnum {version}"
+        assert h5_dst["logs/dcevent-analyze"][0] == b"{"
+        assert h5_dst["logs/dcevent-analyze"][1] == b'  "dcevent": {'
 
 
 def test_writer_basic():
