@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=45", "setuptools_scm[toml]>=6.2"]
+requires = ["setuptools>=46", "setuptools_scm[toml]>=6.2"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -39,6 +39,9 @@ source = "https://github.com/DC-Analysis/dcnum"
 tracker = "https://github.com/DC-Analysis/dcnum/issues"
 documentation = "https://dcnum.readthedocs.io/en/stable/"
 changelog = "https://dcnum.readthedocs.io/en/stable/sec_changelog.html"
+
+[tool.setuptools]
+packages = ["dcnum"]
 
 [tool.setuptools_scm]
 write_to = "dcnum/_version.py"
