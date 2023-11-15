@@ -225,9 +225,14 @@ def copy_metadata(h5_src: h5py.File,
             for key in h5_src[topic]:
                 h5_dst.require_group(topic)
                 if key not in h5_dst[topic]:
+                    data = h5_src[topic][key][:]
+                    if data.dtype == np.dtype("O"):
+                        # convert variable-length strings to fixed-length
+                        max_length = max([len(line) for line in data])
+                        data = np.asarray(data, dtype=f"S{max_length}")
                     ds = h5_dst[topic].create_dataset(
                         name=key,
-                        data=h5_src[topic][key][:],
+                        data=data,
                         **ds_kwds
                     )
                     # help with debugging and add some meta-metadata

@@ -11,6 +11,44 @@ from dcnum import __version__ as version
 from helper_methods import retrieve_data
 
 
+def test_copy_metadata_logs():
+    path = retrieve_data(
+        "fmt-hdf5_cytoshot_full-features_legacy_allev_2023.zip")
+    path_wrt = path.with_name("written.hdf5")
+    with h5py.File(path, "r") as h5_src, h5py.File(path_wrt, "w") as h5_dst:
+        write.copy_metadata(h5_src=h5_src, h5_dst=h5_dst)
+        # Make sure that worked
+        assert dict(h5_src.attrs) == dict(h5_dst.attrs)
+        assert len(h5_src["logs"]) == 2
+        for key in h5_src["logs"]:
+            assert np.all(h5_src[f"logs/{key}"][:] == h5_dst[f"logs/{key}"][:])
+            assert h5_dst[f"logs/{key}"].attrs["software"] \
+                   == f"dcnum {version}"
+        assert h5_dst["logs/dcevent-analyze"][0] == b"{"
+        assert h5_dst["logs/dcevent-analyze"][1] == b'  "dcevent": {'
+
+
+def test_copy_metadata_logs_variable_length():
+    """
+    Old versions of dclab and Shape-In store the logs as variable-length
+    string. This does not support the fletcher32 filter.
+    """
+    path = retrieve_data(
+        "fmt-hdf5_shapein_raw-with-variable-length-logs.zip")
+    path_wrt = path.with_name("written.hdf5")
+    with h5py.File(path, "r") as h5_src, h5py.File(path_wrt, "w") as h5_dst:
+        write.copy_metadata(h5_src=h5_src, h5_dst=h5_dst)
+        # Make sure that worked
+        assert dict(h5_src.attrs) == dict(h5_dst.attrs)
+        assert len(h5_src["logs"]) == 2
+        for key in h5_src["logs"]:
+            assert np.all(h5_src[f"logs/{key}"][:] == h5_dst[f"logs/{key}"][:])
+            assert h5_dst[f"logs/{key}"].attrs["software"] \
+                   == f"dcnum {version}"
+        assert h5_dst["logs/M1_para.ini"][0] == b"[General]"
+        assert h5_dst["logs/M1_camera.ini"][1] == b"Shutter Time = 20"
+
+
 def test_create_with_basins_absolute():
     path = retrieve_data(
         "fmt-hdf5_cytoshot_full-features_legacy_allev_2023.zip")
@@ -98,23 +136,6 @@ def test_create_with_basins_relative_and_absolute():
         assert len(hd.basins[0]["features"]) == 48
         assert len(hd.basins[0]["paths"]) == 2
         assert np.allclose(hd["deform"][0], 0.07405636775888857)
-
-
-def test_copy_metadata_logs():
-    path = retrieve_data(
-        "fmt-hdf5_cytoshot_full-features_legacy_allev_2023.zip")
-    path_wrt = path.with_name("written.hdf5")
-    with h5py.File(path, "r") as h5_src, h5py.File(path_wrt, "w") as h5_dst:
-        write.copy_metadata(h5_src=h5_src, h5_dst=h5_dst)
-        # Make sure that worked
-        assert dict(h5_src.attrs) == dict(h5_dst.attrs)
-        assert len(h5_src["logs"]) == 2
-        for key in h5_src["logs"]:
-            assert np.all(h5_src[f"logs/{key}"][:] == h5_dst[f"logs/{key}"][:])
-            assert h5_dst[f"logs/{key}"].attrs["software"] \
-                   == f"dcnum {version}"
-        assert h5_dst["logs/dcevent-analyze"][0] == b"{"
-        assert h5_dst["logs/dcevent-analyze"][1] == b'  "dcevent": {'
 
 
 def test_writer_basic():
