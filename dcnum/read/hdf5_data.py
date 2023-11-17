@@ -53,7 +53,11 @@ class HDF5Data:
 
     def __getitem__(self, feat):
         if feat in ["image", "image_bg", "mask"]:
-            return self.get_image_cache(feat)
+            data = self.get_image_cache(feat)
+            if data is None:
+                raise KeyError(f"Feature '{feat}' not found in {self}!")
+            else:
+                return data
         elif feat in self._cache_scalar:  # check for scalar cached
             return self._cache_scalar[feat]
         elif (feat in self.h5["events"]

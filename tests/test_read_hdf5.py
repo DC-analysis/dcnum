@@ -97,6 +97,16 @@ def test_image_cache_iter_chunks(size, chunks, tmp_path):
         assert list(hic.iter_chunks()) == list(range(chunks))
 
 
+def test_keyerror_when_image_is_none(tmp_path):
+    path = tmp_path / "test.hdf5"
+    with h5py.File(path, "w") as hw:
+        hw["events/deform"] = np.random.rand(100)
+
+    h5dat = read.HDF5Data(path)
+    with pytest.raises(KeyError, match="image"):
+        _ = h5dat["image"]
+
+
 def test_pixel_size_getset(tmp_path):
     path = tmp_path / "test.hdf5"
     with h5py.File(path, "w") as hw:
