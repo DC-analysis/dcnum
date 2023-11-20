@@ -1,11 +1,34 @@
 import h5py
 import numpy as np
 
-from dcnum.write import HDF5Writer
+from dcnum.write import HDF5Writer, create_with_basins
 from dcnum.read import HDF5Data
 
 
 from helper_methods import retrieve_data
+
+
+def test_basin_features():
+    h5path = retrieve_data("fmt-hdf5_cytoshot_full-features_2023.zip")
+    h5path_basin = h5path.with_name("basin.rtdc")
+    create_with_basins(path_out=h5path_basin, basin_paths=[h5path])
+    with HDF5Data(h5path_basin) as hd:
+        h5dat, features = hd.get_basin_data(0)
+        assert "time" in h5dat.h5["events"]
+        assert "time" in features
+        assert "time" in h5dat
+
+
+def test_basin_features_nested():
+    h5path = retrieve_data("fmt-hdf5_cytoshot_full-features_2023.zip")
+    h5path_basin = h5path.with_name("basin.rtdc")
+    h5path_basin_nest = h5path.with_name("basin_nested.rtdc")
+    create_with_basins(path_out=h5path_basin, basin_paths=[h5path])
+    create_with_basins(path_out=h5path_basin_nest, basin_paths=[h5path_basin])
+    with HDF5Data(h5path_basin_nest) as hd:
+        h5dat, features = hd.get_basin_data(0)
+        assert "time" in features
+        assert "time" in h5dat
 
 
 def test_basin_not_available():

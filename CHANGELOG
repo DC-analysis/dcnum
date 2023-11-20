@@ -1,3 +1,7 @@
+0.14.0
+ - fix: protected features (e.g. time, frame) were not included in ouptut
+   files when the input file was basin-based
+ - ref: increment DCNUM_PPID_GENERATION to 6
 0.13.3
  - fix: correctly raise KeyError for missing image-based feature from
    HDF5Data._image_cache

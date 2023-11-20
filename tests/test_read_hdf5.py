@@ -5,11 +5,43 @@ import h5py
 import numpy as np
 import pytest
 
-from dcnum import read
+from dcnum import read, write
 
 from helper_methods import retrieve_data
 
 data_path = pathlib.Path(__file__).parent / "data"
+
+
+def test_features_scalar_frame():
+    path = retrieve_data(
+        "fmt-hdf5_cytoshot_full-features_legacy_allev_2023.zip")
+    with read.HDF5Data(path) as hd:
+        assert "time" in hd
+        assert "time" in hd.features_scalar_frame
+
+
+def test_features_scalar_frame_from_basin():
+    path = retrieve_data(
+        "fmt-hdf5_cytoshot_full-features_legacy_allev_2023.zip")
+    path_2 = path.with_name("basin_based.rtdc")
+    write.create_with_basins(path_2, basin_paths=[path])
+
+    with read.HDF5Data(path_2) as hd:
+        assert "time" in hd
+        assert "time" in hd.features_scalar_frame
+
+
+def test_features_scalar_frame_from_basin_nested():
+    path = retrieve_data(
+        "fmt-hdf5_cytoshot_full-features_legacy_allev_2023.zip")
+    path_2 = path.with_name("basin_based.rtdc")
+    path_basin_nest = path.with_name("basin_nested.rtdc")
+    write.create_with_basins(path_out=path_2, basin_paths=[path])
+    write.create_with_basins(path_out=path_basin_nest, basin_paths=[path_2])
+
+    with read.HDF5Data(path_basin_nest) as hd:
+        assert "time" in hd
+        assert "time" in hd.features_scalar_frame
 
 
 def test_image_cache(tmp_path):

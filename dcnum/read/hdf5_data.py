@@ -234,7 +234,7 @@ class HDF5Data:
         """
         if self._feats is None:
             feats = []
-            for feat in self.h5["events"]:
+            for feat in self.keys():
                 if feat in PROTECTED_FEATURES:
                     feats.append(feat)
             self._feats = feats
@@ -280,6 +280,16 @@ class HDF5Data:
                 h5dat = HDF5Data(path)
                 features = bn_dict.get("features")
                 if features is None:
+                    # Only get the features from the actual HDF5 file.
+                    # If this file has basins as well, the basin metadata
+                    # should have been copied over to the parent file. This
+                    # makes things a little cleaner, because basins are not
+                    # nested, but all basins are available in the top file.
+                    # See :func:`write.store_metadata` for copying metadata
+                    # between files.
+                    # The writer can still specify "features" in the basin
+                    # metadata, then these basins are indeed nested, and
+                    # we consider that ok as well.
                     features = sorted(h5dat.h5["events"].keys())
                 self._basin_data[index] = (h5dat, features)
         return self._basin_data[index]
