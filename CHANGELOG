@@ -1,3 +1,8 @@
+0.15.0
+ - BREAKING CHANGE: Remove preselection capabilities, because it is not
+   well integrated into the pipeline. For more information, please see
+   issue #15.
+ - ref: increment DCNUM_PPID_GENERATION to 7
 0.14.0
  - fix: protected features (e.g. time, frame) were not included in ouptut
    files when the input file was basin-based

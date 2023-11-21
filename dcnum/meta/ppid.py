@@ -8,7 +8,7 @@ import pathlib
 
 #: Increment this string if there are breaking changes that make
 #: previous pipelines unreproducible.
-DCNUM_PPID_GENERATION = "6"
+DCNUM_PPID_GENERATION = "7"
 
 
 def compute_pipeline_hash(bg_id, seg_id, feat_id, gate_id,

@@ -6,6 +6,7 @@ import os
 import queue
 import threading
 import traceback
+import warnings
 
 import numpy as np
 
@@ -27,8 +28,6 @@ class QueueEventExtractor:
     def __init__(self,
                  data: HDF5Data,
                  gate: Gate,
-                 preselect: bool,
-                 ptp_median: float,
                  raw_queue: mp.Queue,
                  event_queue: mp.Queue,
                  log_queue: mp.Queue,
@@ -44,15 +43,10 @@ class QueueEventExtractor:
 
         Parameters
         ----------
-        data:
+        data: HDF5Data
             Data source.
-        gate:
+        gate: Gate
             Gating rules.
-        preselect:
-            Whether to perform data preselection based on peak-to-peak
-            values in the images.
-        ptp_median:
-            Median peak-to-peak value in the images for preselction.
         raw_queue:
             Queue from which the worker obtains the chunks and
             indices of the labels to work on.
@@ -81,10 +75,6 @@ class QueueEventExtractor:
         self.data = data
         #: Gating information
         self.gate = gate
-        #: Whether to perform Preselection
-        self.preselect = preselect
-        #: Peak-to-peak median for preselection
-        self.ptp_median = ptp_median
         #: queue containing sub-indices for `label_array`
         self.raw_queue = raw_queue
         #: queue with event-wise feature dictionaries
@@ -111,24 +101,49 @@ class QueueEventExtractor:
         self.logger = None
 
     @staticmethod
-    def get_init_kwargs(data, gate, preselect, ptp_median, log_queue):
-        """You can pass `*args.values()` directly to __init__
+    def get_init_kwargs(data: HDF5Data,
+                        gate: Gate,
+                        log_queue: mp.Queue,
+                        preselect: None = None,
+                        ptp_median: None = None):
+        """Get initialization arguments for :cass:`.QueueEventExtractor`
 
         This method was created for convenience reasons:
         - It makes sure that the order of arguments is correct, since it
           is implemented in the same class.
         - It simplifies testing.
+
+        Parameters
+        ----------
+        data: HDF5Data
+            Input data
+        gate: HDF5Data
+            Gating class to use
+        log_queue: mp.Queue
+            Queue for sending log messages
+        preselect, ptp_median:
+            Deprecated
+
+        Returns
+        -------
+        args: dict
+            You can pass `*args.values()` directly to `__init__`
         """
         # queue with the raw (unsegmented) image data
         raw_queue = mp_spawn.Queue()
         # queue with event-wise feature dictionaries
         event_queue = mp_spawn.Queue()
 
+        if preselect is not None:
+            warnings.warn("The `preselect` argument is deprecated!",
+                          DeprecationWarning)
+        if ptp_median is not None:
+            warnings.warn("The `ptp_median` argument is deprecated!",
+                          DeprecationWarning)
+
         args = collections.OrderedDict()
         args["data"] = data
         args["gate"] = gate
-        args["preselect"] = preselect
-        args["ptp_median"] = ptp_median
         args["raw_queue"] = raw_queue
         args["event_queue"] = event_queue
         args["log_queue"] = log_queue
@@ -245,11 +260,7 @@ class QueueEventExtractor:
             # TODO: Do this before segmentation already?
             # skip events that have been analyzed already
             return None
-        if self.preselect:
-            # TODO: Do this before segmentation already?
-            ptp = np.ptp(self.data.image_corr[index])
-            if ptp < 0.1 * self.ptp_median:
-                return None
+
         masks = self.get_masks_from_label(label)
         if masks.size:
             events = self.get_events_from_masks(
