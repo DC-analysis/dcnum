@@ -1,8 +1,9 @@
 import copy
+import warnings
 
 import numpy as np
 
-from ..meta.ppid import kwargs_to_ppid
+from ..meta.ppid import kwargs_to_ppid, ppid_to_kwargs
 
 
 class Gate:
@@ -84,42 +85,6 @@ class Gate:
 
         return all_online_filters
 
-    def get_ppid(self):
-        """Return a unique gating pipeline identifier
-
-        The pipeline identifier is universally applicable and must
-        be backwards-compatible (future versions of dcevent will
-        correctly acknowledge the ID).
-
-        The gating pipeline ID is defined as::
-
-            KEY:KW_GATE
-
-        Where KEY is e.g. "online_gates", and KW_GATE is
-        the corresponding value, e.g.::
-
-            online_gates=True^size_thresh_mask=5
-        """
-        return self.get_ppid_from_kwargs(self.kwargs)
-
-    @classmethod
-    def get_ppid_from_kwargs(cls, kwargs):
-        # TODO:
-        #  If polygon filters are used, the MD5sum should be used and
-        #  they should be placed as a log to the output .rtdc file.
-        kwargs = copy.deepcopy(kwargs)
-        if kwargs.get("size_thresh_mask") is None:
-            # Set the default described in init
-            kwargs["size_thresh_mask"] = cls._default_size_thresh_mask
-        key = cls.key()
-        cback = kwargs_to_ppid(cls, "__init__", kwargs)
-
-        return ":".join([key, cback])
-
-    @property
-    def features(self):
-        return [kk.split()[0] for kk in list(self.box_gates.keys())]
-
     def gate_feature(self, feat, data):
         valid_left = True
         valid_right = True
@@ -128,10 +93,6 @@ class Gate:
         if f"{feat} max" in self.box_gates:
             valid_right = data < self.box_gates[f"{feat} max"]
         return np.logical_and(valid_left, valid_right)
-
-    @classmethod
-    def key(cls):
-        return "norm"
 
     def gate_event(self, event):
         """Return None if the event should not be used, else `event`"""
@@ -170,3 +131,62 @@ class Gate:
         if mask_sum is None:
             mask_sum = np.sum(mask)
         return mask_sum > self.kwargs["size_thresh_mask"]
+
+    def get_ppid(self):
+        """Return a unique gating pipeline identifier
+
+        The pipeline identifier is universally applicable and must
+        be backwards-compatible (future versions of dcevent will
+        correctly acknowledge the ID).
+
+        The gating pipeline ID is defined as::
+
+            KEY:KW_GATE
+
+        Where KEY is e.g. "online_gates", and KW_GATE is
+        the corresponding value, e.g.::
+
+            online_gates=True^size_thresh_mask=5
+        """
+        return self.get_ppid_from_ppkw(self.kwargs)
+
+    @classmethod
+    def get_ppid_code(cls):
+        return "norm"
+
+    @classmethod
+    def get_ppid_from_ppkw(cls, kwargs):
+        """return full pipeline identifier from the given keywords"""
+        # TODO:
+        #  If polygon filters are used, the MD5sum should be used and
+        #  they should be placed as a log to the output .rtdc file.
+        kwargs = copy.deepcopy(kwargs)
+        if kwargs.get("size_thresh_mask") is None:
+            # Set the default described in init
+            kwargs["size_thresh_mask"] = cls._default_size_thresh_mask
+        key = cls.get_ppid_code()
+        cback = kwargs_to_ppid(cls, "__init__", kwargs)
+
+        return ":".join([key, cback])
+
+    @staticmethod
+    def get_ppkw_from_ppid(gate_ppid):
+        code, pp_gate_kwargs = gate_ppid.split(":")
+        if code != Gate.get_ppid_code():
+            raise ValueError(
+                f"Could not find gating method '{code}'!")
+        kwargs = ppid_to_kwargs(cls=Gate,
+                                method="__init__",
+                                ppid=pp_gate_kwargs)
+        return kwargs
+
+    @property
+    def features(self):
+        return [kk.split()[0] for kk in list(self.box_gates.keys())]
+
+    @classmethod
+    def get_ppid_from_kwargs(cls, kwargs):
+        warnings.warn(
+            "Please use get_ppid_from_ppkw instead of get_ppid_from_kwargs.",
+            DeprecationWarning)
+        return cls.get_ppid_from_ppkw(kwargs)

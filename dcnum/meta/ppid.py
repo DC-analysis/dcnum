@@ -4,11 +4,31 @@ import collections
 import hashlib
 import inspect
 import pathlib
+from typing import Dict, List, Protocol
+import warnings
 
 
 #: Increment this string if there are breaking changes that make
 #: previous pipelines unreproducible.
 DCNUM_PPID_GENERATION = "7"
+
+
+class ClassWithPPIDCapabilities(Protocol):
+    def get_ppid(self) -> str:
+        """full pipeline identifier for the class (instance method)"""
+        pass
+
+    def get_ppid_code(self) -> str:
+        """string representing the class in the pipeline (classmethod)"""
+        pass
+
+    def get_ppid_from_ppkw(self) -> str:
+        """pipeline identifier from specific pipeline keywords (classmethod)"""
+        pass
+
+    def get_ppkw_from_ppid(self) -> Dict:
+        """class keywords from full pipeline identifier (staticmethod)"""
+        pass
 
 
 def compute_pipeline_hash(bg_id, seg_id, feat_id, gate_id,
@@ -37,7 +57,8 @@ def convert_to_dtype(value, dtype):
     return value
 
 
-def get_class_method_info(class_obj, static_kw_methods=None):
+def get_class_method_info(class_obj: ClassWithPPIDCapabilities,
+                          static_kw_methods: List = None):
     """Return dictionary of class info with static keyword methods docs
 
     Parameters
@@ -49,8 +70,14 @@ def get_class_method_info(class_obj, static_kw_methods=None):
         are extracted.
     """
     doc = class_obj.__doc__ or class_obj.__init__.__doc__
+    if hasattr(class_obj, "key"):
+        warnings.warn(f"{class_obj.__class__} implements `key` which is "
+                      f"deprecated. Please rename to `get_ppid_code`.",
+                      DeprecationWarning)
+        setattr(class_obj, "get_ppid_code", class_obj.key)
     info = {
-        "key": class_obj.key(),
+        "code": class_obj.get_ppid_code(),
+        "key": class_obj.get_ppid_code(),  # Deprecated
         "doc": doc,
         "title": doc.split("\n")[0],
         }

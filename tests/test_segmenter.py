@@ -241,6 +241,7 @@ def test_ppid_no_union_kwonlykwargs(segm_method):
     segm_cls = SEGM_METH[segm_method]
     meta = ppid.get_class_method_info(segm_cls,
                                       static_kw_methods=["segment_approach"])
+    assert meta["code"] == segm_method
     annot = meta["annotations"]["segment_approach"]
     for key in annot:
         assert not isinstance(annot[key], types.UnionType), segm_method

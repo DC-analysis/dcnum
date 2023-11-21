@@ -3,6 +3,7 @@
    well integrated into the pipeline. For more information, please see
    issue #15.
  - ref: increment DCNUM_PPID_GENERATION to 7
+ - ref: several changes and deprecations in the PPID helper functions
 0.14.0
  - fix: protected features (e.g. time, frame) were not included in ouptut
    files when the input file was basin-based

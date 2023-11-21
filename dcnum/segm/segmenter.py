@@ -1,14 +1,16 @@
 import abc
+import copy
 import functools
 import inspect
 import logging
+import warnings
 
 import cv2
 import numpy as np
 import scipy.ndimage as ndi
 from skimage import morphology
 
-from ..meta.ppid import kwargs_to_ppid
+from ..meta.ppid import kwargs_to_ppid, ppid_to_kwargs
 
 
 class Segmenter(abc.ABC):
@@ -55,13 +57,11 @@ class Segmenter(abc.ABC):
                 "`kwargs_mask` has been specified, but mask post-processing "
                 f"is disabled for segmenter {self.__class__}")
 
-    @classmethod
-    def key(cls):
-        """The unique key/name of this segmenter class"""
-        key = cls.__name__.lower()
-        if key.startswith("segment"):
-            key = key[7:]
-        return key
+    @staticmethod
+    @functools.cache
+    def get_disk(radius):
+        """Cached `skimage.morphology.disk(radius)`"""
+        return morphology.disk(radius)
 
     def get_ppid(self):
         """Return a unique segmentation pipeline identifier
@@ -85,10 +85,18 @@ class Segmenter(abc.ABC):
 
         KW_MASK represents keyword arguments for `process_mask`.
         """
-        return self.get_ppid_from_kwargs(self.kwargs, self.kwargs_mask)
+        return self.get_ppid_from_ppkw(self.kwargs, self.kwargs_mask)
 
     @classmethod
-    def get_ppid_from_kwargs(cls, kwargs, kwargs_mask=None):
+    def get_ppid_code(cls):
+        """The unique code/name of this segmenter class"""
+        code = cls.__name__.lower()
+        if code.startswith("segment"):
+            code = code[7:]
+        return code
+
+    @classmethod
+    def get_ppid_from_ppkw(cls, kwargs, kwargs_mask=None):
         """Return the pipeline ID from given keyword arguments
 
         See Also
@@ -103,18 +111,31 @@ class Segmenter(abc.ABC):
             # see check above (kwargs_mask may also be {})
             kwargs_mask = kwargs["kwargs_mask"]
         # Start with the default mask kwargs defined for this subclass
-        kwargs_mask_used = cls.mask_default_kwargs
+        kwargs_mask_used = copy.deepcopy(cls.mask_default_kwargs)
         kwargs_mask_used.update(kwargs_mask)
-        key = cls.key()
+        key = cls.get_ppid_code()
         csegm = kwargs_to_ppid(cls, "segment_approach", kwargs)
         cmask = kwargs_to_ppid(cls, "process_mask", kwargs_mask_used)
         return ":".join([key, csegm, cmask])
 
     @staticmethod
-    @functools.cache
-    def get_disk(radius):
-        """Cached `skimage.morphology.disk(radius)`"""
-        return morphology.disk(radius)
+    def get_ppkw_from_ppid(segm_ppid):
+        """Return keyword arguments for this pipeline identifier"""
+        code, pp_kwargs, pp_kwargs_mask = segm_ppid.split(":")
+        for cls_code in get_available_segmenters():
+            if cls_code == code:
+                cls = get_available_segmenters()[cls_code]
+                break
+        else:
+            raise ValueError(
+                f"Could not find segmenter '{code}'!")
+        kwargs = ppid_to_kwargs(cls=cls,
+                                method="segment_approach",
+                                ppid=pp_kwargs)
+        kwargs["kwargs_mask"] = ppid_to_kwargs(cls=cls,
+                                               method="process_mask",
+                                               ppid=pp_kwargs_mask)
+        return kwargs
 
     @staticmethod
     def process_mask(labels, *,
@@ -240,3 +261,20 @@ class Segmenter(abc.ABC):
     @abc.abstractmethod
     def segment_batch(self, data, start=None, stop=None):
         """Return the integer labels for an entire batch"""
+
+    @classmethod
+    def get_ppid_from_kwargs(cls, *args, **kwargs):
+        warnings.warn(
+            "Please use get_ppid_from_ppkw instead of get_ppid_from_kwargs.",
+            DeprecationWarning)
+        return cls.get_ppid_from_ppkw(*args, **kwargs)
+
+
+@functools.cache
+def get_available_segmenters():
+    """Return dictionary of available segmenters"""
+    segmenters = {}
+    for scls in Segmenter.__subclasses__():
+        for cls in scls.__subclasses__():
+            segmenters[cls.get_ppid_code()] = cls
+    return segmenters

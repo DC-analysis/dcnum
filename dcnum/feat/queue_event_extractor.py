@@ -10,7 +10,7 @@ import warnings
 
 import numpy as np
 
-from ..meta.ppid import kwargs_to_ppid
+from ..meta.ppid import kwargs_to_ppid, ppid_to_kwargs
 from ..read import HDF5Data
 
 from .feat_brightness import brightness_features
@@ -156,13 +156,6 @@ class QueueEventExtractor:
         args["finalize_extraction"] = mp_spawn.Value("b", False)
         return args
 
-    @classmethod
-    def get_ppid_from_kwargs(cls, kwargs):
-        """Return the pipeline ID for this event extractor"""
-        key = "legacy"
-        cback = kwargs_to_ppid(cls, "get_events_from_masks", kwargs)
-        return ":".join([key, cback])
-
     def get_events_from_masks(self, masks, data_index, *,
                               brightness: bool = True,
                               haralick: bool = True,
@@ -251,7 +244,29 @@ class QueueEventExtractor:
 
             b=1^h=1
         """
-        return self.get_ppid_from_kwargs(self.extract_kwargs)
+        return self.get_ppid_from_ppkw(self.extract_kwargs)
+
+    @classmethod
+    def get_ppid_code(cls):
+        return "legacy"
+
+    @classmethod
+    def get_ppid_from_ppkw(cls, kwargs):
+        """Return the pipeline ID for this event extractor"""
+        code = cls.get_ppid_code()
+        cback = kwargs_to_ppid(cls, "get_events_from_masks", kwargs)
+        return ":".join([code, cback])
+
+    @staticmethod
+    def get_ppkw_from_ppid(extr_ppid):
+        code, pp_extr_kwargs = extr_ppid.split(":")
+        if code != QueueEventExtractor.get_ppid_code():
+            raise ValueError(
+                f"Could not find extraction method '{code}'!")
+        kwargs = ppid_to_kwargs(cls=QueueEventExtractor,
+                                method="get_events_from_masks",
+                                ppid=pp_extr_kwargs)
+        return kwargs
 
     def process_label(self, label, index):
         """Process one label image, extracting masks and features"""
@@ -319,6 +334,13 @@ class QueueEventExtractor:
         # arrive in the logging queue, since we called `cancel_join_thread`
         # earlier.
         self.log_queue.close()
+
+    @classmethod
+    def get_ppid_from_kwargs(cls, kwargs):
+        warnings.warn(
+            "Please use get_ppid_from_ppkw instead of get_ppid_from_kwargs.",
+            DeprecationWarning)
+        return cls.get_ppid_from_ppkw(kwargs)
 
 
 class EventExtractorProcess(QueueEventExtractor, mp_spawn.Process):

@@ -17,7 +17,7 @@ class ExampleClass:
         return id(self)
 
     @classmethod
-    def key(cls):
+    def get_ppid_code(cls):
         return cls.__name__
 
 

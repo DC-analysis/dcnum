@@ -1,8 +1,10 @@
 import abc
+import functools
 import inspect
 import multiprocessing as mp
 import pathlib
 import uuid
+import warnings
 
 import h5py
 import hdf5plugin
@@ -131,37 +133,6 @@ class Background(abc.ABC):
         if self.h5in is not self.h5out and self.h5out is not None:
             self.h5out.close()
 
-    @staticmethod
-    def get_kwargs_from_ppid(bg_ppid):
-        """Return keyword arguments for any subclass from a PPID string"""
-        name, pp_check_user_kwargs = bg_ppid.split(":")
-        for cls in Background.__subclasses__():
-            if cls.key() == name:
-                break
-        else:
-            raise ValueError(
-                f"Could not find background computation method '{name}'!")
-        kwargs = ppid.ppid_to_kwargs(cls=cls,
-                                     method="check_user_kwargs",
-                                     ppid=pp_check_user_kwargs)
-        return kwargs
-
-    @classmethod
-    def get_ppid_from_kwargs(cls, kwargs):
-        """Return the PPID based on given keyword arguments for a subclass"""
-        key = cls.key()
-        cback = ppid.kwargs_to_ppid(cls, "check_user_kwargs", kwargs)
-        return ":".join([key, cback])
-
-    @classmethod
-    def key(cls):
-        if cls is Background:
-            raise ValueError("Cannot get `key` for `Background` base class!")
-        key = cls.__name__.lower()
-        if key.startswith("background"):
-            key = key[10:]
-        return key
-
     @abc.abstractmethod
     def check_user_kwargs(self, **kwargs):
         """Implement this to check the kwargs during init"""
@@ -186,7 +157,39 @@ class Background(abc.ABC):
 
             k=100^b=10000
         """
-        return self.get_ppid_from_kwargs(self.kwargs)
+        return self.get_ppid_from_ppkw(self.kwargs)
+
+    @classmethod
+    def get_ppid_code(cls):
+        if cls is Background:
+            raise ValueError("Cannot get `key` for `Background` base class!")
+        key = cls.__name__.lower()
+        if key.startswith("background"):
+            key = key[10:]
+        return key
+
+    @classmethod
+    def get_ppid_from_ppkw(cls, kwargs):
+        """Return the PPID based on given keyword arguments for a subclass"""
+        code = cls.get_ppid_code()
+        cback = ppid.kwargs_to_ppid(cls, "check_user_kwargs", kwargs)
+        return ":".join([code, cback])
+
+    @staticmethod
+    def get_ppkw_from_ppid(bg_ppid):
+        """Return keyword arguments for any subclass from a PPID string"""
+        code, pp_check_user_kwargs = bg_ppid.split(":")
+        for bg_code in get_available_background_methods():
+            if bg_code == code:
+                cls = get_available_background_methods()[bg_code]
+                break
+        else:
+            raise ValueError(
+                f"Could not find background computation method '{code}'!")
+        kwargs = ppid.ppid_to_kwargs(cls=cls,
+                                     method="check_user_kwargs",
+                                     ppid=pp_check_user_kwargs)
+        return kwargs
 
     def process(self):
         self.process_approach()
@@ -200,3 +203,19 @@ class Background(abc.ABC):
     @abc.abstractmethod
     def process_approach(self):
         """The actual background computation approach"""
+
+    @classmethod
+    def get_ppid_from_kwargs(cls, kwargs):
+        warnings.warn(
+            "Please use get_ppid_from_ppkw instead of get_ppid_from_kwargs.",
+            DeprecationWarning)
+        return cls.get_ppid_from_ppkw(kwargs)
+
+
+@functools.cache
+def get_available_background_methods():
+    """Return dictionary of background computation methods"""
+    methods = {}
+    for cls in Background.__subclasses__():
+        methods[cls.get_ppid_code()] = cls
+    return methods
