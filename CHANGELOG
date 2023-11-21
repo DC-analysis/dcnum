@@ -4,6 +4,7 @@
    issue #15.
  - ref: increment DCNUM_PPID_GENERATION to 7
  - ref: several changes and deprecations in the PPID helper functions
+ - build: change flat-layout to src-layout (issues with editable installs)
 0.14.0
  - fix: protected features (e.g. time, frame) were not included in ouptut
    files when the input file was basin-based
