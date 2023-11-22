@@ -3,6 +3,8 @@
    well integrated into the pipeline. For more information, please see
    issue #15.
  - enh: introduce pipeline identifier for data pixel size
+ - enh: reduce pixel_size accuracy to 8 digits after the decimal point
+   for pipeline reproducibility
  - ref: increment DCNUM_PPID_GENERATION to 7
  - ref: several changes and deprecations in the PPID helper functions
  - build: change flat-layout to src-layout (issues with editable installs)

@@ -222,6 +222,9 @@ class HDF5Data:
 
     @pixel_size.setter
     def pixel_size(self, pixel_size: float):
+        # Reduce pixel_size accuracy to 8 digits after the point to
+        # enforce pipeline reproducibility (see get_ppid_from_ppkw).
+        pixel_size = float(f"{pixel_size:.8f}")
         self.meta["imaging:pixel size"] = pixel_size
 
     @property
@@ -261,7 +264,7 @@ class HDF5Data:
         # Data does not really fit into the PPID scheme we use for the rest
         # of the pipeline. This implementation here is custom.
         code = cls.get_ppid_code()
-        kwid = f"p={kwargs['pixel_size']}"
+        kwid = f"p={kwargs['pixel_size']:.8f}".rstrip("0")
         return ":".join([code, kwid])
 
     @staticmethod
