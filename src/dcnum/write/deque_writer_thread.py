@@ -19,7 +19,7 @@ class DequeWriterThread(threading.Thread):
         ----------
         path_out:
             Path to the output HDF5 file
-        dq:
+        dq: collections.deque
             `collections.deque` object from which data are taken
             using `popleft()`.
         """

@@ -1,3 +1,4 @@
+"""Feature computation: gating after feature extraction"""
 import copy
 import warnings
 

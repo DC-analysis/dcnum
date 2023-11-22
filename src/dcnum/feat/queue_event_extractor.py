@@ -1,3 +1,4 @@
+"""Feature Extraction: event extractor worker"""
 import collections
 import logging
 from logging.handlers import QueueHandler

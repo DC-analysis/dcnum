@@ -1,3 +1,4 @@
+"""Feature computation: managing event extraction threads"""
 import logging
 import multiprocessing as mp
 import threading
