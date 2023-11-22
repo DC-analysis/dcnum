@@ -221,7 +221,7 @@ class HDF5Data:
         return self.meta.get("imaging:pixel size", 0)
 
     @pixel_size.setter
-    def pixel_size(self, pixel_size):
+    def pixel_size(self, pixel_size: float):
         self.meta["imaging:pixel size"] = pixel_size
 
     @property
@@ -248,6 +248,33 @@ class HDF5Data:
         self._image_cache.clear()
         self._basin_data.clear()
         self.h5.close()
+
+    def get_ppid(self):
+        return self.get_ppid_from_ppkw({"pixel_size": self.pixel_size})
+
+    @classmethod
+    def get_ppid_code(cls):
+        return "hdf"
+
+    @classmethod
+    def get_ppid_from_ppkw(cls, kwargs):
+        # Data does not really fit into the PPID scheme we use for the rest
+        # of the pipeline. This implementation here is custom.
+        code = cls.get_ppid_code()
+        kwid = f"p={kwargs['pixel_size']}"
+        return ":".join([code, kwid])
+
+    @staticmethod
+    def get_ppkw_from_ppid(dat_ppid):
+        # Data does not fit in the PPID scheme we use, but we still
+        # would like to pass pixel_size to __init__ if we need it.
+        code, pp_dat_kwargs = dat_ppid.split(":")
+        if code != HDF5Data.get_ppid_code():
+            raise ValueError(f"Could not find data method '{code}'!")
+        p, val = pp_dat_kwargs.split("=")
+        if p != "p":
+            raise ValueError(f"Invalid parameter '{p}'!")
+        return {"pixel_size": float(val)}
 
     def get_basin_data(self, index):
         """Return HDF5Data info for a basin index in `self.basins`

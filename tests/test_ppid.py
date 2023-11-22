@@ -21,6 +21,18 @@ class ExampleClass:
         return cls.__name__
 
 
+def test_compute_pipeline_hash():
+    pp_hash = ppid.compute_pipeline_hash(
+        gen_id="7",
+        dat_id="hdf:p=0.34",
+        bg_id="sparsemed:k=200^s=1^t=0^f=0.8",
+        seg_id="thresh:t=-3:cle=1^f=1^clo=2",
+        feat_id="legacy:b=1^h=0",
+        gate_id="norm:o=0^s=11",
+    )
+    assert pp_hash == "ec11977fc233e133c29642736161f201"
+
+
 @pytest.mark.parametrize("in_list,out_list", [
     (["camera", "campus"],
      ["came", "camp"]),

@@ -31,10 +31,11 @@ class ClassWithPPIDCapabilities(Protocol):
         pass
 
 
-def compute_pipeline_hash(bg_id, seg_id, feat_id, gate_id,
-                          gen_id=DCNUM_PPID_GENERATION):
+def compute_pipeline_hash(*, bg_id, seg_id, feat_id, gate_id,
+                          dat_id="unknown", gen_id=DCNUM_PPID_GENERATION):
     hasher = hashlib.md5()
-    hasher.update("|".join([gen_id, bg_id, seg_id, feat_id, gate_id]).encode())
+    hasher.update("|".join([
+        gen_id, dat_id, bg_id, seg_id, feat_id, gate_id]).encode())
     pph = hasher.hexdigest()
     return pph
 

@@ -2,6 +2,7 @@
  - BREAKING CHANGE: Remove preselection capabilities, because it is not
    well integrated into the pipeline. For more information, please see
    issue #15.
+ - enh: introduce pipeline identifier for data pixel size
  - ref: increment DCNUM_PPID_GENERATION to 7
  - ref: several changes and deprecations in the PPID helper functions
  - build: change flat-layout to src-layout (issues with editable installs)
