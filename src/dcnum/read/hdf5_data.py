@@ -169,6 +169,11 @@ class HDF5Data:
                     and (self.pixel_size < 0.255 or self.pixel_size > 0.275)):
                 warnings.warn(
                     f"Correcting for invalid pixel size in '{self.path}'!")
+                warnings.warn(
+                    "Correcting the pixel size is deprecated in dcnum. Please "
+                    "make sure your input data are clean before processing.",
+                    DeprecationWarning
+                )
                 # Set default pixel size for Rivercyte devices
                 self.pixel_size = 0.2645
 
