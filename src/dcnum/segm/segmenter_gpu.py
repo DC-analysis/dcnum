@@ -9,6 +9,7 @@ from .segmenter import Segmenter
 
 
 class GPUSegmenter(Segmenter, abc.ABC):
+    hardware_processor = "gpu"
     mask_postprocessing = False
 
     def __init__(self, *args, **kwargs):

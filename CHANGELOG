@@ -2,6 +2,7 @@
  - BREAKING CHANGE: Remove preselection capabilities, because it is not
    well integrated into the pipeline. For more information, please see
    issue #15.
+ - enh: add Segmenter.hardware_processor property
  - enh: introduce pipeline identifier for data pixel size
  - enh: reduce pixel_size accuracy to 8 digits after the decimal point
    for pipeline reproducibility

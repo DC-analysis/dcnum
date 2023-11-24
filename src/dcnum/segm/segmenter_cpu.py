@@ -14,6 +14,8 @@ mp_spawn = mp.get_context('spawn')
 
 
 class CPUSegmenter(Segmenter, abc.ABC):
+    hardware_processor = "cpu"
+
     def __init__(self, num_workers=None, *args, **kwargs):
         super(CPUSegmenter, self).__init__(*args, **kwargs)
         self.num_workers = num_workers or mp.cpu_count()

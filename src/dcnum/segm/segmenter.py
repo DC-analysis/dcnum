@@ -14,6 +14,8 @@ from ..meta.ppid import kwargs_to_ppid, ppid_to_kwargs
 
 
 class Segmenter(abc.ABC):
+    #: Required hardware ("cpu" or "gpu") defined in first-level subclass.
+    hardware_processor = "none"
     #: Whether to enable mask post-processing. If disabled, you should
     #: make sure that your mask is properly defined and cleaned or you
     #: have to call `process_mask` in your `segment_approach` implementation.
