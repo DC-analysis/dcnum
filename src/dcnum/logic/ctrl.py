@@ -6,7 +6,6 @@ import pathlib
 import threading
 import time
 
-import dclab
 import hdf5plugin
 
 from ..feat.feat_background.base import get_available_background_methods
@@ -16,7 +15,9 @@ from ..feat import EventExtractorManagerThread
 from ..segm import SegmenterManagerThread, get_available_segmenters
 from ..meta import ppid
 from ..read import HDF5Data
-from ..write import DequeWriterThread, QueueCollectorThread, create_with_basins
+from ..write import (
+    DequeWriterThread, HDF5Writer, QueueCollectorThread, create_with_basins
+)
 
 from .job import DCNumPipelineJob
 
@@ -197,7 +198,7 @@ class JobRunner(threading.Thread):
             self.task_transfer_basin_data()
 
         # Add the log file to the resulting .rtdc file
-        with dclab.RTDCWriter(self.path_temp_out) as hw:
+        with HDF5Writer(self.path_temp_out) as hw:
             hw.store_log(
                 time.strftime("dcnum-process-%Y-%m-%d-%H.%M.%S"),
                 self.path_log.read_text().split("\n"))
