@@ -136,6 +136,33 @@ class HDF5Writer:
         ds.resize(offset + dsize, axis=0)
         ds[offset:offset + dsize] = data
 
+    def store_log(self,
+                  log: str,
+                  data: List[str],
+                  override: bool = False):
+        """Store log data
+
+        Store the log data under the key `log`. The `data`
+        kwarg must be a list of strings. If the log entry
+        already exists, `ValueError` is raised unless
+        `override` is set to True.
+        """
+        logs = self.h5.require_group("logs")
+        if log in logs:
+            if override:
+                del logs[log]
+            else:
+                raise ValueError(
+                    f"Log '{log}' already exists in {self.h5.filename}!")
+        logs.create_dataset(
+            name=log,
+            data=data,
+            shape=(len(data),),
+            # maximum line length
+            dtype=f"S{max([len(ll) for ll in data])}",
+            chunks=True,
+            **self.ds_kwds)
+
 
 def create_with_basins(
         path_out: str | pathlib.Path,

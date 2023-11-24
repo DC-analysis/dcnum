@@ -216,3 +216,32 @@ def test_writer_basin_file_relative():
         assert data_dict["type"] == "file"
         assert data_dict["format"] == "hdf5"
         assert data_dict["features"] == ["deform", "area_um"]
+
+
+def test_writer_logs(tmp_path):
+    path_test = tmp_path / "test.h5"
+    # We basically create a file that consists only of the metadata.
+    with write.HDF5Writer(path_test) as hw:
+        hw.store_log("peter", ["McNulty", "Freamon", "Omar"])
+
+    with read.HDF5Data(path_test) as hd:
+        assert hd.logs["peter"] == ["McNulty", "Freamon", "Omar"]
+
+
+def test_writer_logs_override(tmp_path):
+    path_test = tmp_path / "test.h5"
+    # We basically create a file that consists only of the metadata.
+    with write.HDF5Writer(path_test) as hw:
+        hw.store_log("peter", ["McNulty", "Freamon", "Omar"])
+
+    with read.HDF5Data(path_test) as hd:
+        assert hd.logs["peter"] == ["McNulty", "Freamon", "Omar"]
+
+    with write.HDF5Writer(path_test) as hw:
+        with pytest.raises(ValueError, match="peter"):
+            hw.store_log("peter", ["Omar", "McNulty", "Freamon"])
+        hw.store_log("peter", ["Omar", "McNulty", "Freamon"],
+                     override=True)
+
+    with read.HDF5Data(path_test) as hd:
+        assert hd.logs["peter"] == ["Omar", "McNulty", "Freamon"]
