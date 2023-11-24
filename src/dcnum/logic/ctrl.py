@@ -33,6 +33,7 @@ class JobRunner(threading.Thread):
         self.job = job
         self.ppid, self.pphash, self.ppdict = job.get_ppid(ret_hash=True,
                                                            ret_dict=True)
+        self.event_count = 0
 
         self._data = None
         # current job state
@@ -197,8 +198,18 @@ class JobRunner(threading.Thread):
         if self.job["no_basins_in_output"]:
             self.task_transfer_basin_data()
 
-        # Add the log file to the resulting .rtdc file
         with HDF5Writer(self.path_temp_out) as hw:
+            # Add important metadata
+            hw.h5.attrs["pipeline:dcnum generation"] = self.ppdict["gen_id"]
+            hw.h5.attrs["pipeline:dcnum data"] = self.ppdict["dat_id"]
+            hw.h5.attrs["pipeline:dcnum background"] = self.ppdict["bg_id"]
+            hw.h5.attrs["pipeline:dcnum segmenter"] = self.ppdict["seg_id"]
+            hw.h5.attrs["pipeline:dcnum feature"] = self.ppdict["feat_id"]
+            hw.h5.attrs["pipeline:dcnum gate"] = self.ppdict["gate_id"]
+            hw.h5.attrs["pipeline:dcnum hash"] = self.pphash
+            hw.h5.attrs["pipeline:dcnum yield"] = self.event_count
+            hw.h5.attrs["experiment:event count"] = self.event_count
+            # Add the log file to the resulting .rtdc file
             hw.store_log(
                 time.strftime("dcnum-process-%Y-%m-%d-%H.%M.%S"),
                 self.path_log.read_text().split("\n"))
@@ -225,7 +236,6 @@ class JobRunner(threading.Thread):
                 **self.job["background_kwargs"]) as bic:
 
             bic.process()
-            bic.h5out.attrs["pipeline:dcnum background"] = bic.get_ppid()
         self.logger.info("Finished background computation")
 
     def task_segment_extract(self):
@@ -307,7 +317,7 @@ class JobRunner(threading.Thread):
         pmax = 0.95  # for
         while True:
             counted_frames = thr_coll.written_frames
-            counted_events = thr_coll.written_events
+            self.event_count = thr_coll.written_events
             td = time.monotonic() - t0
             # set the current status
             self._progress = round(
@@ -346,7 +356,8 @@ class JobRunner(threading.Thread):
                            logger=self.logger,
                            name="writer")
 
-        if counted_events == 0:
+        self.event_count = thr_coll.written_events
+        if self.event_count == 0:
             self.logger.error(
                 f"No events found in {self.data.path}! Please check the "
                 f"input file or revise your pipeline.")

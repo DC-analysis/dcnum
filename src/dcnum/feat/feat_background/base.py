@@ -193,7 +193,6 @@ class Background(abc.ABC):
 
     def process(self):
         self.process_approach()
-
         bg_ppid = self.get_ppid()
         # Store pipeline information in the image_bg feature
         self.h5out["events/image_bg"].attrs["dcnum ppid background"] = bg_ppid
