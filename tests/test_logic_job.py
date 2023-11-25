@@ -1,7 +1,6 @@
 import multiprocessing as mp
 
 from dcnum import logic
-from dcnum.meta import ppid
 
 from helper_methods import retrieve_data
 
