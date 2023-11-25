@@ -55,6 +55,12 @@ def test_segm_thresh_basic():
         assert np.all(mask_seg == mask_u[ii]), f"masks not matching at {ii}"
 
 
+def test_segm_thresh_get_ppid_from_ppkw():
+    segm_kwargs = {"kwargs_mask": {"closing_disk": 3}}
+    cls = segm.get_available_segmenters()["thresh"]
+    assert cls.get_ppid_from_ppkw(segm_kwargs) == "thresh:t=-6:cle=1^f=1^clo=3"
+
+
 @pytest.mark.parametrize("worker_type", ["thread", "process"])
 def test_segm_thresh_segment_batch(worker_type):
     debug = worker_type == "thread"
