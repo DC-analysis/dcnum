@@ -9,7 +9,7 @@ def test_ppid_decoding_extr_check_kwargs():
 
 
 def test_ppid_encoding_extr_check_kwargs():
-    kwargs = {"haralock": True, "brightness": False}
+    kwargs = {"haralick": True, "brightness": False}
     ppid = QueueEventExtractor.get_ppid_from_ppkw(kwargs)
     assert ppid == "legacy:b=0^h=1"
 
