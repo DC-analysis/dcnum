@@ -101,6 +101,11 @@ def kwargs_to_ppid(cls, method, kwargs):
     concat_strings = []
     if info["defaults"][method]:
         kwdefaults = info["defaults"][method]
+        kw_false = set(kwargs.keys()) - set(kwdefaults.keys())
+        if kw_false:
+            raise KeyError(f"Invalid kwargs {kw_false} specified for method "
+                           f"'{method}'! Valid kwargs are"
+                           f"{sorted(kwdefaults.keys())}")
         kwannot = info["annotations"][method]
         kws = list(kwdefaults.keys())
         kws_abrv = get_unique_prefix(kws)

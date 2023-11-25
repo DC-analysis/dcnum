@@ -80,6 +80,11 @@ def test_kwargs_to_ppid(kwargs, pid):
     assert pid == ptest
 
 
+def test_kwargs_to_ppid_invalid():
+    with pytest.raises(KeyError, match="hansel"):
+        ppid.kwargs_to_ppid(ExampleClass, "cook", {"hansel": 4})
+
+
 @pytest.mark.parametrize("kwargs, pid", [
     ({},
      "tem=90^te=a^o=0^wit=1^a=1000^win=red^tes=1"),
