@@ -1,6 +1,7 @@
 import collections
 import copy
 import inspect
+import multiprocessing as mp
 import pathlib
 from typing import Dict
 
@@ -53,6 +54,9 @@ class DCNumPipelineJob:
         self.kwargs["path_out"] = pathlib.Path(path_out)
         # Set default mask kwargs for segmenter
         self.kwargs["segmenter_kwargs"].setdefault("kwargs_mask", {})
+        # Set default number of processes
+        if num_procs is None:
+            self.kwargs["num_procs"] = mp.cpu_count()
 
     def __getitem__(self, item):
         return copy.deepcopy(self.kwargs[item])
@@ -114,4 +118,6 @@ class DCNumPipelineJob:
             ret.append(pp_hash)
         if ret_dict:
             ret.append(pp_hash_kw)
+        if len(ret) == 1:
+            ret = ret[0]
         return ret

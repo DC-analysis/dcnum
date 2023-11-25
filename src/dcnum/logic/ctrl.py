@@ -27,9 +27,9 @@ from .job import DCNumPipelineJob
 mp_spawn = mp.get_context("spawn")
 
 
-class JobRunner(threading.Thread):
+class DCNumJobRunner(threading.Thread):
     def __init__(self, job: DCNumPipelineJob, *args, **kwargs):
-        super(JobRunner, self).__init__(*args, **kwargs)
+        super(DCNumJobRunner, self).__init__(*args, **kwargs)
         self.job = job
         self.ppid, self.pphash, self.ppdict = job.get_ppid(ret_hash=True,
                                                            ret_dict=True)
@@ -86,12 +86,12 @@ class JobRunner(threading.Thread):
 
     @property
     def path_temp_in(self):
-        po = pathlib.Path(self.data["path_out"])
+        po = pathlib.Path(self.job["path_out"])
         return po.with_name(po.stem + "_dcn_input_basin.rtdc~")
 
     @property
     def path_temp_out(self):
-        po = pathlib.Path(self.data["path_out"])
+        po = pathlib.Path(self.job["path_out"])
         return po.with_name(po.stem + "_dcn_output_temp.rtdc~")
 
     def close(self):
@@ -285,7 +285,7 @@ class JobRunner(threading.Thread):
         # Start feature extractor thread
         fe_kwargs = QueueEventExtractor.get_init_kwargs(
             data=self.data,
-            gate=gate.Gate(**self.job["gate_kwargs"]),
+            gate=gate.Gate(self.data, **self.job["gate_kwargs"]),
             log_queue=self.log_queue)
         fe_kwargs["extract_kwargs"] = self.job["feature_kwargs"]
 
