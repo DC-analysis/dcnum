@@ -132,7 +132,7 @@ class DCNumJobRunner(threading.Thread):
         dathash = self.data.h5.attrs.get("pipeline:dcnum hash", "0")
         # The number of events extracted in a potential previous pipeline run.
         evyield = self.data.h5.attrs.get("pipeline:dcnum yield", -1),
-        redo_check = (
+        redo_sanity = (
              # Whether pipeline hash is invalid.
              ppid.compute_pipeline_hash(**datdict) != dathash
              # Whether the input file is the original output of the pipeline.
@@ -142,18 +142,19 @@ class DCNumJobRunner(threading.Thread):
         # hash sanity check above, check the generation, input data,
         # and background pipeline identifiers.
         redo_bg = (
-                redo_check
-                or (datdict["gen_id"] != self.ppdict["gen_id"])
-                or (datdict["dat_id"] != self.ppdict["dat_id"])
-                or (datdict["bg_id"] != self.ppdict["bg_id"]))
+            (datdict["gen_id"] != self.ppdict["gen_id"])
+            or (datdict["dat_id"] != self.ppdict["dat_id"])
+            or (datdict["bg_id"] != self.ppdict["bg_id"]))
 
         # Do we have to rerun segmentation and feature extraction? Check
         # the segmentation, feature extraction, and gating pipeline
         # identifiers.
-        redo_seg = (redo_bg
-                    or (datdict["seg_id"] != self.ppdict["seg_id"])
-                    or (datdict["feat_id"] != self.ppdict["feat_id"])
-                    or (datdict["gate_id"] != self.ppdict["gate_id"]))
+        redo_seg = (
+            redo_sanity
+            or redo_bg
+            or (datdict["seg_id"] != self.ppdict["seg_id"])
+            or (datdict["feat_id"] != self.ppdict["feat_id"])
+            or (datdict["gate_id"] != self.ppdict["gate_id"]))
 
         # Create a basin-based temporary input file
         create_with_basins(path_out=self.path_temp_in,
@@ -214,13 +215,17 @@ class DCNumJobRunner(threading.Thread):
                 time.strftime("dcnum-process-%Y-%m-%d-%H.%M.%S"),
                 self.path_log.read_text().split("\n"))
 
+        # Delete temporary input file
+        self.path_temp_in.unlink(missing_ok=True)
+        # Rename the output file
+        self.path_temp_out.rename(self.job["path_out"])
         self._progress = 1.0
         self._state = "done"
 
     def task_background(self):
         """Perform background computation task
 
-        This populates the file `self.path_temp_out` with the 'image_bg'
+        This populates the file `self.path_temp_in` with the 'image_bg'
         feature.
         """
         self.logger.info("Starting background computation")
@@ -228,7 +233,7 @@ class DCNumJobRunner(threading.Thread):
         bg_cls = get_available_background_methods()[bg_code]
         with bg_cls(
                 input_data=self.data.image.h5ds,
-                output_path=self.path_temp_out,
+                output_path=self.path_temp_in,
                 # always compress, the disk is usually the bottleneck
                 compress=True,
                 num_cpus=self.job["num_procs"],
@@ -314,7 +319,7 @@ class DCNumJobRunner(threading.Thread):
         # So in principle we are done here. We do not have to do anything
         # besides monitoring the progress.
         pmin = 0.1  # from background computation
-        pmax = 0.95  # for
+        pmax = 0.95  # 5% reserved for cleanup
         while True:
             counted_frames = thr_coll.written_frames
             self.event_count = thr_coll.written_events

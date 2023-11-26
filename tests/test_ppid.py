@@ -82,7 +82,10 @@ def test_kwargs_to_ppid(kwargs, pid):
 
 def test_kwargs_to_ppid_invalid():
     with pytest.raises(KeyError, match="hansel"):
-        ppid.kwargs_to_ppid(ExampleClass, "cook", {"hansel": 4})
+        ppid.kwargs_to_ppid(ExampleClass,
+                            method="cook",
+                            kwargs={"hansel": 4},
+                            allow_invalid_keys=False)
 
 
 @pytest.mark.parametrize("kwargs, pid", [

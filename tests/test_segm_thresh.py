@@ -46,6 +46,8 @@ def test_segm_thresh_basic():
 
     sm = segm.segm_thresh.SegmentThresh(thresh=-6,
                                         kwargs_mask={"closing_disk": 3})
+    assert sm.requires_background_correction
+
     for ii in range(len(frame_u)):
         labels_seg = sm.segment_frame(image_u_c[ii])
         mask_seg = np.array(labels_seg, dtype=bool)
