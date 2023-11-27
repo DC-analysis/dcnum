@@ -3,6 +3,7 @@ import logging
 from logging.handlers import QueueListener
 import multiprocessing as mp
 import pathlib
+import socket
 import threading
 import time
 
@@ -28,9 +29,23 @@ mp_spawn = mp.get_context("spawn")
 
 
 class DCNumJobRunner(threading.Thread):
-    def __init__(self, job: DCNumPipelineJob, *args, **kwargs):
+    def __init__(self,
+                 job: DCNumPipelineJob,
+                 tmp_suffix: str = None,
+                 *args, **kwargs):
+        """Run a pipeline as defined by a :class:`DCNumPipelineJob` instance
+
+        Parameters
+        ----------
+        job: DCNumPipelineJob
+            pipeline job to run
+        tmp_suffix: str
+            optional unique string for creating temporary files
+            (defaults to hostname)
+        """
         super(DCNumJobRunner, self).__init__(*args, **kwargs)
         self.job = job
+        self.tmp_suffix = tmp_suffix or socket.gethostname()
         self.ppid, self.pphash, self.ppdict = job.get_ppid(ret_hash=True,
                                                            ret_dict=True)
         self.event_count = 0
@@ -104,12 +119,12 @@ class DCNumJobRunner(threading.Thread):
     @property
     def path_temp_in(self):
         po = pathlib.Path(self.job["path_out"])
-        return po.with_name(po.stem + "_input_bb.rtdc~")
+        return po.with_name(po.stem + f"_input_bb_{self.tmp_suffix}.rtdc~")
 
     @property
     def path_temp_out(self):
         po = pathlib.Path(self.job["path_out"])
-        return po.with_name(po.stem + "_output.rtdc~")
+        return po.with_name(po.stem + f"_output_{self.tmp_suffix}.rtdc~")
 
     def close(self):
         self.draw.close()
