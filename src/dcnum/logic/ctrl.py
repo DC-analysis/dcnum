@@ -156,8 +156,8 @@ class DCNumJobRunner(threading.Thread):
     def get_status(self):
         return {
             "progress": self._progress,
-            "state": self._state,
             "segm rate": self._segm_rate,
+            "state": self._state,
         }
 
     def run(self):

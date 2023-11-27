@@ -54,6 +54,26 @@ def test_error_pipeline_log_file_remains():
     assert runner.path_log.exists(), "log file expected"
 
 
+def test_get_status():
+    path_orig = retrieve_data("fmt-hdf5_cytoshot_full-features_2023.zip")
+    path = path_orig.with_name("input.rtdc")
+    with read.concatenated_hdf5_data(5 * [path_orig], path_out=path):
+        pass
+    job = logic.DCNumPipelineJob(path_in=path, debug=True)
+    # control
+    with logic.DCNumJobRunner(job=job) as runner:
+        assert runner.get_status() == {
+            "progress": 0,
+            "segm rate": 0,
+            "state": "init",
+        }
+        runner.run()
+        final_status = runner.get_status()
+        assert final_status["progress"] == 1
+        assert final_status["segm rate"] > 0
+        assert final_status["state"] == "done"
+
+
 def test_logs_in_pipeline():
     path_orig = retrieve_data("fmt-hdf5_cytoshot_full-features_2023.zip")
     path = path_orig.with_name("input.rtdc")
