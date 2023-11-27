@@ -1,3 +1,5 @@
+import time
+
 import h5py
 import numpy as np
 
@@ -28,6 +30,30 @@ def test_error_pipeline_log_file_remains():
             raise ValueError("My Test Error In The Context")
     # log file should still be there
     assert runner.path_log.exists(), "log file expected"
+
+
+def test_logs_in_pipeline():
+    path_orig = retrieve_data("fmt-hdf5_cytoshot_full-features_2023.zip")
+    path = path_orig.with_name("input.rtdc")
+    with read.concatenated_hdf5_data(5 * [path_orig], path_out=path):
+        pass
+
+    job = logic.DCNumPipelineJob(path_in=path, debug=True)
+
+    with logic.DCNumJobRunner(job=job) as runner:
+        runner.run()
+
+    with read.HDF5Data(job["path_out"]) as hd:
+        # Check the logs
+        key = sorted(hd.logs.keys())[0]
+        assert key.startswith(time.strftime("dcnum-process-%Y")), \
+            "don't run during new year"
+        logdat = " ".join(hd.logs[key])
+        assert "Starting background computation" in logdat
+        assert "Finished background computation" in logdat
+        assert "Starting segmentation and feature extraction" in logdat
+        assert "Flushing data to disk" in logdat
+        assert "Finished segmentation and feature extraction" in logdat
 
 
 def test_simple_pipeline():
