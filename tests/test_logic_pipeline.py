@@ -35,8 +35,10 @@ def test_simple_pipeline():
         runner.run()
 
         assert job["path_out"].exists(), "output file must exist"
-        assert not runner.path_temp_in.exists(), "tmp input file mustn't exist"
-        assert not runner.path_temp_out.exists(), "tmp out file must not exist"
+        assert runner.path_temp_in.exists(), "tmp input still exists"
+
+    assert not runner.path_temp_in.exists(), "tmp input file mustn't exist"
+    assert not runner.path_temp_out.exists(), "tmp out file must not exist"
 
     with read.HDF5Data(job["path_out"]) as hd:
         assert "image" in hd
