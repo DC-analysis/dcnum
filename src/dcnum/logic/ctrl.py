@@ -133,6 +133,8 @@ class DCNumJobRunner(threading.Thread):
         if self._data_temp_in is not None:
             self._data_temp_in.close()
             self._data_temp_in = None
+        # Delete temporary input file
+        self.path_temp_in.unlink(missing_ok=True)
         # clean up logging
         self.logger.removeHandler(self._log_file_handler)
         self._log_file_handler.flush()
@@ -248,8 +250,6 @@ class DCNumJobRunner(threading.Thread):
                 time.strftime("dcnum-process-%Y-%m-%d-%H.%M.%S"),
                 self.path_log.read_text().split("\n"))
 
-        # Delete temporary input file
-        self.path_temp_in.unlink(missing_ok=True)
         # Rename the output file
         self.path_temp_out.rename(self.job["path_out"])
         self._progress = 1.0
