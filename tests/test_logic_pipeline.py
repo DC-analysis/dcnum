@@ -16,14 +16,14 @@ def test_error_file_exists():
     path = path_orig.with_name("input.rtdc")
     with read.concatenated_hdf5_data(5 * [path_orig], path_out=path):
         pass
-    path_out = path.with_name("test1.rtdc")
+    path_out = path.with_name("test_out.rtdc")
     job = logic.DCNumPipelineJob(path_in=path,
                                  path_out=path_out,
                                  debug=True)
     path_out.touch()
     # control
     with logic.DCNumJobRunner(job=job) as runner:
-        with pytest.raises(FileExistsError, match=str(path_out)):
+        with pytest.raises(FileExistsError, match=path_out.name):
             runner.run()
 
 
