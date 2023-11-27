@@ -96,9 +96,9 @@ def test_simple_pipeline():
         assert hd["nevents"][0] == 2
         assert np.all(hd["nevents"][:11] == [2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3])
         assert np.all(hd["frame"][:11] == [1, 1, 2, 2, 4, 4, 5, 5, 5, 6, 6])
-        assert np.allclose(hd["area_um"][2], 91.40306662500001,
+        assert np.allclose(hd["area_um"][3], 36.694151125,
                            atol=0.5, rtol=0)
-        assert np.allclose(hd["deform"][2], 0.1305825636759126,
+        assert np.allclose(hd["deform"][3], 0.29053587689236526,
                            atol=0.001, rtol=0)
 
     with h5py.File(job["path_out"]) as h5:
