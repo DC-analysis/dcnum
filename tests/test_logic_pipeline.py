@@ -11,6 +11,22 @@ from dcnum.meta import ppid
 from helper_methods import retrieve_data
 
 
+def test_error_file_exists():
+    path_orig = retrieve_data("fmt-hdf5_cytoshot_full-features_2023.zip")
+    path = path_orig.with_name("input.rtdc")
+    with read.concatenated_hdf5_data(5 * [path_orig], path_out=path):
+        pass
+    path_out = path.with_name("test1.rtdc")
+    job = logic.DCNumPipelineJob(path_in=path,
+                                 path_out=path_out,
+                                 debug=True)
+    path_out.touch()
+    # control
+    with logic.DCNumJobRunner(job=job) as runner:
+        with pytest.raises(FileExistsError, match=str(path_out)):
+            runner.run()
+
+
 def test_error_pipeline_log_file_remains():
     path_orig = retrieve_data("fmt-hdf5_cytoshot_full-features_2023.zip")
     path = path_orig.with_name("input.rtdc")

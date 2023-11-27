@@ -6,6 +6,7 @@ import pathlib
 import socket
 import threading
 import time
+import uuid
 
 import hdf5plugin
 
@@ -45,7 +46,9 @@ class DCNumJobRunner(threading.Thread):
         """
         super(DCNumJobRunner, self).__init__(*args, **kwargs)
         self.job = job
-        self.tmp_suffix = tmp_suffix or socket.gethostname()
+        if tmp_suffix is None:
+            tmp_suffix = f"{socket.gethostname()}_{str(uuid.uuid4())[:5]}"
+        self.tmp_suffix = tmp_suffix
         self.ppid, self.pphash, self.ppdict = job.get_ppid(ret_hash=True,
                                                            ret_dict=True)
         self.event_count = 0
@@ -159,6 +162,9 @@ class DCNumJobRunner(threading.Thread):
 
     def run(self):
         """Execute the pipeline job"""
+        if self.job["path_out"].exists():
+            raise FileExistsError(
+                f"Output file {self.job['path_out']} already exists!")
         self._state = "setup"
         # First get a list of all pipeline IDs. If the input file has
         # already been processed by dcnum, then we do not have to redo
