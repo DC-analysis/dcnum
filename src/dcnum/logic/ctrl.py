@@ -362,7 +362,7 @@ class DCNumJobRunner(threading.Thread):
             self._progress = round(
                 pmin + counted_frames / data_size / (pmax - pmin),
                 3)
-            self._segm_rate = counted_frames / td
+            self._segm_rate = counted_frames / (td or 0.03)
             time.sleep(.5)
             if counted_frames == data_size:
                 break
