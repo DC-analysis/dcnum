@@ -3,6 +3,8 @@ import json
 import h5py
 import numpy as np
 
+import pytest
+
 from dcnum.feat.feat_background import bg_sparse_median
 from dcnum.read import HDF5Data
 from dcnum.write import create_with_basins
@@ -77,6 +79,8 @@ def test_base_background_input_is_output(tmp_path):
         assert "image_bg" in hd
 
 
+@pytest.mark.filterwarnings(
+    "ignore::dcnum.write.writer.CreatingFileWithoutBasinWarning")
 def test_base_background_output_basin_none(
         tmp_path):
     """In dcnum 0.13.0, we introduced `create_with_basins`"""

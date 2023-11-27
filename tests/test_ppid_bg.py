@@ -5,6 +5,8 @@ from dcnum.feat import feat_background as fbg
 import pytest
 
 
+@pytest.mark.filterwarnings(
+    "ignore::dcnum.write.writer.CreatingFileWithoutBasinWarning")
 @pytest.mark.parametrize("bg_ppid", [
     "sparsemed:k=200^s=1^t=0^f=0.8",
     "sparsemed:k=210^s=1^t=0^f=0.8",
@@ -44,6 +46,8 @@ def test_ppid_required_method_definitions(bg_code):
     assert bg_class.get_ppid_code() == bg_code
 
 
+@pytest.mark.filterwarnings(
+    "ignore::dcnum.write.writer.CreatingFileWithoutBasinWarning")
 def test_ppid_bg_base_with_sparsemed(tmp_path):
     input_data = np.arange(5 * 7).reshape(1, 5, 7) * np.ones((120, 1, 1))
     path_out = tmp_path / "test.h5"

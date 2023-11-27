@@ -2,12 +2,18 @@ import hashlib
 import json
 import pathlib
 from typing import List
+import warnings
 
 import h5py
 import hdf5plugin
 import numpy as np
 
 from .._version import version
+
+
+class CreatingFileWithoutBasinWarning(UserWarning):
+    """Issued when creating a basin-based dataset without basins"""
+    pass
 
 
 class HDF5Writer:
@@ -181,6 +187,10 @@ def create_with_basins(
         commonly used for relative and absolute paths).
     """
     path_out = pathlib.Path(path_out)
+    if not basin_paths:
+        warnings.warn(f"Creating basin-based file '{path_out}' without any "
+                      f"basins, since the list `basin_paths' is empty!",
+                      CreatingFileWithoutBasinWarning)
     with HDF5Writer(path_out, mode="w") as hw:
         # Get the metadata from the first available basin path
 
@@ -211,7 +221,7 @@ def create_with_basins(
             # Copy the metadata from the representative path.
             if prep is not None:
                 # copy metadata
-                with h5py.File(prep) as h5:
+                with h5py.File(prep, libver="latest") as h5:
                     copy_metadata(h5_src=h5, h5_dst=hw.h5)
                     # extract features
                     features = sorted(h5["events"].keys())

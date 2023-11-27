@@ -35,7 +35,8 @@ class DCNumJobRunner(threading.Thread):
                                                            ret_dict=True)
         self.event_count = 0
 
-        self._data = None
+        self._data_raw = None
+        self._data_temp_in = None
         # current job state
         self._state = "init"
         # overall progress [0, 1]
@@ -77,25 +78,42 @@ class DCNumJobRunner(threading.Thread):
         self.close()
 
     @property
-    def data(self):
-        if self._data is None:
+    def draw(self) -> HDF5Data:
+        """Raw input data"""
+        if self._data_raw is None:
             # Initialize with the proper kwargs (pixel_size)
-            self._data = HDF5Data(self.job["path_in"],
-                                  **self.job["data_kwargs"])
-        return self._data
+            self._data_raw = HDF5Data(self.job["path_in"],
+                                      **self.job["data_kwargs"])
+        return self._data_raw
+
+    @property
+    def dtin(self) -> HDF5Data:
+        """Input data with (corrected) background image"""
+        if self._data_temp_in is None:
+            if not self.path_temp_in.exists():
+                # create basin-based input file
+                create_with_basins(path_out=self.path_temp_in,
+                                   basin_paths=[self.draw.path])
+            # Initialize with the proper kwargs (pixel_size)
+            self._data_temp_in = HDF5Data(self.path_temp_in,
+                                          **self.job["data_kwargs"])
+            assert len(self._data_temp_in) > 0
+            assert "image_bg" in self._data_temp_in
+        return self._data_temp_in
 
     @property
     def path_temp_in(self):
         po = pathlib.Path(self.job["path_out"])
-        return po.with_name(po.stem + "_dcn_input_basin.rtdc~")
+        return po.with_name(po.stem + "_input_bb.rtdc~")
 
     @property
     def path_temp_out(self):
         po = pathlib.Path(self.job["path_out"])
-        return po.with_name(po.stem + "_dcn_output_temp.rtdc~")
+        return po.with_name(po.stem + "_output.rtdc~")
 
     def close(self):
-        self.data.close()
+        self.draw.close()
+        self.dtin.close()
         # clean up logging
         self.log_queue.cancel_join_thread()
         self.log_queue.close()
@@ -121,22 +139,22 @@ class DCNumJobRunner(threading.Thread):
         # "pipeline:dcnum hash" in case individual steps of the pipeline
         # have been run by a rogue data analyst.
         datdict = {
-            "gen_id": self.data.h5.attrs.get("pipeline:dcnum generation", "0"),
-            "dat_id": self.data.h5.attrs.get("pipeline:dcnum data", "0"),
-            "bg_id": self.data.h5.attrs.get("pipeline:dcnum background", "0"),
-            "seg_id": self.data.h5.attrs.get("pipeline:dcnum segmenter", "0"),
-            "feat_id": self.data.h5.attrs.get("pipeline:dcnum feature", "0"),
-            "gate_id": self.data.h5.attrs.get("pipeline:dcnum gate", "0"),
+            "gen_id": self.draw.h5.attrs.get("pipeline:dcnum generation", "0"),
+            "dat_id": self.draw.h5.attrs.get("pipeline:dcnum data", "0"),
+            "bg_id": self.draw.h5.attrs.get("pipeline:dcnum background", "0"),
+            "seg_id": self.draw.h5.attrs.get("pipeline:dcnum segmenter", "0"),
+            "feat_id": self.draw.h5.attrs.get("pipeline:dcnum feature", "0"),
+            "gate_id": self.draw.h5.attrs.get("pipeline:dcnum gate", "0"),
         }
         # The hash of a potential previous pipeline run.
-        dathash = self.data.h5.attrs.get("pipeline:dcnum hash", "0")
+        dathash = self.draw.h5.attrs.get("pipeline:dcnum hash", "0")
         # The number of events extracted in a potential previous pipeline run.
-        evyield = self.data.h5.attrs.get("pipeline:dcnum yield", -1),
+        evyield = self.draw.h5.attrs.get("pipeline:dcnum yield", -1),
         redo_sanity = (
              # Whether pipeline hash is invalid.
              ppid.compute_pipeline_hash(**datdict) != dathash
              # Whether the input file is the original output of the pipeline.
-             or len(self.data) != evyield
+             or len(self.draw) != evyield
         )
         # Do we have to recompute the background data? In addition to the
         # hash sanity check above, check the generation, input data,
@@ -156,17 +174,13 @@ class DCNumJobRunner(threading.Thread):
             or (datdict["feat_id"] != self.ppdict["feat_id"])
             or (datdict["gate_id"] != self.ppdict["gate_id"]))
 
-        # Create a basin-based temporary input file
-        create_with_basins(path_out=self.path_temp_in,
-                           basin_paths=[self.data.path])
-
         self._state = "background"
 
         if redo_bg:
             # The 'image_bg' feature is written to `self.path_temp_in`.
-            # If `self.data.path` already has the correct 'image_bg'
-            # feature, then this one is used automatically (because
-            # `self.path_temp_in` is basin-based).
+            # If `job["path_in"]` already has the correct 'image_bg'
+            # feature, then we never reach this case here
+            # (note that `self.path_temp_in` is basin-based).
             self.task_background()
 
         self._progress = 0.1
@@ -229,10 +243,15 @@ class DCNumJobRunner(threading.Thread):
         feature.
         """
         self.logger.info("Starting background computation")
+        if self._data_temp_in is not None:
+            # Close the temporary input data file, so we can write to it.
+            self._data_temp_in.close()
+            self._data_temp_in = None
+        # Start background computation
         bg_code = self.job["background_code"]
         bg_cls = get_available_background_methods()[bg_code]
         with bg_cls(
-                input_data=self.data.image.h5ds,
+                input_data=self.job["path_in"],
                 output_path=self.path_temp_in,
                 # always compress, the disk is usually the bottleneck
                 compress=True,
@@ -260,9 +279,9 @@ class DCNumJobRunner(threading.Thread):
         # Start segmentation thread
         seg_cls = get_available_segmenters()[self.job["segmenter_code"]]
         if seg_cls.requires_background_correction:
-            imdat = self.data.image_corr
+            imdat = self.dtin.image_corr
         else:
-            imdat = self.data.image
+            imdat = self.dtin.image
 
         if self.job["debug"]:
             num_slots = 1
@@ -289,8 +308,8 @@ class DCNumJobRunner(threading.Thread):
 
         # Start feature extractor thread
         fe_kwargs = QueueEventExtractor.get_init_kwargs(
-            data=self.data,
-            gate=gate.Gate(self.data, **self.job["gate_kwargs"]),
+            data=self.dtin,
+            gate=gate.Gate(self.dtin, **self.job["gate_kwargs"]),
             log_queue=self.log_queue)
         fe_kwargs["extract_kwargs"] = self.job["feature_kwargs"]
 
@@ -305,7 +324,7 @@ class DCNumJobRunner(threading.Thread):
 
         # Start the data collection thread
         thr_coll = QueueCollectorThread(
-            data=self.data,
+            data=self.dtin,
             event_queue=fe_kwargs["event_queue"],
             writer_dq=writer_dq,
             feat_nevents=fe_kwargs["feat_nevents"],
@@ -313,7 +332,7 @@ class DCNumJobRunner(threading.Thread):
         )
         thr_coll.start()
 
-        data_size = len(self.data)
+        data_size = len(self.dtin)
         t0 = time.monotonic()
 
         # So in principle we are done here. We do not have to do anything
@@ -364,7 +383,7 @@ class DCNumJobRunner(threading.Thread):
         self.event_count = thr_coll.written_events
         if self.event_count == 0:
             self.logger.error(
-                f"No events found in {self.data.path}! Please check the "
+                f"No events found in {self.draw.path}! Please check the "
                 f"input file or revise your pipeline.")
 
         self.logger.info("Finished segmentation and feature extraction")
