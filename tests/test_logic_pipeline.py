@@ -27,7 +27,7 @@ def test_error_pipeline_log_file_remains():
     assert not runner.path_log.exists(), "no log file expected"
 
     job2 = logic.DCNumPipelineJob(path_in=path,
-                                  path_out=path.with_name("test1.rtdc"),
+                                  path_out=path.with_name("test2.rtdc"),
                                   debug=True)
 
     with pytest.raises(ValueError, match="My Test Error In The Context"):
