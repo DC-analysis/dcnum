@@ -29,13 +29,14 @@ def test_simple_pipeline():
 
     job = logic.DCNumPipelineJob(path_in=path, debug=True)
     assert job.get_ppid() == jobid
-    runner = logic.DCNumJobRunner(job=job)
-    assert len(runner.draw) == 200
-    runner.run()
 
-    assert job["path_out"].exists(), "output file must exist"
-    assert not runner.path_temp_in.exists(), "temp input file must not exist"
-    assert not runner.path_temp_out.exists(), "temp out file must not exist"
+    with logic.DCNumJobRunner(job=job) as runner:
+        assert len(runner.draw) == 200
+        runner.run()
+
+        assert job["path_out"].exists(), "output file must exist"
+        assert not runner.path_temp_in.exists(), "tmp input file mustn't exist"
+        assert not runner.path_temp_out.exists(), "tmp out file must not exist"
 
     with read.HDF5Data(job["path_out"]) as hd:
         assert "image" in hd
@@ -108,8 +109,9 @@ def test_recomputation_of_background_metadata_changed(attr, oldval, newbg):
 
     job = logic.DCNumPipelineJob(path_in=path,
                                  debug=True)
-    runner = logic.DCNumJobRunner(job=job)
-    runner.run()
+
+    with logic.DCNumJobRunner(job=job) as runner:
+        runner.run()
 
     with h5py.File(job["path_out"]) as h5:
         assert h5.attrs[attr] != oldval, "sanity check"
@@ -144,25 +146,25 @@ def test_task_background():
 
     job = logic.DCNumPipelineJob(path_in=path, debug=True)
     assert job.get_ppid() == jobid
-    runner = logic.DCNumJobRunner(job=job)
 
-    assert not runner.path_temp_in.exists()
-    runner.task_background()
-    assert runner.path_temp_in.exists(), "running bg task creates basin"
-    assert not runner.path_temp_out.exists()
+    with logic.DCNumJobRunner(job=job) as runner:
+        assert not runner.path_temp_in.exists()
+        runner.task_background()
+        assert runner.path_temp_in.exists(), "running bg task creates basin"
+        assert not runner.path_temp_out.exists()
 
-    with h5py.File(runner.path_temp_in) as h5:
-        assert "image" not in h5["events"], "image is in the basin file"
-        image_bg = h5["events/image_bg"]
-        assert image_bg.attrs["dcnum ppid background"] == bg_id
-        assert image_bg.attrs["dcnum ppid generation"] == gen_id
+        with h5py.File(runner.path_temp_in) as h5:
+            assert "image" not in h5["events"], "image is in the basin file"
+            image_bg = h5["events/image_bg"]
+            assert image_bg.attrs["dcnum ppid background"] == bg_id
+            assert image_bg.attrs["dcnum ppid generation"] == gen_id
 
-    with read.HDF5Data(runner.path_temp_in) as hd:
-        assert "image" in hd, "image is in the basin file"
-        assert "image_bg" in hd
-        assert np.allclose(np.mean(hd["image_bg"][0]),
-                           180.5675625,
-                           rtol=0, atol=0.01)
+        with read.HDF5Data(runner.path_temp_in) as hd:
+            assert "image" in hd, "image is in the basin file"
+            assert "image_bg" in hd
+            assert np.allclose(np.mean(hd["image_bg"][0]),
+                               180.5675625,
+                               rtol=0, atol=0.01)
 
 
 def test_task_background_data_properties():
@@ -177,17 +179,18 @@ def test_task_background_data_properties():
         h5["events/image_bg"][:, 0, 0] = 200
 
     job = logic.DCNumPipelineJob(path_in=path, debug=True)
-    runner = logic.DCNumJobRunner(job=job)
-    runner.task_background()
 
-    assert runner._data_temp_in is None
-    assert runner.path_temp_in.exists()
+    with logic.DCNumJobRunner(job=job) as runner:
+        runner.task_background()
 
-    with read.HDF5Data(runner.path_temp_in) as hd:
-        assert "image_bg" in hd
-        assert "image_bg" in hd.h5["events"]
+        assert runner._data_temp_in is None
+        assert runner.path_temp_in.exists()
 
-    assert "image_bg" in runner.dtin.h5["events"]
+        with read.HDF5Data(runner.path_temp_in) as hd:
+            assert "image_bg" in hd
+            assert "image_bg" in hd.h5["events"]
 
-    assert np.all(runner.draw.h5["events/image_bg"][:, 0, 0] == 200)
-    assert not np.all(runner.dtin.h5["events/image_bg"][:, 0, 0] == 200)
+        assert "image_bg" in runner.dtin.h5["events"]
+
+        assert np.all(runner.draw.h5["events/image_bg"][:, 0, 0] == 200)
+        assert not np.all(runner.dtin.h5["events/image_bg"][:, 0, 0] == 200)

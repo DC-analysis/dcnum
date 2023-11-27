@@ -127,15 +127,19 @@ class DCNumJobRunner(threading.Thread):
         return po.with_name(po.stem + f"_output_{self.tmp_suffix}.rtdc~")
 
     def close(self):
-        self.draw.close()
-        self.dtin.close()
+        if self._data_raw is not None:
+            self._data_raw.close()
+            self._data_raw = None
+        if self._data_temp_in is not None:
+            self._data_temp_in.close()
+            self._data_temp_in = None
         # clean up logging
-        self.log_queue.cancel_join_thread()
-        self.log_queue.close()
-        self._qlisten.stop()
         self.logger.removeHandler(self._log_file_handler)
         self._log_file_handler.flush()
         self._log_file_handler.close()
+        self._qlisten.stop()
+        self.log_queue.cancel_join_thread()
+        self.log_queue.close()
 
     def get_status(self):
         return {
