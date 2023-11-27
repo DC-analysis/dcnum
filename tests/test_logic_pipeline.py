@@ -17,15 +17,21 @@ def test_error_pipeline_log_file_remains():
     with read.concatenated_hdf5_data(5 * [path_orig], path_out=path):
         pass
 
-    job = logic.DCNumPipelineJob(path_in=path, debug=True)
+    job = logic.DCNumPipelineJob(path_in=path,
+                                 path_out=path.with_name("test1.rtdc"),
+                                 debug=True)
 
     # control
     with logic.DCNumJobRunner(job=job) as runner:
         runner.run()
     assert not runner.path_log.exists(), "no log file expected"
 
+    job2 = logic.DCNumPipelineJob(path_in=path,
+                                  path_out=path.with_name("test1.rtdc"),
+                                  debug=True)
+
     with pytest.raises(ValueError, match="My Test Error In The Context"):
-        with logic.DCNumJobRunner(job=job) as runner:
+        with logic.DCNumJobRunner(job=job2) as runner:
             runner.run()
             raise ValueError("My Test Error In The Context")
     # log file should still be there
