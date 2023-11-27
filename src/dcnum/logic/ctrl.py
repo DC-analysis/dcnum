@@ -90,7 +90,9 @@ class DCNumJobRunner(threading.Thread):
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        self.close()
+        # If an error occurred, don't delete the log and basin files.
+        delete_temporary_files = exc_type is None
+        self.close(delete_temporary_files=delete_temporary_files)
 
     @property
     def draw(self) -> HDF5Data:
@@ -126,15 +128,13 @@ class DCNumJobRunner(threading.Thread):
         po = pathlib.Path(self.job["path_out"])
         return po.with_name(po.stem + f"_output_{self.tmp_suffix}.rtdc~")
 
-    def close(self):
+    def close(self, delete_temporary_files=True):
         if self._data_raw is not None:
             self._data_raw.close()
             self._data_raw = None
         if self._data_temp_in is not None:
             self._data_temp_in.close()
             self._data_temp_in = None
-        # Delete temporary input file
-        self.path_temp_in.unlink(missing_ok=True)
         # clean up logging
         self.logger.removeHandler(self._log_file_handler)
         self._log_file_handler.flush()
@@ -142,6 +142,13 @@ class DCNumJobRunner(threading.Thread):
         self._qlisten.stop()
         self.log_queue.cancel_join_thread()
         self.log_queue.close()
+        if delete_temporary_files:
+            # Delete log file on disk
+            self.path_log.unlink(missing_ok=True)
+            # Delete temporary input file
+            self.path_temp_in.unlink(missing_ok=True)
+            # We don't have to delete self.path_temp_out, since this one
+            # is `rename`d to `self.jon["path_out"]`.
 
     def get_status(self):
         return {

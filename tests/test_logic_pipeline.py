@@ -9,6 +9,27 @@ from dcnum.meta import ppid
 from helper_methods import retrieve_data
 
 
+def test_error_pipeline_log_file_remains():
+    path_orig = retrieve_data("fmt-hdf5_cytoshot_full-features_2023.zip")
+    path = path_orig.with_name("input.rtdc")
+    with read.concatenated_hdf5_data(5 * [path_orig], path_out=path):
+        pass
+
+    job = logic.DCNumPipelineJob(path_in=path, debug=True)
+
+    # control
+    with logic.DCNumJobRunner(job=job) as runner:
+        runner.run()
+    assert not runner.path_log.exists(), "no log file expected"
+
+    with pytest.raises(ValueError, match="My Test Error In The Context"):
+        with logic.DCNumJobRunner(job=job) as runner:
+            runner.run()
+            raise ValueError("My Test Error In The Context")
+    # log file should still be there
+    assert runner.path_log.exists(), "log file expected"
+
+
 def test_simple_pipeline():
     path_orig = retrieve_data("fmt-hdf5_cytoshot_full-features_2023.zip")
     path = path_orig.with_name("input.rtdc")
