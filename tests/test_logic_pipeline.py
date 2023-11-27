@@ -93,6 +93,13 @@ def test_simple_pipeline():
         assert "deform" in hd
         assert "inert_ratio_prnc" in hd
         assert len(hd) == 395
+        assert hd["nevents"][0] == 2
+        assert np.all(hd["nevents"][:11] == [2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3])
+        assert np.all(hd["frame"][:11] == [1, 1, 2, 2, 4, 4, 5, 5, 5, 6, 6])
+        assert np.allclose(hd["area_um"][2], 91.40306662500001,
+                           atol=0.5, rtol=0)
+        assert np.allclose(hd["deform"][2], 0.1305825636759126,
+                           atol=0.001, rtol=0)
 
     with h5py.File(job["path_out"]) as h5:
         assert h5.attrs["pipeline:dcnum generation"] == gen_id
