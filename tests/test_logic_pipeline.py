@@ -372,6 +372,33 @@ def test_task_background():
                                rtol=0, atol=0.01)
 
 
+def test_task_background_close_input_file_on_demand():
+    """Tests whether the background task can close the input file"""
+    path_orig = retrieve_data("fmt-hdf5_cytoshot_full-features_2023.zip")
+    path = path_orig.with_name("input.rtdc")
+    with read.concatenated_hdf5_data(5 * [path_orig], path_out=path):
+        pass
+
+    with h5py.File(path, "a") as h5:
+        # marker for identifying recomputation of background
+        h5["events/image_bg"][:, 0, 0] = 200
+
+    job = logic.DCNumPipelineJob(path_in=path, debug=True)
+
+    with logic.DCNumJobRunner(job=job) as runner:
+        assert runner.dtin  # access the temporary input file
+        assert runner._data_temp_in is not None
+
+        runner.task_background()
+
+        assert runner._data_temp_in is None
+        assert runner.path_temp_in.exists()
+
+        with read.HDF5Data(runner.path_temp_in) as hd:
+            assert "image_bg" in hd
+            assert "image_bg" in hd.h5["events"]
+
+
 def test_task_background_data_properties():
     """.draw and .dtin should return reasonable values"""
     path_orig = retrieve_data("fmt-hdf5_cytoshot_full-features_2023.zip")
