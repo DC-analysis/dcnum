@@ -9,6 +9,7 @@ import time
 import uuid
 
 import hdf5plugin
+import h5py
 
 from ..feat.feat_background.base import get_available_background_methods
 from ..feat.queue_event_extractor import QueueEventExtractor
@@ -183,7 +184,7 @@ class DCNumJobRunner(threading.Thread):
         # The hash of a potential previous pipeline run.
         dathash = self.draw.h5.attrs.get("pipeline:dcnum hash", "0")
         # The number of events extracted in a potential previous pipeline run.
-        evyield = self.draw.h5.attrs.get("pipeline:dcnum yield", -1),
+        evyield = self.draw.h5.attrs.get("pipeline:dcnum yield", -1)
         redo_sanity = (
              # Whether pipeline hash is invalid.
              ppid.compute_pipeline_hash(**datdict) != dathash
@@ -234,6 +235,12 @@ class DCNumJobRunner(threading.Thread):
             self.task_segment_extract()
         else:
             # scenario A
+            # Access the temporary input HDF5Data so that the underlying
+            # basin file is created and close it immediately afterward.
+            self.dtin.close()
+            self._data_temp_in = None
+            # Note any new actions that work on `self.path_temp_in` are not
+            # reflected in `self.path_temp_out`.
             self.path_temp_in.rename(self.path_temp_out)
 
         self._progress = 0.95
@@ -248,7 +255,7 @@ class DCNumJobRunner(threading.Thread):
             self.task_transfer_basin_data()
 
         with HDF5Writer(self.path_temp_out) as hw:
-            # Add important metadata
+            # pipeline metadata
             hw.h5.attrs["pipeline:dcnum generation"] = self.ppdict["gen_id"]
             hw.h5.attrs["pipeline:dcnum data"] = self.ppdict["dat_id"]
             hw.h5.attrs["pipeline:dcnum background"] = self.ppdict["bg_id"]
@@ -257,11 +264,14 @@ class DCNumJobRunner(threading.Thread):
             hw.h5.attrs["pipeline:dcnum gate"] = self.ppdict["gate_id"]
             hw.h5.attrs["pipeline:dcnum hash"] = self.pphash
             hw.h5.attrs["pipeline:dcnum yield"] = self.event_count
+            # regular metadata
             hw.h5.attrs["experiment:event count"] = self.event_count
-            # Add the log file to the resulting .rtdc file
-            hw.store_log(
-                time.strftime("dcnum-process-%Y-%m-%d-%H.%M.%S"),
-                self.path_log.read_text().split("\n"))
+            hw.h5.attrs["imaging:pixel size"] = self.draw.pixel_size
+            if self.path_log.exists():
+                # Add the log file to the resulting .rtdc file
+                hw.store_log(
+                    time.strftime("dcnum-process-%Y-%m-%d-%H.%M.%S"),
+                    self.path_log.read_text().split("\n"))
 
         # Rename the output file
         self.path_temp_out.rename(self.job["path_out"])
@@ -421,7 +431,19 @@ class DCNumJobRunner(threading.Thread):
         self.logger.info("Finished segmentation and feature extraction")
 
     def task_transfer_basin_data(self):
-        pass
+        with h5py.File(self.path_temp_out, "a") as hout:
+            hd = HDF5Data(hout)
+            for ii, _ in enumerate(hd.basins):
+                hindat, features = hd.get_basin_data(ii)
+                for feat in features:
+                    if feat not in hout["events"]:
+                        self.logger.debug(
+                            f"Transferring {feat} to output file.")
+                        h5py.h5o.copy(src_loc=hindat.h5["events"].id,
+                                      src_name=feat.encode(),
+                                      dst_loc=hout["events"].id,
+                                      dst_name=feat.encode(),
+                                      )
 
 
 def join_thread_helper(thr, timeout, retries, logger, name):

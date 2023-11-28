@@ -11,6 +11,64 @@ from dcnum.meta import ppid
 from helper_methods import retrieve_data
 
 
+def test_duplicate_pipeline():
+    """Test running the same pipeline twice
+
+    When the pipeline is run on a file with the same pipeline
+    identifier, data are just copied over. Nothing much fancy else.
+    """
+    path_orig = retrieve_data("fmt-hdf5_cytoshot_full-features_2023.zip")
+    path = path_orig.with_name("input.rtdc")
+    path2 = path.with_name("path_intermediate.rtdc")
+    with read.concatenated_hdf5_data(5 * [path_orig], path_out=path):
+        pass
+    job = logic.DCNumPipelineJob(path_in=path, path_out=path2, debug=True)
+
+    # perform the initial pipeline
+    with logic.DCNumJobRunner(job=job) as runner:
+        runner.run()
+    # Sanity checks for initial job
+    with read.HDF5Data(job["path_out"]) as hd:
+        # Check the logs
+        key = sorted(hd.logs.keys())[0]
+        assert key.startswith(time.strftime("dcnum-process-"))
+        logdat = " ".join(hd.logs[key])
+        assert "Starting background computation" in logdat
+        assert "Finished background computation" in logdat
+        assert "Starting segmentation and feature extraction" in logdat
+        assert "Flushing data to disk" in logdat
+        assert "Finished segmentation and feature extraction" in logdat
+
+    # remove all logs just to be sure nothing interferes
+    with h5py.File(path2, "a") as h5:
+        del h5["logs"]
+
+    # now when we do everything again, not a things should be done
+    job2 = logic.DCNumPipelineJob(path_in=path2,
+                                  path_out=path2.with_name("final_out.rtdc"),
+                                  no_basins_in_output=True,
+                                  debug=True)
+    with logic.DCNumJobRunner(job=job2) as runner2:
+        runner2.run()
+    # Real check for second run (not the `not`s [sic]!)
+    with read.HDF5Data(job2["path_out"]) as hd:
+        # Check the logs
+        key = sorted(hd.logs.keys())[0]
+        assert key.startswith(time.strftime("dcnum-process-"))
+        logdat = " ".join(hd.logs[key])
+        assert "Starting background computation" not in logdat
+        assert "Finished background computation" not in logdat
+        assert "Starting segmentation and feature extraction" not in logdat
+        assert "Flushing data to disk" not in logdat
+        assert "Finished segmentation and feature extraction" not in logdat
+
+    with h5py.File(job2["path_out"]) as h5:
+        assert "deform" in h5["events"]
+        assert "image" in h5["events"]
+        assert "image_bg" in h5["events"]
+        assert len(h5["events/deform"]) == 395
+
+
 def test_error_file_exists():
     path_orig = retrieve_data("fmt-hdf5_cytoshot_full-features_2023.zip")
     path = path_orig.with_name("input.rtdc")
@@ -21,7 +79,6 @@ def test_error_file_exists():
                                  path_out=path_out,
                                  debug=True)
     path_out.touch()
-    # control
     with logic.DCNumJobRunner(job=job) as runner:
         with pytest.raises(FileExistsError, match=path_out.name):
             runner.run()
@@ -60,7 +117,6 @@ def test_get_status():
     with read.concatenated_hdf5_data(5 * [path_orig], path_out=path):
         pass
     job = logic.DCNumPipelineJob(path_in=path, debug=True)
-    # control
     with logic.DCNumJobRunner(job=job) as runner:
         assert runner.get_status() == {
             "progress": 0,
