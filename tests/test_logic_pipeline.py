@@ -205,7 +205,35 @@ def test_logs_in_pipeline():
         assert "Finished segmentation and feature extraction" in logdat
 
 
-def test_simple_pipeline():
+def test_no_events_found():
+    path_orig = retrieve_data("fmt-hdf5_cytoshot_full-features_2023.zip")
+    path = path_orig.with_name("input.rtdc")
+    with read.concatenated_hdf5_data(5 * [path_orig], path_out=path):
+        pass
+
+    # Set image data to zero (no events)
+    with h5py.File(path, "a") as h5:
+        zeros = np.zeros_like(h5["events/image"][:])
+        del h5["events/image"]
+        h5["events/image"] = zeros
+
+    job = logic.DCNumPipelineJob(path_in=path, debug=True)
+
+    with logic.DCNumJobRunner(job=job) as runner:
+        runner.run()
+
+    with read.HDF5Data(job["path_out"]) as hd:
+        assert len(hd) == 0
+        # Check the logs
+        key = sorted(hd.logs.keys())[0]
+        assert key.startswith(time.strftime("dcnum-process-%Y")), \
+            "don't run during new year"
+        logdat = " ".join(hd.logs[key])
+        assert "No events found" in logdat
+
+
+@pytest.mark.parametrize("debug", [True, False])
+def test_simple_pipeline(debug):
     path_orig = retrieve_data("fmt-hdf5_cytoshot_full-features_2023.zip")
     path = path_orig.with_name("input.rtdc")
     with read.concatenated_hdf5_data(5 * [path_orig], path_out=path):
@@ -223,7 +251,7 @@ def test_simple_pipeline():
     gate_id = "norm:o=0^s=10"
     jobid = "|".join([gen_id, dat_id, bg_id, seg_id, feat_id, gate_id])
 
-    job = logic.DCNumPipelineJob(path_in=path, debug=True)
+    job = logic.DCNumPipelineJob(path_in=path, debug=debug)
     assert job.get_ppid() == jobid
 
     with logic.DCNumJobRunner(job=job) as runner:
