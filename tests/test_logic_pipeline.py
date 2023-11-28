@@ -5,7 +5,7 @@ import numpy as np
 
 import pytest
 
-from dcnum import logic, read
+from dcnum import logic, read, write
 from dcnum.meta import ppid
 
 from helper_methods import retrieve_data
@@ -67,6 +67,57 @@ def test_duplicate_pipeline():
         assert "image" in h5["events"]
         assert "image_bg" in h5["events"]
         assert len(h5["events/deform"]) == 395
+
+
+def test_duplicate_transfer_basin_data():
+    """task_transfer_basin_data should not copy basin data from input"""
+    path_orig = retrieve_data("fmt-hdf5_cytoshot_full-features_2023.zip")
+    path = path_orig.with_name("input.rtdc")
+    path2 = path.with_name("path_intermediate.rtdc")
+    with read.concatenated_hdf5_data(5 * [path_orig], path_out=path):
+        pass
+
+    with write.HDF5Writer(path) as hw:
+        path_basin = path.with_name("data_basin.rtdc")
+        # store the basin in the original file
+        hw.store_basin(name="test", paths=[path_basin], features=["peter"])
+        # store the peter data in the basin
+        with h5py.File(path_basin, "a") as hb:
+            hb["events/peter"] = 3.14 * hw.h5["events/deform"][:]
+
+    job = logic.DCNumPipelineJob(path_in=path, path_out=path2, debug=True)
+
+    # perform the initial pipeline
+    with logic.DCNumJobRunner(job=job) as runner:
+        runner.run()
+
+    with h5py.File(path2) as h5:
+        # The feature comes from the input file and will *not* be copied.
+        assert "peter" not in h5["events"]
+
+    # Now we change things. The input file now contains basins that should
+    # also be present in the output file. Using the `no_basins_in_output`
+    # option, the feature data from the input should actually be stored
+    # in the output file.
+    with write.HDF5Writer(path2) as hw2:
+        del hw2.h5["logs"]  # remove logs
+        path_basin2 = path2.with_name("data_basin_2.rtdc")
+        # store the basin in the original file
+        hw2.store_basin(name="test", paths=[path_basin2], features=["peter2"])
+        # store the peter data in the basin
+        with h5py.File(path_basin2, "a") as hb2:
+            hb2["events/peter2"] = 3.15 * hw2.h5["events/deform"][:]
+
+    job2 = logic.DCNumPipelineJob(path_in=path2,
+                                  path_out=path2.with_name("final_out.rtdc"),
+                                  no_basins_in_output=True,
+                                  debug=True)
+    with logic.DCNumJobRunner(job=job2) as runner2:
+        runner2.run()
+
+    with h5py.File(job2["path_out"]) as h52:
+        # The feature comes from the input file and *will* be copied.
+        assert "peter2" in h52["events"]
 
 
 def test_error_file_exists():
