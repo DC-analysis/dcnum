@@ -11,6 +11,44 @@ from dcnum.meta import ppid
 from helper_methods import retrieve_data
 
 
+def test_chained_pipeline():
+    """Test running two pipelines consecutively"""
+    path_orig = retrieve_data("fmt-hdf5_cytoshot_full-features_2023.zip")
+    path = path_orig.with_name("input.rtdc")
+    path2 = path.with_name("path_intermediate.rtdc")
+    with read.concatenated_hdf5_data(5 * [path_orig], path_out=path):
+        pass
+
+    job = logic.DCNumPipelineJob(path_in=path,
+                                 path_out=path2,
+                                 background_kwargs={"kernel_size": 150},
+                                 debug=True)
+
+    # perform the initial pipeline
+    with logic.DCNumJobRunner(job=job) as runner:
+        runner.run()
+
+    with h5py.File(path2) as h5:
+        assert h5.attrs["pipeline:dcnum background"] \
+               == "sparsemed:k=150^s=1^t=0^f=0.8"
+
+    # now when we do everything again, not a things should be done
+    job2 = logic.DCNumPipelineJob(path_in=path2,
+                                  path_out=path2.with_name("final_out.rtdc"),
+                                  background_kwargs={"kernel_size": 250},
+                                  debug=True)
+    with logic.DCNumJobRunner(job=job2) as runner2:
+        runner2.run()
+
+    with h5py.File(job2["path_out"]) as h5:
+        assert "deform" in h5["events"]
+        assert "image" in h5["events"]
+        assert "image_bg" in h5["events"]
+        assert len(h5["events/deform"]) == 395
+        assert h5.attrs["pipeline:dcnum background"] \
+               == "sparsemed:k=250^s=1^t=0^f=0.8"
+
+
 def test_duplicate_pipeline():
     """Test running the same pipeline twice
 
