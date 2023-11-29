@@ -20,7 +20,8 @@ from ..segm import SegmenterManagerThread, get_available_segmenters
 from ..meta import ppid
 from ..read import HDF5Data
 from ..write import (
-    DequeWriterThread, HDF5Writer, QueueCollectorThread, create_with_basins
+    DequeWriterThread, HDF5Writer, QueueCollectorThread,
+    copy_metadata, create_with_basins,
 )
 
 from .job import DCNumPipelineJob
@@ -166,10 +167,13 @@ class DCNumJobRunner(threading.Thread):
             self._data_temp_in.close()
             self._data_temp_in = None
         # clean up logging
-        self.logger.removeHandler(self._log_file_handler)
-        self._log_file_handler.flush()
-        self._log_file_handler.close()
-        self._qlisten.stop()
+        if self._log_file_handler in self.logger.handlers:
+            self.logger.removeHandler(self._log_file_handler)
+            self._log_file_handler.flush()
+            self._log_file_handler.close()
+        if self._qlisten is not None:
+            self._qlisten.stop()
+            self._qlisten = None
         self.log_queue.cancel_join_thread()
         self.log_queue.close()
         if delete_temporary_files:
@@ -179,6 +183,11 @@ class DCNumJobRunner(threading.Thread):
             self.path_temp_in.unlink(missing_ok=True)
             # We don't have to delete self.path_temp_out, since this one
             # is `rename`d to `self.jon["path_out"]`.
+
+    def join(self, *args, **kwargs):
+        super(DCNumJobRunner, self).join(*args, **kwargs)
+        # Close only after join
+        self.close()
 
     def get_status(self):
         return {
@@ -298,6 +307,12 @@ class DCNumJobRunner(threading.Thread):
                 hw.store_log(
                     time.strftime("dcnum-process-%Y-%m-%d-%H.%M.%S"),
                     self.path_log.read_text().split("\n"))
+            # copy metadata/logs/tables from original file
+            with h5py.File(self.job["path_in"]) as h5_src:
+                copy_metadata(h5_src=h5_src,
+                              h5_dst=hw.h5,
+                              # don't copy basins
+                              copy_basins=False)
 
         # Rename the output file
         self.path_temp_out.rename(self.job["path_out"])
@@ -413,7 +428,7 @@ class DCNumJobRunner(threading.Thread):
             td = time.monotonic() - t0
             # set the current status
             self._progress = round(
-                pmin + counted_frames / data_size / (pmax - pmin),
+                pmin + counted_frames / data_size * (pmax - pmin),
                 3)
             self._segm_rate = counted_frames / (td or 0.03)
             time.sleep(.5)

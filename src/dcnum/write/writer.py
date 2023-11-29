@@ -239,13 +239,14 @@ def create_with_basins(
 
 
 def copy_metadata(h5_src: h5py.File,
-                  h5_dst: h5py.File):
+                  h5_dst: h5py.File,
+                  copy_basins=True):
     """Copy attributes, tables, logs, and basins from one H5File to another
 
     Notes
     -----
     Metadata in `h5_dst` are never overridden, only metadata that
-    are not defined are added.
+    are not defined already are added.
     """
     # compress data
     ds_kwds = {}
@@ -256,8 +257,11 @@ def copy_metadata(h5_src: h5py.File,
     src_attrs = dict(h5_src.attrs)
     for kk in src_attrs:
         h5_dst.attrs.setdefault(kk, src_attrs[kk])
+    copy_data = ["logs", "tables"]
+    if copy_basins:
+        copy_data.append("basins")
     # copy other metadata
-    for topic in ["basins", "logs", "tables"]:
+    for topic in copy_data:
         if topic in h5_src:
             for key in h5_src[topic]:
                 h5_dst.require_group(topic)

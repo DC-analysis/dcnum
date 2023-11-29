@@ -325,6 +325,23 @@ def test_simple_pipeline(debug):
         assert h5.attrs["pipeline:dcnum gate"] == gate_id
         assert h5.attrs["pipeline:dcnum yield"] == 395
         assert h5.attrs["experiment:event count"] == 395
+        # test for general metadata
+        assert h5.attrs["experiment:sample"] == "data"
+        assert h5.attrs["experiment:date"] == "2022-04-21"
+
+
+def test_simple_pipeline_in_thread():
+    path_orig = retrieve_data("fmt-hdf5_cytoshot_full-features_2023.zip")
+    path = path_orig.with_name("input.rtdc")
+    with read.concatenated_hdf5_data(5 * [path_orig], path_out=path):
+        pass
+
+    job = logic.DCNumPipelineJob(path_in=path, debug=True)
+
+    # The context manager's __exit__ and runner.join both call runner.close()
+    with logic.DCNumJobRunner(job=job) as runner:
+        runner.start()
+        runner.join()
 
 
 @pytest.mark.parametrize("attr,oldval,newbg", [

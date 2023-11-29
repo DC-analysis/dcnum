@@ -49,6 +49,22 @@ def test_copy_metadata_logs_variable_length():
         assert h5_dst["logs/M1_camera.ini"][1] == b"Shutter Time = 20"
 
 
+def test_copy_metadata_without_basins():
+    path = retrieve_data(
+        "fmt-hdf5_cytoshot_full-features_legacy_allev_2023.zip")
+    path_wrt = path.with_name("written.hdf5")
+    write.create_with_basins(path_out=path_wrt, basin_paths=[path.resolve()])
+    path_test = path.with_name("test.hdf5")
+
+    with h5py.File(path_wrt) as hin, h5py.File(path_test, "a") as h5:
+        assert "basins" in hin
+        assert "basins" not in h5
+        write.copy_metadata(h5_src=hin, h5_dst=h5, copy_basins=False)
+        assert "basins" not in h5
+        write.copy_metadata(h5_src=hin, h5_dst=h5)  # defaults to True
+        assert "basins" in h5
+
+
 def test_create_with_basins_absolute():
     path = retrieve_data(
         "fmt-hdf5_cytoshot_full-features_legacy_allev_2023.zip")
