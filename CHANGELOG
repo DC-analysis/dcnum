@@ -2,11 +2,13 @@
  - BREAKING CHANGE: Remove preselection capabilities, because it is not
    well integrated into the pipeline. For more information, please see
    issue #15.
+ - feat: introduce logic submodule for running pipelines
  - feat: implement HDF5Writer.store_log
  - enh: add Segmenter.hardware_processor property
  - enh: introduce pipeline identifier for data pixel size
  - enh: reduce pixel_size accuracy to 8 digits after the decimal point
    for pipeline reproducibility
+ - enh: warn the user when creating a basin-based file without basin paths
  - ref: deprecate pixel size correction in HDF5Data
  - ref: increment DCNUM_PPID_GENERATION to 7
  - ref: several changes and deprecations in the PPID helper functions

@@ -105,13 +105,14 @@ class Segmenter(abc.ABC):
         --------
         get_ppid: Same method for class instances
         """
+        kwargs = copy.deepcopy(kwargs)
         if kwargs_mask is None and kwargs.get("kwargs_mask", None) is None:
             raise KeyError("`kwargs_mask` must be either specified as "
                            "keyword argument to this method or as a key "
                            "in `kwargs`!")
         if kwargs_mask is None:
             # see check above (kwargs_mask may also be {})
-            kwargs_mask = kwargs["kwargs_mask"]
+            kwargs_mask = kwargs.pop("kwargs_mask")
         # Start with the default mask kwargs defined for this subclass
         kwargs_mask_used = copy.deepcopy(cls.mask_default_kwargs)
         kwargs_mask_used.update(kwargs_mask)

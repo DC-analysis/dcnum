@@ -37,6 +37,8 @@ def test_compute_median_for_slice():
     assert not np.all(comp_in_b == comp_out_b)
 
 
+@pytest.mark.filterwarnings(
+    "ignore::dcnum.write.writer.CreatingFileWithoutBasinWarning")
 @pytest.mark.parametrize("event_count", [720, 730])  # should be independent
 def test_median_map_iterator(tmp_path, event_count):
     output_path = tmp_path / "test.h5"
@@ -63,6 +65,8 @@ def test_median_map_iterator(tmp_path, event_count):
     assert jobs[6].stop == 7 * 5
 
 
+@pytest.mark.filterwarnings(
+    "ignore::dcnum.write.writer.CreatingFileWithoutBasinWarning")
 @pytest.mark.parametrize("event_count", [720, 730])
 def test_median_process_next_batch(tmp_path, event_count):
     output_path = tmp_path / "test.h5"
@@ -96,6 +100,8 @@ def test_median_process_next_batch(tmp_path, event_count):
         assert np.all(ds[:90, 1, 0] == 7)
 
 
+@pytest.mark.filterwarnings(
+    "ignore::dcnum.write.writer.CreatingFileWithoutBasinWarning")
 @pytest.mark.parametrize("event_count, chunk_count", [[720, 8], [730, 9]])
 def test_median_process_full(tmp_path, event_count, chunk_count):
     output_path = tmp_path / "test.h5"

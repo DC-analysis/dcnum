@@ -46,6 +46,8 @@ def test_segm_thresh_basic():
 
     sm = segm.segm_thresh.SegmentThresh(thresh=-6,
                                         kwargs_mask={"closing_disk": 3})
+    assert sm.requires_background_correction
+
     for ii in range(len(frame_u)):
         labels_seg = sm.segment_frame(image_u_c[ii])
         mask_seg = np.array(labels_seg, dtype=bool)
@@ -53,6 +55,12 @@ def test_segm_thresh_basic():
         # segmenter class as it would be part of gating.
         mask_seg = morphology.remove_small_objects(mask_seg, min_size=10)
         assert np.all(mask_seg == mask_u[ii]), f"masks not matching at {ii}"
+
+
+def test_segm_thresh_get_ppid_from_ppkw():
+    segm_kwargs = {"kwargs_mask": {"closing_disk": 3}}
+    cls = segm.get_available_segmenters()["thresh"]
+    assert cls.get_ppid_from_ppkw(segm_kwargs) == "thresh:t=-6:cle=1^f=1^clo=3"
 
 
 @pytest.mark.parametrize("worker_type", ["thread", "process"])

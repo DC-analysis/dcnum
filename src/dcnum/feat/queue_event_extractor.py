@@ -35,6 +35,7 @@ class QueueEventExtractor:
                  feat_nevents: mp.Array,
                  label_array: mp.Array,
                  finalize_extraction: mp.Value,
+                 close_queues: bool = True,
                  extract_kwargs: dict = None,
                  *args, **kwargs):
         """Base class for event extraction from label images
@@ -65,11 +66,13 @@ class QueueEventExtractor:
         finalize_extraction:
             Shared value indicating whether this worker should stop as
             soon as the `raw_queue` is empty.
+        close_queues: bool
+            Whether to close event and logging queues
+            (set to False in debug mode)
         extract_kwargs:
             Keyword arguments for the extraction process. See the
             keyword-only arguments in
             :func:`QueueEventExtractor.get_events_from_masks`.
-
         """
         super(QueueEventExtractor, self).__init__(*args, **kwargs)
         #: Data instance
@@ -82,6 +85,7 @@ class QueueEventExtractor:
         self.event_queue = event_queue
         #: queue for logging
         self.log_queue = log_queue
+        self.close_queues = close_queues
         #: Shared array of length `len(data)` into which the number of
         #: events per frame is written.
         self.feat_nevents = feat_nevents
@@ -155,6 +159,7 @@ class QueueEventExtractor:
             np.ctypeslib.ctypes.c_int16,
             int(np.prod(data.image.chunk_shape)))
         args["finalize_extraction"] = mp_spawn.Value("b", False)
+        args["close_queues"] = True
         return args
 
     def get_events_from_masks(self, masks, data_index, *,
@@ -327,14 +332,15 @@ class QueueEventExtractor:
                     self.event_queue.put((index, events))
 
         self.logger.debug(f"Finalizing `run` for PID {os.getpid()}, {self}")
-        # Explicitly close the event queue and join it
-        self.event_queue.close()
-        self.event_queue.join_thread()
-        self.logger.debug(f"End of `run` for PID {os.getpid()}, {self}")
-        # Also close the logging queue. Not that not all messages might
-        # arrive in the logging queue, since we called `cancel_join_thread`
-        # earlier.
-        self.log_queue.close()
+        if self.close_queues:
+            # Explicitly close the event queue and join it
+            self.event_queue.close()
+            self.event_queue.join_thread()
+            self.logger.debug(f"End of `run` for PID {os.getpid()}, {self}")
+            # Also close the logging queue. Note that not all messages might
+            # arrive in the logging queue, since we called `cancel_join_thread`
+            # earlier.
+            self.log_queue.close()
 
     @classmethod
     def get_ppid_from_kwargs(cls, kwargs):

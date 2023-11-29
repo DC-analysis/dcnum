@@ -7,6 +7,8 @@ from dcnum.feat.feat_background import bg_sparse_median
 from helper_methods import retrieve_data
 
 
+@pytest.mark.filterwarnings(
+    "ignore::dcnum.write.writer.CreatingFileWithoutBasinWarning")
 @pytest.mark.parametrize("event_count,kernel_size,split_time",
                          [(720, 10, 0.01),
                           (730, 10, 0.01),

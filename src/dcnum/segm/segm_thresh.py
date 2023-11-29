@@ -8,6 +8,7 @@ class SegmentThresh(CPUSegmenter):
         "fill_holes": True,
         "closing_disk": 2,
     }
+    requires_background_correction = True
 
     def __init__(self, thresh=-6, *args, **kwargs):
         """Simple image thresholding segmentation

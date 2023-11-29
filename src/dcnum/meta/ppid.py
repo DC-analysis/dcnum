@@ -95,12 +95,25 @@ def get_class_method_info(class_obj: ClassWithPPIDCapabilities,
     return info
 
 
-def kwargs_to_ppid(cls, method, kwargs):
+def kwargs_to_ppid(cls: ClassWithPPIDCapabilities,
+                   method: str,
+                   kwargs: Dict,
+                   allow_invalid_keys: bool = True):
     info = get_class_method_info(cls, [method])
 
     concat_strings = []
     if info["defaults"][method]:
         kwdefaults = info["defaults"][method]
+        kw_false = set(kwargs.keys()) - set(kwdefaults.keys())
+        if kw_false:
+            # This should not have happened.
+            msg = f"Invalid kwargs {kw_false} specified for method " \
+                  f"'{method}'! Valid kwargs are {sorted(kwdefaults.keys())}."
+            if allow_invalid_keys:
+                warnings.warn(msg + " Please cleanup your code!",
+                              DeprecationWarning)
+            else:
+                raise KeyError(msg)
         kwannot = info["annotations"][method]
         kws = list(kwdefaults.keys())
         kws_abrv = get_unique_prefix(kws)

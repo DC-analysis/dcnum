@@ -46,6 +46,8 @@ class EventExtractorManagerThread(threading.Thread):
         """
         super(EventExtractorManagerThread, self).__init__(
               name="EventExtractorManager", *args, **kwargs)
+        if debug:
+            fe_kwargs["close_queues"] = False
         self.logger = logging.getLogger(
             "dcnum.feat.EventExtractorManagerThread")
         #: Keyword arguments for class:`.EventExtractor`
