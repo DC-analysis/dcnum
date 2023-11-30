@@ -145,3 +145,40 @@ def test_median_sparsemend_full_with_file_no_time_no_frame(tmp_path):
     with h5py.File(output_path) as h5:
         assert "image_bg" in h5["/events"]
         assert h5["/events/image_bg"].shape == (40, 80, 400)
+
+
+@pytest.mark.filterwarnings(
+    "ignore::dcnum.write.writer.CreatingFileWithoutBasinWarning")
+def test_median_sparsemend_small_file(tmp_path):
+    event_count = 34
+    kernel_size = 200
+    split_time = 0.01
+    output_path = tmp_path / "test.h5"
+    # image shape: 5 * 7
+    input_data = np.arange(5*7).reshape(1, 5, 7) * np.ones((event_count, 1, 1))
+    assert np.all(input_data[0] == input_data[1])
+    assert np.all(input_data[0].flatten() == np.arange(5*7))
+
+    # duration and time are hard-coded
+    duration = event_count / 3600 * 1.5
+    dtime = np.linspace(0, duration, event_count)
+
+    with bg_sparse_median.BackgroundSparseMed(input_data=input_data,
+                                              output_path=output_path,
+                                              kernel_size=kernel_size,
+                                              split_time=split_time,
+                                              thresh_cleansing=0,
+                                              frac_cleansing=.8,
+                                              ) as bic:
+        assert len(bic.shared_input_raw) == 34 * 5 * 7
+        assert bic.kernel_size == 34
+        assert bic.duration == duration
+        assert np.allclose(bic.time, dtime)
+        assert np.allclose(bic.step_times[0], 0)
+        assert np.allclose(bic.step_times[1], split_time)
+        assert np.allclose(bic.step_times,
+                           np.arange(0, duration, split_time))
+        # process the data
+        bic.process()
+
+    assert output_path.exists()

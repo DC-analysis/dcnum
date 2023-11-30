@@ -135,3 +135,23 @@ def test_median_process_full(tmp_path, event_count, chunk_count):
         assert np.all(ds[:90, 1, 0] == 7)
         assert np.all(ds[690:, 0, 0] == 0)
         assert np.all(ds[690:, 0, 1] == 1)
+
+
+@pytest.mark.filterwarnings(
+    "ignore::dcnum.write.writer.CreatingFileWithoutBasinWarning")
+def test_median_rollmed_small_file(tmp_path):
+    event_count = 34
+    kernel_size = 200
+    output_path = tmp_path / "test.h5"
+    # image shape: 5 * 7
+    input_data = np.arange(5*7).reshape(1, 5, 7) * np.ones((event_count, 1, 1))
+    assert np.all(input_data[0] == input_data[1])
+    assert np.all(input_data[0].flatten() == np.arange(5*7))
+
+    with pytest.raises(ValueError, match="Cannot compute background"):
+        with bg_roll_median.BackgroundRollMed(input_data=input_data,
+                                              output_path=output_path,
+                                              kernel_size=kernel_size,
+                                              batch_size=1000,
+                                              ):
+            pass

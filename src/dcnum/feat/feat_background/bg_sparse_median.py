@@ -78,6 +78,12 @@ class BackgroundSparseMed(Background):
             thresh_cleansing=thresh_cleansing,
             frac_cleansing=frac_cleansing)
 
+        if kernel_size > len(self.input_data):
+            logger.warning(
+                f"The kernel size {kernel_size} is too large for input data"
+                f"size {len(self.input_data)}. Setting it to input data size!")
+            kernel_size = len(self.input_data)
+
         #: kernel size used for median filtering
         self.kernel_size = kernel_size
         #: time between background images in the background series
@@ -306,12 +312,9 @@ class BackgroundSparseMed(Background):
         idx_start = np.argmin(np.abs(second - self.time))
         idx_stop = idx_start + self.kernel_size
         if idx_stop >= self.event_count:
-            # If `idx_stop` is always greater than `self.event_count`,
-            # then `diff` is always greater than zero.
-            diff = idx_stop - self.event_count
-            idx_stop -= diff
-            idx_start -= diff
-            assert idx_start >= 0
+            idx_stop = self.event_count
+            idx_start = max(0, idx_stop - self.kernel_size)
+        assert idx_stop - idx_start == self.kernel_size
 
         # The following is equivalent to, but faster than:
         # self.bg_images[ii] = np.median(self.input_data[idx_start:idx_stop],

@@ -1,3 +1,5 @@
+0.15.1
+ - fix: handle small kernel size before background computation (#16)
 0.15.0
  - BREAKING CHANGE: Remove preselection capabilities, because it is not
    well integrated into the pipeline. For more information, please see
