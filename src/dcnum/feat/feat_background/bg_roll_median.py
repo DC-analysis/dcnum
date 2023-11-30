@@ -63,11 +63,10 @@ class BackgroundRollMed(Background):
             kernel_size=kernel_size,
             batch_size=batch_size)
 
-        if kernel_size + batch_size > len(self.input_data):
+        if kernel_size > len(self.input_data):
             raise ValueError(f"Cannot compute background when the input data "
                              f"size {len(self.input_data)} is larger than the "
-                             f"sum of kernel size {kernel_size} and batch "
-                             f"size {batch_size}! Please reduce on of both.")
+                             f"kernel size {kernel_size}!")
 
         #: kernel size used for median filtering
         self.kernel_size = kernel_size
