@@ -1,4 +1,5 @@
-0.15.1
+0.16.0
+ - feat: implement "copy" background class
  - fix: handle small kernel size before background computation (#16)
  - fix: update experiment:run identifier for dclab-user convenience
  - fix: make sure output directory exists for pipeline job
