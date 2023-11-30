@@ -201,6 +201,8 @@ class DCNumJobRunner(threading.Thread):
         if self.job["path_out"].exists():
             raise FileExistsError(
                 f"Output file {self.job['path_out']} already exists!")
+        # Make sure the output directory exists.
+        self.job["path_out"].parent.mkdir(parents=True, exist_ok=True)
         self._state = "setup"
         # First get a list of all pipeline IDs. If the input file has
         # already been processed by dcnum, then we do not have to redo
@@ -400,6 +402,7 @@ class DCNumJobRunner(threading.Thread):
             image_data=imdat,
             slot_states=slot_states,
             slot_chunks=slot_chunks,
+            debug=self.job["debug"],
         )
         thr_segm.start()
 
