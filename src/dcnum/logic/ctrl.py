@@ -313,6 +313,20 @@ class DCNumJobRunner(threading.Thread):
                               h5_dst=hw.h5,
                               # don't copy basins
                               copy_basins=False)
+            if redo_seg:
+                # Store the correct measurement identifier. This is used to
+                # identify this file as a correct basin in subsequent pipeline
+                # steps, and it also makes sure that the original file cannot
+                # become a basin by accident (we have different indexing).
+                # This is the identifier appendix that we use to identify this
+                # dataset. Note that we only override the run identifier when
+                # segmentation did actually take place.
+                mid_ap = "dcn-" + self.pphash[:7]
+                # This is the current measurement identifier (may be empty).
+                mid_cur = hw.h5.attrs.get("experiment:run identifier", "")
+                # The new measurement identifier is a combination of both.
+                mid_new = f"{mid_cur}_{mid_ap}" if mid_cur else mid_ap
+                hw.h5.attrs["experiment:run identifier"] = mid_new
 
         # Rename the output file
         self.path_temp_out.rename(self.job["path_out"])

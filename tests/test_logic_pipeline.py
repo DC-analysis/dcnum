@@ -325,9 +325,11 @@ def test_simple_pipeline(debug):
         assert h5.attrs["pipeline:dcnum gate"] == gate_id
         assert h5.attrs["pipeline:dcnum yield"] == 395
         assert h5.attrs["experiment:event count"] == 395
+        pp_hash = h5.attrs["pipeline:dcnum hash"]
         # test for general metadata
         assert h5.attrs["experiment:sample"] == "data"
         assert h5.attrs["experiment:date"] == "2022-04-21"
+        assert h5.attrs["experiment:run identifier"] == f"dcn-{pp_hash[:7]}"
 
 
 def test_simple_pipeline_in_thread():
