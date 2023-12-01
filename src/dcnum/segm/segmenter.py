@@ -3,6 +3,7 @@ import copy
 import functools
 import inspect
 import logging
+from typing import Dict
 import warnings
 
 import cv2
@@ -26,17 +27,21 @@ class Segmenter(abc.ABC):
     #: If the segmenter requires a background-corrected image, set this to True
     requires_background_correction = False
 
-    def __init__(self, kwargs_mask=None, debug=False, **kwargs):
-        """Base segemnter
+    def __init__(self,
+                 *,
+                 kwargs_mask: Dict = None,
+                 debug: bool = False,
+                 **kwargs):
+        """Base segmenter
 
         Parameters
         ----------
-        data: HDF5Data
-            Instance containing the raw data. Requires at least the
-            `image` and `image_bg` attributes. Some segemnters require
-            more properties, so make sure to use :class:`.HDF5Data`.
         kwargs_mask: dict
             Keyword arguments for mask post-processing (see `process_mask`)
+        debug: bool
+            Debugging parameters
+        kwargs:
+            Additional, optional keyword arguments for `segment_batch`.
         """
         self.debug = debug
         self.logger = logging.getLogger(__name__).getChild(

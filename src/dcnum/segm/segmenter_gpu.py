@@ -1,5 +1,6 @@
 import abc
 import pathlib
+from typing import Dict
 
 import numpy as np
 import scipy.ndimage as ndi
@@ -12,8 +13,27 @@ class GPUSegmenter(Segmenter, abc.ABC):
     hardware_processor = "gpu"
     mask_postprocessing = False
 
-    def __init__(self, *args, **kwargs):
-        super(GPUSegmenter, self).__init__(*args, **kwargs)
+    def __init__(self,
+                 *,
+                 kwargs_mask: Dict = None,
+                 debug: bool = False,
+                 **kwargs
+                 ):
+        """GPU base segmenter
+
+        Parameters
+        ----------
+        kwargs_mask: dict
+            Keyword arguments for mask post-processing (see `process_mask`)
+        debug: bool
+            Debugging parameters
+        kwargs:
+            Additional, optional keyword arguments for `segment_approach`
+            defined in the subclass.
+        """
+        super(GPUSegmenter, self).__init__(kwargs_mask=kwargs_mask,
+                                           debug=debug,
+                                           **kwargs)
 
     @staticmethod
     def _get_model_path(model_file):

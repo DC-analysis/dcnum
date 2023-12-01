@@ -2,6 +2,7 @@ import abc
 import multiprocessing as mp
 import time
 import threading
+from typing import Dict
 
 import numpy as np
 
@@ -16,8 +17,27 @@ mp_spawn = mp.get_context('spawn')
 class CPUSegmenter(Segmenter, abc.ABC):
     hardware_processor = "cpu"
 
-    def __init__(self, num_workers=None, *args, **kwargs):
-        super(CPUSegmenter, self).__init__(*args, **kwargs)
+    def __init__(self,
+                 *,
+                 num_workers: int = None,
+                 kwargs_mask: Dict = None,
+                 debug: bool = False,
+                 **kwargs):
+        """CPU base segmenter
+
+        Parameters
+        ----------
+        kwargs_mask: dict
+            Keyword arguments for mask post-processing (see `process_mask`)
+        debug: bool
+            Debugging parameters
+        kwargs:
+            Additional, optional keyword arguments for `segment_approach`
+            defined in the subclass.
+        """
+        super(CPUSegmenter, self).__init__(kwargs_mask=kwargs_mask,
+                                           debug=debug,
+                                           **kwargs)
         self.num_workers = num_workers or mp.cpu_count()
         self.mp_image_raw = None
         self._mp_image_np = None
