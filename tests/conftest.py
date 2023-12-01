@@ -4,6 +4,14 @@ import shutil
 import tempfile
 import time
 
+
+# Make all libraries use only one single thread.
+os.environ.setdefault("OMP_NUM_THREADS", "1")
+os.environ.setdefault("MKL_NUM_THREADS", "1")
+os.environ.setdefault("NUMEXPR_NUM_THREADS", "1")
+os.environ.setdefault("NUMBA_NUM_THREADS", "1")
+
+
 TMPDIR = tempfile.mkdtemp(prefix=time.strftime(
     "dcnum_test_%H.%M_"))
 

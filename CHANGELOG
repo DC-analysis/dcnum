@@ -1,3 +1,5 @@
+0.16.1
+ - tests: set environment variables so that libraries use one thread only
 0.16.0
  - feat: implement "copy" background class
  - fix: handle small kernel size before background computation (#16)
