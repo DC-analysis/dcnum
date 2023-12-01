@@ -6,6 +6,14 @@ from dcnum.meta import ppid
 
 
 class ExampleClass:
+    def __init__(self,
+                 *,
+                 kitchen_size: str = "large",
+                 **kwargs):
+        """A cooking class"""
+        self.kitchen_size = kitchen_size
+        self.kwargs = kwargs
+
     def cook(self, *,
              temperature: float = 90.0,
              te: str = "a",
@@ -78,6 +86,23 @@ def test_unique_prefix_unordered(in_list, out_list):
 def test_kwargs_to_ppid(kwargs, pid):
     ptest = ppid.kwargs_to_ppid(ExampleClass, "cook", kwargs)
     assert pid == ptest
+
+
+def test_kwargs_to_ppid_init():
+    """kwargs defined in __init__ must be allowed!"""
+    ppid.kwargs_to_ppid(ExampleClass,
+                        method="cook",
+                        kwargs={"kitchen_size": "small"},
+                        allow_invalid_keys=False)
+
+
+def test_kwargs_to_ppid_init_invalid():
+    """kwargs defined in __init__ must be allowed!"""
+    with pytest.raises(KeyError, match="cook_size"):
+        ppid.kwargs_to_ppid(ExampleClass,
+                            method="cook",
+                            kwargs={"cook_size": "small"},
+                            allow_invalid_keys=False)
 
 
 def test_kwargs_to_ppid_invalid():

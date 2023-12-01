@@ -1,4 +1,5 @@
 0.16.1
+ - fix: when checking for ppid kwargs, allow kwargs defined in `__init__`
  - tests: set environment variables so that libraries use one thread only
 0.16.0
  - feat: implement "copy" background class

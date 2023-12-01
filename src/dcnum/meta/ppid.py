@@ -88,7 +88,7 @@ def get_class_method_info(class_obj: ClassWithPPIDCapabilities,
         for mm in static_kw_methods:
             meth = getattr(class_obj, mm)
             spec = inspect.getfullargspec(meth)
-            defau[mm] = spec.kwonlydefaults
+            defau[mm] = spec.kwonlydefaults or {}
             annot[mm] = spec.annotations
         info["defaults"] = defau
         info["annotations"] = annot
@@ -99,16 +99,25 @@ def kwargs_to_ppid(cls: ClassWithPPIDCapabilities,
                    method: str,
                    kwargs: Dict,
                    allow_invalid_keys: bool = True):
-    info = get_class_method_info(cls, [method])
+    info = get_class_method_info(cls, [method, "__init__"])
 
     concat_strings = []
     if info["defaults"][method]:
         kwdefaults = info["defaults"][method]
-        kw_false = set(kwargs.keys()) - set(kwdefaults.keys())
+        kwdefaults_init = info["defaults"]["__init__"]
+        kw_false = (set(kwargs.keys())
+                    - set(kwdefaults.keys())
+                    - set(kwdefaults_init.keys()))
         if kw_false:
             # This should not have happened.
-            msg = f"Invalid kwargs {kw_false} specified for method " \
-                  f"'{method}'! Valid kwargs are {sorted(kwdefaults.keys())}."
+            msg = (f"Invalid kwargs {kw_false} specified for method "
+                   f"'{method}'! Valid kwargs are"
+                   f"{sorted(kwdefaults.keys())}. If you wrote this "
+                   f"segmenter and had to implement `__init__`, make sure "
+                   f"that it accepts all kwonly-arguments its super class "
+                   f"accepts. If this is not the case, you are probably "
+                   f"passing bad kwargs to the segmenter!"
+                   )
             if allow_invalid_keys:
                 warnings.warn(msg + " Please cleanup your code!",
                               DeprecationWarning)
