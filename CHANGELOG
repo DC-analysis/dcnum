@@ -1,3 +1,5 @@
+0.16.2
+ - fix: ignore empty HDF5 datasets when copying metadata
 0.16.1
  - fix: when checking for ppid kwargs, allow kwargs defined in `__init__`
  - ref: use kwonly arguments for segmenter `__init__` method

@@ -11,6 +11,22 @@ from dcnum import __version__ as version
 from helper_methods import retrieve_data
 
 
+def test_copy_metadata_empty_log_variable_length_string():
+    path = retrieve_data(
+        "fmt-hdf5_cytoshot_full-features_legacy_allev_2023.zip")
+
+    # Add an empty log file
+    with h5py.File(path, "a") as h5:
+        data = np.asarray([], dtype=h5py.string_dtype(length=None))
+        h5["logs"].create_dataset(name="empty_log_entry",
+                                  data=data)
+
+    path_wrt = path.with_name("written.hdf5")
+    with h5py.File(path, "r") as h5_src, h5py.File(path_wrt, "w") as h5_dst:
+        write.copy_metadata(h5_src=h5_src, h5_dst=h5_dst)
+        assert "empty_log_entry" not in h5_dst["logs"]
+
+
 def test_copy_metadata_logs():
     path = retrieve_data(
         "fmt-hdf5_cytoshot_full-features_legacy_allev_2023.zip")

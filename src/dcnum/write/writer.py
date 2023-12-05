@@ -267,18 +267,19 @@ def copy_metadata(h5_src: h5py.File,
                 h5_dst.require_group(topic)
                 if key not in h5_dst[topic]:
                     data = h5_src[topic][key][:]
-                    if data.dtype == np.dtype("O"):
-                        # convert variable-length strings to fixed-length
-                        max_length = max([len(line) for line in data])
-                        data = np.asarray(data, dtype=f"S{max_length}")
-                    ds = h5_dst[topic].create_dataset(
-                        name=key,
-                        data=data,
-                        **ds_kwds
-                    )
-                    # help with debugging and add some meta-metadata
-                    ds.attrs.update(h5_src[topic][key].attrs)
-                    soft_strings = [ds.attrs.get("software"),
-                                    f"dcnum {version}"]
-                    soft_strings = [s for s in soft_strings if s is not None]
-                    ds.attrs["software"] = " | ".join(soft_strings)
+                    if data.size:  # ignore empty datasets
+                        if data.dtype == np.dtype("O"):
+                            # convert variable-length strings to fixed-length
+                            max_length = max([len(line) for line in data])
+                            data = np.asarray(data, dtype=f"S{max_length}")
+                        ds = h5_dst[topic].create_dataset(
+                            name=key,
+                            data=data,
+                            **ds_kwds
+                        )
+                        # help with debugging and add some meta-metadata
+                        ds.attrs.update(h5_src[topic][key].attrs)
+                        soft_strgs = [ds.attrs.get("software"),
+                                      f"dcnum {version}"]
+                        soft_strgs = [s for s in soft_strgs if s is not None]
+                        ds.attrs["software"] = " | ".join(soft_strgs)
