@@ -38,25 +38,24 @@ class HDF5Writer:
         self.h5.close()
 
     @staticmethod
-    def get_best_nd_chunks(item_shape):
+    def get_best_nd_chunks(item_shape, feat_dtype=np.float64):
         """Return best chunks for image data
 
         Chunking has performance implications. It’s recommended to keep the
-        total size of your chunks between 10 KiB and 1 MiB. This number defines
-        the maximum chunk size as well as half the maximum cache size for each
-        dataset.
+        total size of dataset chunks between 10 KiB and 1 MiB. This number
+        defines the maximum chunk size as well as half the maximum cache
+        size for each dataset.
         """
-        num_bytes = 1024**2  # between 10KiB and 1 MiB
-        if len(item_shape) == 0:
-            # scalar feature
-            chunk_size_int = 10000
-        else:
-            event_size = np.prod(item_shape) * np.dtype(np.uint8).itemsize
-            chunk_size = num_bytes / event_size
-            chunk_size_int = max(1, int(np.floor(chunk_size)))
+        # set image feature chunk size to approximately 1MiB
+        num_bytes = 1024 ** 2
+        event_size = np.prod(item_shape) * np.dtype(feat_dtype).itemsize
+        chunk_size = num_bytes / event_size
+        # Set minimum chunk size to 10 so that we can have at least some
+        # compression performance.
+        chunk_size_int = max(10, int(np.floor(chunk_size)))
         return tuple([chunk_size_int] + list(item_shape))
 
-    def require_feature(self, feat, item_shape, dtype, ds_kwds=None):
+    def require_feature(self, feat, item_shape, feat_dtype, ds_kwds=None):
         """Create a new feature in the "events" group"""
 
         if ds_kwds is None:
@@ -67,9 +66,10 @@ class HDF5Writer:
             dset = self.events.create_dataset(
                 feat,
                 shape=tuple([0] + list(item_shape)),
-                dtype=dtype,
+                dtype=feat_dtype,
                 maxshape=tuple([None] + list(item_shape)),
-                chunks=self.get_best_nd_chunks(item_shape),
+                chunks=self.get_best_nd_chunks(item_shape,
+                                               feat_dtype=feat_dtype),
                 **ds_kwds)
             if len(item_shape) == 2:
                 dset.attrs.create('CLASS', np.string_('IMAGE'))
@@ -137,7 +137,7 @@ class HDF5Writer:
             data = 255 * np.array(data, dtype=np.uint8)
         ds, offset = self.require_feature(feat=feat,
                                           item_shape=data.shape[1:],
-                                          dtype=data.dtype)
+                                          feat_dtype=data.dtype)
         dsize = data.shape[0]
         ds.resize(offset + dsize, axis=0)
         ds[offset:offset + dsize] = data
