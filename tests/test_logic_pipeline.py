@@ -11,6 +11,16 @@ from dcnum.meta import ppid
 from helper_methods import retrieve_data
 
 
+def get_log(hd: read.HDF5Data,
+            startswith: str):
+    """Return log entry that starts with `startswith`"""
+    for key in hd.logs:
+        if key.startswith(startswith):
+            return hd.logs[key]
+    else:
+        raise KeyError(f"Log starting with {startswith} not found!")
+
+
 def test_chained_pipeline():
     """Test running two pipelines consecutively"""
     path_orig = retrieve_data("fmt-hdf5_cytoshot_full-features_2023.zip")
@@ -68,9 +78,7 @@ def test_duplicate_pipeline():
     # Sanity checks for initial job
     with read.HDF5Data(job["path_out"]) as hd:
         # Check the logs
-        key = sorted(hd.logs.keys())[0]
-        assert key.startswith(time.strftime("dcnum-process-"))
-        logdat = " ".join(hd.logs[key])
+        logdat = " ".join(get_log(hd, time.strftime("dcnum-log-%Y")))
         assert "Starting background computation" in logdat
         assert "Finished background computation" in logdat
         assert "Starting segmentation and feature extraction" in logdat
@@ -91,9 +99,7 @@ def test_duplicate_pipeline():
     # Real check for second run (not the `not`s [sic]!)
     with read.HDF5Data(job2["path_out"]) as hd:
         # Check the logs
-        key = sorted(hd.logs.keys())[0]
-        assert key.startswith(time.strftime("dcnum-process-"))
-        logdat = " ".join(hd.logs[key])
+        logdat = " ".join(get_log(hd, time.strftime("dcnum-log-%Y")))
         assert "Starting background computation" not in logdat
         assert "Finished background computation" not in logdat
         assert "Starting segmentation and feature extraction" not in logdat
@@ -232,15 +238,15 @@ def test_logs_in_pipeline():
 
     with read.HDF5Data(job["path_out"]) as hd:
         # Check the logs
-        key = sorted(hd.logs.keys())[0]
-        assert key.startswith(time.strftime("dcnum-process-%Y")), \
-            "don't run during new year"
-        logdat = " ".join(hd.logs[key])
+        logdat = " ".join(get_log(hd, time.strftime("dcnum-log-%Y")))
         assert "Starting background computation" in logdat
         assert "Finished background computation" in logdat
         assert "Starting segmentation and feature extraction" in logdat
         assert "Flushing data to disk" in logdat
         assert "Finished segmentation and feature extraction" in logdat
+
+        jobdat = " ".join(get_log(hd, time.strftime("dcnum-job-%Y")))
+        assert "identifiers" in jobdat
 
 
 def test_no_events_found():
@@ -263,10 +269,7 @@ def test_no_events_found():
     with read.HDF5Data(job["path_out"]) as hd:
         assert len(hd) == 0
         # Check the logs
-        key = sorted(hd.logs.keys())[0]
-        assert key.startswith(time.strftime("dcnum-process-%Y")), \
-            "don't run during new year"
-        logdat = " ".join(hd.logs[key])
+        logdat = " ".join(get_log(hd, time.strftime("dcnum-log-%Y")))
         assert "No events found" in logdat
 
 

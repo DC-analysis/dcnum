@@ -1,9 +1,11 @@
 import collections
+import json
 import logging
 from logging.handlers import QueueListener
 import multiprocessing as mp
 import os
 import pathlib
+import platform
 import socket
 import threading
 import time
@@ -19,13 +21,14 @@ from ..feat import EventExtractorManagerThread
 from ..segm import SegmenterManagerThread, get_available_segmenters
 from ..meta import ppid
 from ..read import HDF5Data
+from .._version import version_tuple
 from ..write import (
     DequeWriterThread, HDF5Writer, QueueCollectorThread,
     copy_metadata, create_with_basins,
 )
 
 from .job import DCNumPipelineJob
-
+from .json_encoder import ExtendedJSONEncoder
 
 # Force using "spawn" method for multiprocessing, because we are using
 # queues and threads and would end up with race conditions otherwise.
@@ -198,6 +201,7 @@ class DCNumJobRunner(threading.Thread):
 
     def run(self):
         """Execute the pipeline job"""
+        time_string = time.strftime("%Y-%m-%d-%H.%M.%S", time.gmtime())
         if self.job["path_out"].exists():
             raise FileExistsError(
                 f"Output file {self.job['path_out']} already exists!")
@@ -223,11 +227,10 @@ class DCNumJobRunner(threading.Thread):
         # The number of events extracted in a potential previous pipeline run.
         evyield = self.draw.h5.attrs.get("pipeline:dcnum yield", -1)
         redo_sanity = (
-             # Whether pipeline hash is invalid.
-             ppid.compute_pipeline_hash(**datdict) != dathash
-             # Whether the input file is the original output of the pipeline.
-             or len(self.draw) != evyield
-        )
+            # Whether pipeline hash is invalid.
+            ppid.compute_pipeline_hash(**datdict) != dathash
+            # Whether the input file is the original output of the pipeline.
+            or len(self.draw) != evyield)
         # Do we have to recompute the background data? In addition to the
         # hash sanity check above, check the generation, input data,
         # and background pipeline identifiers.
@@ -304,11 +307,41 @@ class DCNumJobRunner(threading.Thread):
             # regular metadata
             hw.h5.attrs["experiment:event count"] = self.event_count
             hw.h5.attrs["imaging:pixel size"] = self.draw.pixel_size
+            # Add the log file to the resulting .rtdc file
             if self.path_log.exists():
-                # Add the log file to the resulting .rtdc file
                 hw.store_log(
-                    time.strftime("dcnum-process-%Y-%m-%d-%H.%M.%S"),
+                    f"dcnum-log-{time_string}",
                     self.path_log.read_text().split("\n"))
+            # Add job information to resulting .rtdc file
+            hw.store_log(f"dcnum-job-{time_string}",
+                         json.dumps({
+                             "dcnum version": version_tuple,
+                             "job": self.job.__getstate__(),
+                             "pipeline": {"identifiers": self.ppdict,
+                                          "hash": self.pphash,
+                                          },
+                             "python": {
+                                 "build": ", ".join(platform.python_build()),
+                                 "implementation":
+                                     platform.python_implementation(),
+                                 "version": platform.python_version(),
+                                 },
+                             "system": {
+                                 "info": platform.platform(),
+                                 "machine": platform.machine(),
+                                 "name": platform.system(),
+                                 "release": platform.release(),
+                                 "version": platform.version(),
+                                 },
+                             "tasks": {"background": redo_bg,
+                                       "segmentation": redo_seg
+                                       },
+                             },
+                             indent=2,
+                             sort_keys=True,
+                             cls=ExtendedJSONEncoder,
+                         ).split("\n"))
+
             # copy metadata/logs/tables from original file
             with h5py.File(self.job["path_in"]) as h5_src:
                 copy_metadata(h5_src=h5_src,
@@ -357,7 +390,6 @@ class DCNumJobRunner(threading.Thread):
                 num_cpus=self.job["num_procs"],
                 # custom kwargs
                 **self.job["background_kwargs"]) as bic:
-
             bic.process()
         self.logger.info("Finished background computation")
 
@@ -372,7 +404,7 @@ class DCNumJobRunner(threading.Thread):
             dq=writer_dq,
             mode="w",
             ds_kwds=ds_kwds,
-            )
+        )
         thr_write.start()
 
         # Start segmentation thread
@@ -514,5 +546,5 @@ def join_thread_helper(thr, timeout, retries, logger, name):
             break
     else:
         logger.error(f"Failed to join thread '{name}'")
-        raise ValueError(
-            f"Thread '{name}' ({thr}) did not join within {timeout*retries}s!")
+        raise ValueError(f"Thread '{name}' ({thr}) did not join"
+                         f"within {timeout * retries}s!")
