@@ -277,7 +277,7 @@ class BackgroundSparseMed(Background):
                     f"`thresh_cleansing` or `frac_cleansing`. The new "
                     f"threshold is {thresh_fact / thresh}.")
 
-            logger.info(f"Removed {frac_remove:.2%} of the background series")
+            logger.info(f"Cleansed {frac_remove:.2%}")
             step_times = self.step_times[used]
             bg_images = self.bg_images[used]
         else:

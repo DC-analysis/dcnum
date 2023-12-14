@@ -1,4 +1,5 @@
 import collections
+import datetime
 import json
 import logging
 from logging.handlers import QueueListener
@@ -70,10 +71,9 @@ class DCNumJobRunner(threading.Thread):
 
         # Set up logging
         # General logger for this job
-        self.logger = logging.getLogger(__name__).getChild(
-            f"Runner-{self.pphash[:5]}")
-        self.logger.setLevel(
-            logging.DEBUG if job["debug"] else logging.WARNING)
+        self.main_logger = logging.getLogger("dcnum")
+        self.main_logger.setLevel(
+            logging.DEBUG if job["debug"] else logging.INFO)
         # Log file output in target directory
         self.path_log = job["path_out"].with_suffix(".log")
         self.path_log.parent.mkdir(exist_ok=True, parents=True)
@@ -85,15 +85,18 @@ class DCNumJobRunner(threading.Thread):
             errors="ignore",
         )
         fmt = logging.Formatter(
-            "%(asctime)s %(levelname)s %(processName)s/%(threadName)s "
-            + "in %(name)s: %(message)s")
+            fmt="%(asctime)s %(levelname)s %(name)s: %(message)s",
+            datefmt='%H:%M:%S'
+        )
         self._log_file_handler.setFormatter(fmt)
-        self.logger.addHandler(self._log_file_handler)
-        handlers = list(self.logger.handlers)
+        self.main_logger.addHandler(self._log_file_handler)
+        handlers = list(self.main_logger.handlers)
         # Queue for subprocesses to log to
         self.log_queue = mp_spawn.Queue()
         self._qlisten = QueueListener(self.log_queue, *handlers)
         self._qlisten.start()
+
+        self.logger = logging.getLogger(f"dcnum.Runner-{self.pphash[:2]}")
 
         # Sanity checks
         for os_env in [
@@ -170,8 +173,8 @@ class DCNumJobRunner(threading.Thread):
             self._data_temp_in.close()
             self._data_temp_in = None
         # clean up logging
-        if self._log_file_handler in self.logger.handlers:
-            self.logger.removeHandler(self._log_file_handler)
+        if self._log_file_handler in self.main_logger.handlers:
+            self.main_logger.removeHandler(self._log_file_handler)
             self._log_file_handler.flush()
             self._log_file_handler.close()
         if self._qlisten is not None:
@@ -201,7 +204,9 @@ class DCNumJobRunner(threading.Thread):
 
     def run(self):
         """Execute the pipeline job"""
+        time_start = time.monotonic()
         time_string = time.strftime("%Y-%m-%d-%H.%M.%S", time.gmtime())
+        self.logger.info(f"Run start: {time_string}")
         if self.job["path_out"].exists():
             raise FileExistsError(
                 f"Output file {self.job['path_out']} already exists!")
@@ -307,11 +312,6 @@ class DCNumJobRunner(threading.Thread):
             # regular metadata
             hw.h5.attrs["experiment:event count"] = self.event_count
             hw.h5.attrs["imaging:pixel size"] = self.draw.pixel_size
-            # Add the log file to the resulting .rtdc file
-            if self.path_log.exists():
-                hw.store_log(
-                    f"dcnum-log-{time_string}",
-                    self.path_log.read_text().split("\n"))
             # Add job information to resulting .rtdc file
             hw.store_log(f"dcnum-job-{time_string}",
                          json.dumps({
@@ -362,6 +362,17 @@ class DCNumJobRunner(threading.Thread):
                 # The new measurement identifier is a combination of both.
                 mid_new = f"{mid_cur}_{mid_ap}" if mid_cur else mid_ap
                 hw.h5.attrs["experiment:run identifier"] = mid_new
+
+        trun = datetime.timedelta(seconds=round(time.monotonic() - time_start))
+        self.logger.info(f"Run duration: {str(trun)}")
+        self.logger.info(time.strftime("Run stop: %Y-%m-%d-%H.%M.%S",
+                                       time.gmtime()))
+        # Add the log file to the resulting .rtdc file
+        if self.path_log.exists():
+            with HDF5Writer(self.path_temp_out) as hw:
+                hw.store_log(
+                    f"dcnum-log-{time_string}",
+                    self.path_log.read_text().strip().split("\n"))
 
         # Rename the output file
         self.path_temp_out.rename(self.job["path_out"])
@@ -542,7 +553,7 @@ def join_thread_helper(thr, timeout, retries, logger, name):
         if thr.is_alive():
             logger.info(f"Waiting for '{name}' ({thr}")
         else:
-            logger.info(f"Joined thread '{name}'")
+            logger.debug(f"Joined thread '{name}'")
             break
     else:
         logger.error(f"Failed to join thread '{name}'")

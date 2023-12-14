@@ -1,5 +1,6 @@
 0.16.2
  - fix: ignore empty HDF5 datasets when copying metadata
+ - enh: improve logging verbosity
  - enh: append job information as log entry in DCNumJobRunner output file
  - enh: set chunk size for all feature data to 1MiB in HDF5Writer
 0.16.1

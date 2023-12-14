@@ -244,6 +244,7 @@ def test_logs_in_pipeline():
         assert "Starting segmentation and feature extraction" in logdat
         assert "Flushing data to disk" in logdat
         assert "Finished segmentation and feature extraction" in logdat
+        assert "Run duration" in logdat
 
         jobdat = " ".join(get_log(hd, time.strftime("dcnum-job-%Y")))
         assert "identifiers" in jobdat

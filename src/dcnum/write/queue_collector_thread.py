@@ -184,7 +184,7 @@ class QueueCollectorThread(threading.Thread):
 
             if len(cur_nevents) == 0:
                 self.logger.info(
-                    "Reached the end of the current dataset (frame "
+                    "Reached dataset end (frame "
                     # `last_idx` is the size of the dataset in the end,
                     # because `len(cur_nevents)` is always added to it.
                     f"{last_idx} of {len(self.feat_nevents)}).")
