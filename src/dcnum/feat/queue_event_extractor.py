@@ -35,7 +35,7 @@ class QueueEventExtractor:
                  feat_nevents: mp.Array,
                  label_array: mp.Array,
                  finalize_extraction: mp.Value,
-                 close_queues: bool = True,
+                 log_level: int = logging.INFO,
                  extract_kwargs: dict = None,
                  *args, **kwargs):
         """Base class for event extraction from label images
@@ -66,9 +66,8 @@ class QueueEventExtractor:
         finalize_extraction:
             Shared value indicating whether this worker should stop as
             soon as the `raw_queue` is empty.
-        close_queues: bool
-            Whether to close event and logging queues
-            (set to False in debug mode)
+        log_level:
+            Logging level to use
         extract_kwargs:
             Keyword arguments for the extraction process. See the
             keyword-only arguments in
@@ -85,7 +84,11 @@ class QueueEventExtractor:
         self.event_queue = event_queue
         #: queue for logging
         self.log_queue = log_queue
-        self.close_queues = close_queues
+        # Logging needs to be set up after `start` is called, otherwise
+        # it looks like we have the same PID as the parent process. We
+        # are setting up logging in `run`.
+        self.logger = None
+        self.log_level = log_level
         #: Shared array of length `len(data)` into which the number of
         #: events per frame is written.
         self.feat_nevents = feat_nevents
@@ -100,15 +103,12 @@ class QueueEventExtractor:
         extract_kwargs.setdefault("haralick", True)
         #: Feature extraction keyword arguments.
         self.extract_kwargs = extract_kwargs
-        # Logging needs to be set up after `start` is called, otherwise
-        # it looks like we have the same PID as the parent process. We
-        # are setting up logging in `run`.
-        self.logger = None
 
     @staticmethod
     def get_init_kwargs(data: HDF5Data,
                         gate: Gate,
                         log_queue: mp.Queue,
+                        log_level: int = logging.INFO,
                         preselect: None = None,
                         ptp_median: None = None):
         """Get initialization arguments for :cass:`.QueueEventExtractor`
@@ -125,7 +125,9 @@ class QueueEventExtractor:
         gate: HDF5Data
             Gating class to use
         log_queue: mp.Queue
-            Queue for sending log messages
+            Queue the worker uses for sending log messages
+        log_level: int
+            Logging level to use in the worker process
         preselect, ptp_median:
             Deprecated
 
@@ -146,6 +148,7 @@ class QueueEventExtractor:
             warnings.warn("The `ptp_median` argument is deprecated!",
                           DeprecationWarning)
 
+        # Note that the order must be identical to  __init__
         args = collections.OrderedDict()
         args["data"] = data
         args["gate"] = gate
@@ -159,7 +162,7 @@ class QueueEventExtractor:
             np.ctypeslib.ctypes.c_int16,
             int(np.prod(data.image.chunk_shape)))
         args["finalize_extraction"] = mp_spawn.Value("b", False)
-        args["close_queues"] = True
+        args["log_level"] = log_level
         return args
 
     def get_events_from_masks(self, masks, data_index, *,
@@ -294,17 +297,27 @@ class QueueEventExtractor:
         """Main loop of worker process"""
         # Don't wait for these two queues when joining workers
         self.raw_queue.cancel_join_thread()
-        self.log_queue.cancel_join_thread()
         #: logger sends all logs to `self.log_queue`
         self.logger = logging.getLogger(
             f"dcnum.feat.EventExtractor.{os.getpid()}")
+        self.logger.setLevel(self.log_level)
+        # Clear any handlers that might be set for this logger. This is
+        # important for the case when we are an instance of
+        # EventExtractorThread, because then all handlers from the main
+        # thread are inherited (as opposed to no handlers in the case
+        # of EventExtractorProcess).
+        self.logger.handlers.clear()
         queue_handler = QueueHandler(self.log_queue)
+        queue_handler.setLevel(self.log_level)
         self.logger.addHandler(queue_handler)
-        self.logger.addFilter(DeduplicatingLoggingFilter())
         self.logger.debug(f"Running {self} in PID {os.getpid()}")
 
         mp_array = np.ctypeslib.as_array(
             self.label_array).reshape(self.data.image.chunk_shape)
+
+        # only close queues when we have created them ourselves.
+        close_queues = isinstance(self, EventExtractorProcess)
+
         while True:
             try:
                 chunk_index, label_index = self.raw_queue.get(timeout=.03)
@@ -332,15 +345,21 @@ class QueueEventExtractor:
                     self.event_queue.put((index, events))
 
         self.logger.debug(f"Finalizing `run` for PID {os.getpid()}, {self}")
-        if self.close_queues:
+        if close_queues:
             # Explicitly close the event queue and join it
             self.event_queue.close()
             self.event_queue.join_thread()
             self.logger.debug(f"End of `run` for PID {os.getpid()}, {self}")
+
+        # Make sure everything gets written to the queue.
+        queue_handler.flush()
+
+        if close_queues:
             # Also close the logging queue. Note that not all messages might
             # arrive in the logging queue, since we called `cancel_join_thread`
             # earlier.
             self.log_queue.close()
+            self.log_queue.join_thread()
 
     @classmethod
     def get_ppid_from_kwargs(cls, kwargs):
@@ -362,17 +381,3 @@ class EventExtractorThread(QueueEventExtractor, threading.Thread):
     def __init__(self, *args, **kwargs):
         super(EventExtractorThread, self).__init__(
             name="EventExtractorThread", *args, **kwargs)
-
-
-class DeduplicatingLoggingFilter(logging.Filter):
-    def __init__(self, *args, **kwargs):
-        super(DeduplicatingLoggingFilter, self).__init__(*args, **kwargs)
-        self._records = []
-
-    def filter(self, record):
-        """Return True if the record should be logged"""
-        msg = record.getMessage()
-        logged = msg in self._records
-        if not logged:
-            self._records.append(msg)
-        return not logged

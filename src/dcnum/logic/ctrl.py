@@ -84,6 +84,9 @@ class DCNumJobRunner(threading.Thread):
             delay=True,
             errors="ignore",
         )
+        # Set the log file handler level to DEBUG, so it logs everything
+        # presented to it.
+        self._log_file_handler.setLevel(logging.DEBUG)
         fmt = logging.Formatter(
             fmt="%(asctime)s %(levelname)s %(name)s: %(message)s",
             datefmt='%H:%M:%S'
@@ -91,10 +94,17 @@ class DCNumJobRunner(threading.Thread):
         self._log_file_handler.setFormatter(fmt)
         self.main_logger.addHandler(self._log_file_handler)
         handlers = list(self.main_logger.handlers)
+
         # Queue for subprocesses to log to
         self.log_queue = mp_spawn.Queue()
-        self._qlisten = QueueListener(self.log_queue, *handlers)
+        self._qlisten = QueueListener(self.log_queue, *handlers,
+                                      respect_handler_level=True)
         self._qlisten.start()
+
+        if job["debug"]:
+            self.main_logger.info("Note that in debugging mode, duplicate "
+                                  "log entries may appear (logs that are "
+                                  "recorded via queues).")
 
         self.logger = logging.getLogger(f"dcnum.Runner-{self.pphash[:2]}")
 
@@ -453,7 +463,9 @@ class DCNumJobRunner(threading.Thread):
         fe_kwargs = QueueEventExtractor.get_init_kwargs(
             data=self.dtin,
             gate=gate.Gate(self.dtin, **self.job["gate_kwargs"]),
-            log_queue=self.log_queue)
+            log_queue=self.log_queue,
+            log_level=logging.DEBUG if self.job["debug"] else logging.INFO,
+            )
         fe_kwargs["extract_kwargs"] = self.job["feature_kwargs"]
 
         thr_feat = EventExtractorManagerThread(
