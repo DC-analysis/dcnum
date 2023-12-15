@@ -34,7 +34,9 @@ def test_base_background_input_has_basin(tmp_path):
                                               thresh_cleansing=0,
                                               frac_cleansing=.8,
                                               ) as bic:
+        assert bic.get_progress() == 0
         bic.process()
+        assert bic.get_progress() == 1
 
     # Make sure the basins exist in the input file
     with h5py.File(output_path) as h5:

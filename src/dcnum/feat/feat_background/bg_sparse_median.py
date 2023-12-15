@@ -206,10 +206,7 @@ class BackgroundSparseMed(Background):
 
         # Compute initial background images (populates self.bg_images)
         for ii, ti in enumerate(self.step_times):
-            print(f"Computing background {ii / self.step_times.size:.0%}",
-                  end="\r", flush=True)
             self.process_second(ii, ti)
-        print("Computing background 100%    ", flush=True)
 
         if self.frac_cleansing != 1:
             # The following algorithm finds background images that contain
@@ -292,6 +289,8 @@ class BackgroundSparseMed(Background):
             # Fill up remainder of index array with last entry
             bg_idx[idx1:] = ii
 
+        self.image_proc.value = self.image_count
+
         # Write background data
         pos = 0
         step = 1000
@@ -302,7 +301,9 @@ class BackgroundSparseMed(Background):
                 bg_images[bg_idx[cur_slice]]
             pos += step
 
-    def process_second(self, ii, second):
+    def process_second(self,
+                       ii: int,
+                       second: float | int):
         idx_start = np.argmin(np.abs(second - self.time))
         idx_stop = idx_start + self.kernel_size
         if idx_stop >= self.image_count:
@@ -340,6 +341,8 @@ class BackgroundSparseMed(Background):
                 break
 
         self.bg_images[ii] = self.shared_output.reshape(self.image_shape)
+
+        self.image_proc.value = idx_stop
 
 
 class MedianWorkerSingle(mp_spawn.Process):

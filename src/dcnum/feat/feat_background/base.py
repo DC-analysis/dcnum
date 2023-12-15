@@ -64,8 +64,10 @@ class Background(abc.ABC):
         #: number of CPUs used
         self.num_cpus = num_cpus
 
-        #: number of frames
+        #: number of images in the input data
         self.image_count = None
+        #: number of images that have been processed
+        self.image_proc = mp_spawn.Value("L", 0)
 
         #: HDF5Data instance for input data
         self.hdin = None
@@ -195,6 +197,13 @@ class Background(abc.ABC):
                                      method="check_user_kwargs",
                                      ppid=pp_check_user_kwargs)
         return kwargs
+
+    def get_progress(self):
+        """Return progress of background computation, float in [0,1]"""
+        if self.image_count == 0:
+            return 0.
+        else:
+            return self.image_proc.value / self.image_count
 
     def process(self):
         self.process_approach()

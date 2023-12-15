@@ -171,14 +171,12 @@ class BackgroundRollMed(Background):
         """Perform median computation on entire input data"""
         num_steps = int(np.ceil(self.image_count / self.batch_size))
         for ii in range(num_steps):
-            print(f"Computing background {ii/num_steps*100:.0f}%",
-                  end="\r", flush=True)
             self.process_next_batch()
         # Set the remaining kernel_size median values to the last one
         last_image = self.h5out["events/image_bg"][-self.kernel_size-1]
         for ii in range(self.kernel_size):
             self.h5out["events/image_bg"][self.image_count-ii-1] = last_image
-        print("Computing background 100%    ", flush=True)
+        self.image_proc.value = self.image_count
 
     def process_next_batch(self):
         """Process one batch of input data"""
@@ -215,6 +213,7 @@ class BackgroundRollMed(Background):
                                                          *self.image_shape)
 
         self.current_batch += 1
+        self.image_proc.value += self.batch_size
 
 
 class MedianWorker(mp_spawn.Process):

@@ -43,7 +43,9 @@ def test_median_sparsemend_full(tmp_path, event_count, kernel_size,
         assert np.allclose(bic.step_times,
                            np.arange(0, duration, split_time))
         # process the data
+        assert bic.get_progress() == 0
         bic.process()
+        assert bic.get_progress() == 1
     assert output_path.exists()
 
 

@@ -86,7 +86,9 @@ def test_median_process_next_batch(tmp_path, event_count):
         assert len(mic.shared_input_raw) == (10 + 90) * 5 * 7
 
         assert mic.current_batch == 0
+        assert mic.get_progress() == 0
         mic.process_next_batch()
+        assert mic.get_progress() == 90 / event_count
 
         assert mic.current_batch == 1
 
