@@ -1,19 +1,13 @@
 import logging
-import multiprocessing as mp
 import queue
 import time
 
 import numpy as np
 from scipy import ndimage
 
-from .base import Background
+from .base import mp_spawn, Background
 
 logger = logging.getLogger(__name__)
-
-
-# All subprocesses should use 'spawn' to avoid issues with threads
-# and 'fork' on POSIX systems.
-mp_spawn = mp.get_context('spawn')
 
 
 class BackgroundSparseMed(Background):
@@ -108,15 +102,15 @@ class BackgroundSparseMed(Background):
                     self.time -= self.time[0]
                 else:
                     # compute time using frame rate (approximate)
-                    dur = self.event_count / fr * 1.5
+                    dur = self.image_count / fr * 1.5
                     logger.info(f"Approximating duration: {dur/60:.1f}min")
-                    self.time = np.linspace(0, dur, self.event_count,
+                    self.time = np.linspace(0, dur, self.image_count,
                                             endpoint=True)
         if self.time is None:
             # No HDF5 file or no information therein; Make an educated guess.
-            dur = self.event_count / 3600 * 1.5
+            dur = self.image_count / 3600 * 1.5
             logger.info(f"Guessing duration: {dur/60:.1f}min")
-            self.time = np.linspace(0, dur, self.event_count,
+            self.time = np.linspace(0, dur, self.image_count,
                                     endpoint=True)
 
         #: duration of the measurement
@@ -286,7 +280,7 @@ class BackgroundSparseMed(Background):
             bg_images = self.bg_images
 
         # Assign each frame to a certain background index
-        bg_idx = np.zeros(self.event_count, dtype=int)
+        bg_idx = np.zeros(self.image_count, dtype=int)
         idx0 = 0
         idx1 = None
         for ii in range(len(step_times)):
@@ -301,8 +295,8 @@ class BackgroundSparseMed(Background):
         # Write background data
         pos = 0
         step = 1000
-        while pos < self.event_count:
-            stop = min(pos + step, self.event_count)
+        while pos < self.image_count:
+            stop = min(pos + step, self.image_count)
             cur_slice = slice(pos, stop)
             self.h5out["events/image_bg"][cur_slice] = \
                 bg_images[bg_idx[cur_slice]]
@@ -311,8 +305,8 @@ class BackgroundSparseMed(Background):
     def process_second(self, ii, second):
         idx_start = np.argmin(np.abs(second - self.time))
         idx_stop = idx_start + self.kernel_size
-        if idx_stop >= self.event_count:
-            idx_stop = self.event_count
+        if idx_stop >= self.image_count:
+            idx_stop = self.image_count
             idx_start = max(0, idx_stop - self.kernel_size)
         assert idx_stop - idx_start == self.kernel_size
 

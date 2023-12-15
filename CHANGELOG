@@ -2,6 +2,7 @@
  - fix: ignore empty HDF5 datasets when copying metadata
  - fix: logging from subprocesses did not work as expected
  - ref: removed close_queues argument from EventExtractor init
+ - ref: rename event_count with image_count in background computation
  - enh: improve logging verbosity
  - enh: append job information as log entry in DCNumJobRunner output file
  - enh: set chunk size for all feature data to 1MiB in HDF5Writer

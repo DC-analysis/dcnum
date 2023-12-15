@@ -1,16 +1,10 @@
-import multiprocessing as mp
 import queue
 import time
 
 import numpy as np
 from scipy import ndimage
 
-from .base import Background
-
-
-# All subprocesses should use 'spawn' to avoid issues with threads
-# and 'fork' on POSIX systems.
-mp_spawn = mp.get_context('spawn')
+from .base import mp_spawn, Background
 
 
 class BackgroundRollMed(Background):
@@ -152,9 +146,9 @@ class BackgroundRollMed(Background):
         stop_in = (batch_index + 1) * self.batch_size + self.kernel_size
         stop_out = (batch_index + 1) * self.batch_size
 
-        if stop_in > self.event_count:
-            stop_in = self.event_count
-            stop_out = self.event_count - self.kernel_size
+        if stop_in > self.image_count:
+            stop_in = self.image_count
+            stop_out = self.image_count - self.kernel_size
 
         slice_in = slice(start, stop_in)
         slice_out = slice(start, stop_out)
@@ -175,7 +169,7 @@ class BackgroundRollMed(Background):
 
     def process_approach(self):
         """Perform median computation on entire input data"""
-        num_steps = int(np.ceil(self.event_count / self.batch_size))
+        num_steps = int(np.ceil(self.image_count / self.batch_size))
         for ii in range(num_steps):
             print(f"Computing background {ii/num_steps*100:.0f}%",
                   end="\r", flush=True)
@@ -183,7 +177,7 @@ class BackgroundRollMed(Background):
         # Set the remaining kernel_size median values to the last one
         last_image = self.h5out["events/image_bg"][-self.kernel_size-1]
         for ii in range(self.kernel_size):
-            self.h5out["events/image_bg"][self.event_count-ii-1] = last_image
+            self.h5out["events/image_bg"][self.image_count-ii-1] = last_image
         print("Computing background 100%    ", flush=True)
 
     def process_next_batch(self):

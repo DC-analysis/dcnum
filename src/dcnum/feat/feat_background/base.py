@@ -15,6 +15,11 @@ from ...read import HDF5Data
 from ...write import create_with_basins
 
 
+# All subprocesses should use 'spawn' to avoid issues with threads
+# and 'fork' on POSIX systems.
+mp_spawn = mp.get_context('spawn')
+
+
 class Background(abc.ABC):
     def __init__(self, input_data, output_path, compress=True, num_cpus=None,
                  **kwargs):
@@ -55,12 +60,12 @@ class Background(abc.ABC):
         self.kwargs.update(kwargs)
 
         if num_cpus is None:
-            num_cpus = mp.cpu_count()
+            num_cpus = mp_spawn.cpu_count()
         #: number of CPUs used
         self.num_cpus = num_cpus
 
         #: number of frames
-        self.event_count = None
+        self.image_count = None
 
         #: HDF5Data instance for input data
         self.hdin = None
@@ -93,7 +98,7 @@ class Background(abc.ABC):
         #: shape of event images
         self.image_shape = self.input_data[0].shape
         #: total number of events
-        self.event_count = len(self.input_data)
+        self.image_count = len(self.input_data)
 
         if self.h5out is None:
             if not output_path.exists():
@@ -113,7 +118,7 @@ class Background(abc.ABC):
             "events/image_bg",
             shape=self.input_data.shape,
             dtype=np.uint8,
-            chunks=(min(100, self.event_count),
+            chunks=(min(100, self.image_count),
                     self.image_shape[0],
                     self.image_shape[1]),
             fletcher32=True,
