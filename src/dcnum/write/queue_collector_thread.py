@@ -273,3 +273,6 @@ class QueueCollectorThread(threading.Thread):
 
             # Increment current frame index.
             last_idx += len(cur_nevents)
+
+        self.logger.info(f"Counted {self.written_events} events.")
+        self.logger.debug(f"Counted {self.written_frames} frames.")
