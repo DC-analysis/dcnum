@@ -65,7 +65,8 @@ class DCNumJobRunner(threading.Thread):
         # current job state
         self._state = "init"
         # overall progress [0, 1]
-        self._progress = 0
+        self._progress_bg = None
+        self._progress_ex = None
         # segmentation frame rate
         self._segm_rate = 0
 
@@ -206,8 +207,20 @@ class DCNumJobRunner(threading.Thread):
         self.close()
 
     def get_status(self):
+        bgpart = .1  # fraction of background
+        expart = 0.85  # fraction of segmentation and feature extraction
+        clpart = 0.05  # fraction of cleanup
+        progress = 0
+        if self._progress_bg is not None:
+            # This is the image count of the input dataset
+            progress += bgpart * (self._progress_bg.value / len(self.draw))
+        if self._progress_ex is not None:
+            progress += expart * self._progress_ex
+        if self._state == "done":
+            progress += clpart
+
         return {
-            "progress": self._progress,
+            "progress": progress,
             "segm rate": self._segm_rate,
             "state": self._state,
         }
@@ -273,7 +286,6 @@ class DCNumJobRunner(threading.Thread):
             # (note that `self.path_temp_in` is basin-based).
             self.task_background()
 
-        self._progress = 0.1
         self._state = "segmentation"
 
         # We have the input data covered, and we have to run the
@@ -298,7 +310,6 @@ class DCNumJobRunner(threading.Thread):
             # reflected in `self.path_temp_out`.
             self.path_temp_in.rename(self.path_temp_out)
 
-        self._progress = 0.95
         self._state = "cleanup"
 
         # The user would normally expect the output file to be something
@@ -386,7 +397,6 @@ class DCNumJobRunner(threading.Thread):
 
         # Rename the output file
         self.path_temp_out.rename(self.job["path_out"])
-        self._progress = 1.0
         self._state = "done"
 
     def task_background(self):
@@ -411,6 +421,7 @@ class DCNumJobRunner(threading.Thread):
                 num_cpus=self.job["num_procs"],
                 # custom kwargs
                 **self.job["background_kwargs"]) as bic:
+            self._progress_bg = bic.image_proc
             bic.process()
         self.logger.info("Finished background computation")
 
@@ -492,16 +503,12 @@ class DCNumJobRunner(threading.Thread):
 
         # So in principle we are done here. We do not have to do anything
         # besides monitoring the progress.
-        pmin = 0.1  # from background computation
-        pmax = 0.95  # 5% reserved for cleanup
         while True:
             counted_frames = thr_coll.written_frames
             self.event_count = thr_coll.written_events
             td = time.monotonic() - t0
             # set the current status
-            self._progress = round(
-                pmin + counted_frames / data_size * (pmax - pmin),
-                3)
+            self._progress_ex = counted_frames / data_size
             self._segm_rate = counted_frames / (td or 0.03)
             time.sleep(.5)
             if counted_frames == data_size:
