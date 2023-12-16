@@ -148,6 +148,14 @@ class EventExtractorManagerThread(threading.Thread):
         while not log_queue.empty():
             time.sleep(.05)
 
+        inv_masks = self.fe_kwargs["invalid_mask_counter"].value
+        if inv_masks:
+            self.logger.info(f"Encountered {inv_masks} invalid masks.")
+            inv_frac = inv_masks / len(self.data)
+            if inv_frac > 0.0:
+                self.logger.warning(f"Discarded {inv_frac:.1%} of the masks. "
+                                    f"Please check segmenter applicability.")
+
         self.logger.debug("Requesting extraction workers to join.")
         self.fe_kwargs["finalize_extraction"].value = True
         [w.join() for w in workers]

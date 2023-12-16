@@ -35,6 +35,7 @@ class QueueEventExtractor:
                  feat_nevents: mp.Array,
                  label_array: mp.Array,
                  finalize_extraction: mp.Value,
+                 invalid_mask_counter: mp.Value,
                  log_level: int = logging.INFO,
                  extract_kwargs: dict = None,
                  *args, **kwargs):
@@ -66,6 +67,8 @@ class QueueEventExtractor:
         finalize_extraction:
             Shared value indicating whether this worker should stop as
             soon as the `raw_queue` is empty.
+        invalid_mask_counter:
+            Counts masks labeled as invalid by the feature extractor
         log_level:
             Logging level to use
         extract_kwargs:
@@ -84,6 +87,8 @@ class QueueEventExtractor:
         self.event_queue = event_queue
         #: queue for logging
         self.log_queue = log_queue
+        #: invalid mask counter
+        self.invalid_mask_counter = invalid_mask_counter
         # Logging needs to be set up after `start` is called, otherwise
         # it looks like we have the same PID as the parent process. We
         # are setting up logging in `run`.
@@ -162,6 +167,7 @@ class QueueEventExtractor:
             np.ctypeslib.ctypes.c_int16,
             int(np.prod(data.image.chunk_shape)))
         args["finalize_extraction"] = mp_spawn.Value("b", False)
+        args["invalid_mask_counter"] = mp_spawn.Value("L", 0)
         args["log_level"] = log_level
         return args
 
@@ -210,8 +216,7 @@ class QueueEventExtractor:
         # over from gated_events to valid_events. According to our experience
         # invalid events happen rarely though.
         if np.any(invalid):
-            self.logger.info(f"Discarded {np.sum(invalid)} events due to "
-                             "invalid segmentation.")
+            self.invalid_mask_counter.value += np.sum(invalid)
             for key in gated_events:
                 valid_events[key] = gated_events[key][valid]
         else:
@@ -310,7 +315,7 @@ class QueueEventExtractor:
         queue_handler = QueueHandler(self.log_queue)
         queue_handler.setLevel(self.log_level)
         self.logger.addHandler(queue_handler)
-        self.logger.debug(f"Running {self} in PID {os.getpid()}")
+        self.logger.info("Running")
 
         mp_array = np.ctypeslib.as_array(
             self.label_array).reshape(self.data.image.chunk_shape)
