@@ -10,6 +10,7 @@ import platform
 import socket
 import threading
 import time
+import traceback
 import uuid
 
 import hdf5plugin
@@ -52,6 +53,7 @@ class DCNumJobRunner(threading.Thread):
             (defaults to hostname)
         """
         super(DCNumJobRunner, self).__init__(*args, **kwargs)
+        self.error_tb = None
         self.job = job
         if tmp_suffix is None:
             tmp_suffix = f"{socket.gethostname()}_{str(uuid.uuid4())[:5]}"
@@ -201,10 +203,10 @@ class DCNumJobRunner(threading.Thread):
             # We don't have to delete self.path_temp_out, since this one
             # is `rename`d to `self.jon["path_out"]`.
 
-    def join(self, *args, **kwargs):
+    def join(self, delete_temporary_files=True, *args, **kwargs):
         super(DCNumJobRunner, self).join(*args, **kwargs)
         # Close only after join
-        self.close()
+        self.close(delete_temporary_files=delete_temporary_files)
 
     def get_status(self):
         bgpart = .1  # fraction of background
@@ -226,6 +228,17 @@ class DCNumJobRunner(threading.Thread):
         }
 
     def run(self):
+        try:
+            self.run_pipeline()
+        except BaseException:
+            self._state = "error"
+            self.error_tb = traceback.format_exc()
+            if not self.is_alive():
+                # Thread has not been started. This means we are not running
+                # in a thread but in the main process. Raise the exception.
+                raise
+
+    def run_pipeline(self):
         """Execute the pipeline job"""
         time_start = time.monotonic()
         time_string = time.strftime("%Y-%m-%d-%H.%M.%S", time.gmtime())

@@ -5,6 +5,7 @@
  - ref: rename event_count with image_count in background computation
  - ref: do not print anything to stdout when computing background data
  - ref: use data from background computer in DCNumJobRunner.get_status
+ - enh: introduce DCNumJobRunner.error_tb for errors happening in threads
  - enh: improve logging verbosity
  - enh: append job information as log entry in DCNumJobRunner output file
  - enh: set chunk size for all feature data to 1MiB in HDF5Writer

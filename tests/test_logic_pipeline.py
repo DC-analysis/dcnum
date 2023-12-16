@@ -179,6 +179,23 @@ def test_error_file_exists():
             runner.run()
 
 
+def test_error_file_exists_in_thread():
+    path_orig = retrieve_data("fmt-hdf5_cytoshot_full-features_2023.zip")
+    path = path_orig.with_name("input.rtdc")
+    with read.concatenated_hdf5_data(5 * [path_orig], path_out=path):
+        pass
+    path_out = path.with_name("test_out.rtdc")
+    job = logic.DCNumPipelineJob(path_in=path,
+                                 path_out=path_out,
+                                 debug=True)
+    path_out.touch()
+    runner = logic.DCNumJobRunner(job=job)
+    runner.start()
+    runner.join()
+    assert runner.error_tb is not None
+    assert "FileExistsError" in runner.error_tb
+
+
 def test_error_pipeline_log_file_remains():
     path_orig = retrieve_data("fmt-hdf5_cytoshot_full-features_2023.zip")
     path = path_orig.with_name("input.rtdc")
