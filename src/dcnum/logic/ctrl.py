@@ -36,6 +36,19 @@ from .json_encoder import ExtendedJSONEncoder
 # queues and threads and would end up with race conditions otherwise.
 mp_spawn = mp.get_context("spawn")
 
+#: valid states for a job runnter. The states must be in logical ordern,
+#: not in alphabetical order.
+valid_states = [
+    "created",
+    "init",
+    "setup",
+    "background",
+    "segmentation",
+    "cleanup",
+    "done",
+    "error",
+]
+
 
 class DCNumJobRunner(threading.Thread):
     def __init__(self,
@@ -178,6 +191,16 @@ class DCNumJobRunner(threading.Thread):
         po = pathlib.Path(self.job["path_out"])
         return po.with_name(po.stem + f"_output_{self.tmp_suffix}.rtdc~")
 
+    @property
+    def state(self):
+        return self._state
+
+    @state.setter
+    def state(self, state):
+        if state not in valid_states:
+            raise ValueError(f"Invalid state '{state}' specified!")
+        self._state = state
+
     def close(self, delete_temporary_files=True):
         if self._data_raw is not None:
             self._data_raw.close()
@@ -209,17 +232,32 @@ class DCNumJobRunner(threading.Thread):
         self.close(delete_temporary_files=delete_temporary_files)
 
     def get_status(self):
-        bgpart = .1  # fraction of background
-        expart = 0.85  # fraction of segmentation and feature extraction
-        clpart = 0.05  # fraction of cleanup
+        # Compute the total progress. The following weights indicate
+        # how much fractional time each processing step takes.
+        bgw = 4  # fraction of background
+        exw = 27  # fraction of segmentation and feature extraction
+        clw = 1  # fraction of cleanup operations
+        tot = bgw + exw + clw
         progress = 0
-        if self._progress_bg is not None:
+        st = self.state
+
+        # background
+        if valid_states.index(st) > valid_states.index("background"):
+            # background already computed
+            progress += bgw / tot
+        elif self._progress_bg is not None:
             # This is the image count of the input dataset
-            progress += bgpart * (self._progress_bg.value / len(self.draw))
-        if self._progress_ex is not None:
-            progress += expart * self._progress_ex
-        if self._state == "done":
-            progress += clpart
+            progress += bgw / tot * (self._progress_bg.value / len(self.draw))
+
+        # segmentation
+        if valid_states.index(st) > valid_states.index("segmentation"):
+            # segmentation already done
+            progress += exw / tot
+        elif self._progress_ex is not None:
+            progress += exw / tot * self._progress_ex
+
+        if self.state == "done":
+            progress = 1
 
         return {
             "progress": progress,
@@ -231,7 +269,7 @@ class DCNumJobRunner(threading.Thread):
         try:
             self.run_pipeline()
         except BaseException:
-            self._state = "error"
+            self.state = "error"
             self.error_tb = traceback.format_exc()
             if not self.is_alive():
                 # Thread has not been started. This means we are not running
@@ -248,7 +286,7 @@ class DCNumJobRunner(threading.Thread):
                 f"Output file {self.job['path_out']} already exists!")
         # Make sure the output directory exists.
         self.job["path_out"].parent.mkdir(parents=True, exist_ok=True)
-        self._state = "setup"
+        self.state = "setup"
         # First get a list of all pipeline IDs. If the input file has
         # already been processed by dcnum, then we do not have to redo
         # everything.
@@ -290,7 +328,7 @@ class DCNumJobRunner(threading.Thread):
             or (datdict["feat_id"] != self.ppdict["feat_id"])
             or (datdict["gate_id"] != self.ppdict["gate_id"]))
 
-        self._state = "background"
+        self.state = "background"
 
         if redo_bg:
             # The 'image_bg' feature is written to `self.path_temp_in`.
@@ -299,7 +337,7 @@ class DCNumJobRunner(threading.Thread):
             # (note that `self.path_temp_in` is basin-based).
             self.task_background()
 
-        self._state = "segmentation"
+        self.state = "segmentation"
 
         # We have the input data covered, and we have to run the
         # long-lasting segmentation and feature extraction step.
@@ -323,7 +361,7 @@ class DCNumJobRunner(threading.Thread):
             # reflected in `self.path_temp_out`.
             self.path_temp_in.rename(self.path_temp_out)
 
-        self._state = "cleanup"
+        self.state = "cleanup"
 
         # The user would normally expect the output file to be something
         # that is self-contained (copying the file wildly across file
@@ -410,7 +448,7 @@ class DCNumJobRunner(threading.Thread):
 
         # Rename the output file
         self.path_temp_out.rename(self.job["path_out"])
-        self._state = "done"
+        self.state = "done"
 
     def task_background(self):
         """Perform background computation task
