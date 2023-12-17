@@ -315,7 +315,7 @@ class QueueEventExtractor:
         queue_handler = QueueHandler(self.log_queue)
         queue_handler.setLevel(self.log_level)
         self.logger.addHandler(queue_handler)
-        self.logger.info("Running")
+        self.logger.info("Ready")
 
         mp_array = np.ctypeslib.as_array(
             self.label_array).reshape(self.data.image.chunk_shape)
