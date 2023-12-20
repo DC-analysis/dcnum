@@ -77,9 +77,9 @@ class SegmenterManagerThread(threading.Thread):
         self.debug = debug
 
     def run(self):
+        num_slots = len(self.slot_states)
         # We iterate over all the chunks of the image data.
         for chunk in self.image_data.iter_chunks():
-            num_slots = len(self.slot_states)
             cur_slot = 0
             empty_slots = 0
             # Wait for a free slot to perform segmentation (compute labels)
@@ -89,8 +89,11 @@ class SegmenterManagerThread(threading.Thread):
                 # - "s" the extractor processed the data and is waiting
                 #   for the segmenter
                 if self.slot_states[cur_slot] != "e":
+                    # It's the segmenters turn. Note that we use '!= "e"',
+                    # because the initial value is "\x00".
                     break
                 else:
+                    # Try another slot.
                     empty_slots += 1
                     cur_slot = (cur_slot + 1) % num_slots
                 if empty_slots >= num_slots:

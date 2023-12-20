@@ -81,9 +81,9 @@ class EventExtractorManagerThread(threading.Thread):
                    for _ in range(self.num_workers)]
         [w.start() for w in workers]
 
+        num_slots = len(self.slot_states)
         chunks_processed = 0
         while True:
-            num_slots = len(self.slot_states)
             cur_slot = 0
             unavailable_slots = 0
             # Check all slots for segmented labels
@@ -93,8 +93,10 @@ class EventExtractorManagerThread(threading.Thread):
                 # - "s" the extractor processed the data and is waiting
                 #   for the segmenter
                 if self.slot_states[cur_slot] == "e":
+                    # The segmenter has something for us in this slot.
                     break
                 else:
+                    # Try another slot.
                     unavailable_slots += 1
                     cur_slot = (cur_slot + 1) % num_slots
                 if unavailable_slots >= num_slots:
