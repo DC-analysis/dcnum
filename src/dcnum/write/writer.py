@@ -283,7 +283,7 @@ def set_default_filter_kwargs(ds_kwds=None, compression=True):
         ds_kwds = {}
     if compression:
         # compression
-        for key, val in dict(hdf5plugin.Zstd(clevel=4)).items():
+        for key, val in dict(hdf5plugin.Zstd(clevel=5)).items():
             ds_kwds.setdefault(key, val)
     # checksums
     ds_kwds.setdefault("fletcher32", True)
