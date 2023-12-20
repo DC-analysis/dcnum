@@ -498,13 +498,19 @@ class DCNumJobRunner(threading.Thread):
         if self.job["debug"]:
             num_slots = 1
             num_extractors = 1
+            num_segmenters = 1
         elif seg_cls.hardware_processor == "cpu":  # CPU segmenter
             num_slots = 2
+            # Split segmentation and feature extraction workers evenly.
             num_extractors = self.job["num_procs"] // 2
+            num_segmenters = self.job["num_procs"] - num_extractors
         else:  # GPU segmenter
             num_slots = 3
             num_extractors = self.job["num_procs"]
+            num_segmenters = 1
         num_extractors = max(1, num_extractors)
+        num_segmenters = max(1, num_segmenters)
+        self.job["segmenter_kwargs"]["num_workers"] = num_segmenters
 
         slot_chunks = mp_spawn.Array("i", num_slots)
         slot_states = mp_spawn.Array("u", num_slots)

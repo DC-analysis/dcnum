@@ -15,6 +15,7 @@ class GPUSegmenter(Segmenter, abc.ABC):
 
     def __init__(self,
                  *,
+                 num_workers: int = None,
                  kwargs_mask: Dict = None,
                  debug: bool = False,
                  **kwargs
@@ -31,6 +32,9 @@ class GPUSegmenter(Segmenter, abc.ABC):
             Additional, optional keyword arguments for `segment_approach`
             defined in the subclass.
         """
+        if num_workers not in [None, 1]:
+            raise ValueError(f"Number of workers must not be larger than 1 "
+                             f"for GPU segmenter, got '{num_workers}'!")
         super(GPUSegmenter, self).__init__(kwargs_mask=kwargs_mask,
                                            debug=debug,
                                            **kwargs)
