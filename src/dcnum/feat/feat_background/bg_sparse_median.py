@@ -5,6 +5,8 @@ import time
 import numpy as np
 from scipy import ndimage
 
+from ...read import HDF5Data
+
 from .base import mp_spawn, Background
 
 logger = logging.getLogger(__name__)
@@ -90,15 +92,16 @@ class BackgroundSparseMed(Background):
         # time axis
         self.time = None
         if self.h5in is not None:
-            if "time" in self.h5in["events"]:
+            hd = HDF5Data(self.h5in)
+            if "time" in hd:
                 # use actual time from dataset
-                self.time = self.h5in["/events/time"][:]
+                self.time = hd["time"][:]
                 self.time -= self.time[0]
-            elif "imaging:frame rate" in self.h5in.attrs:
-                fr = self.h5in.attrs["imaging:frame rate"]
-                if "frame" in self.h5in["/events"]:
+            elif "imaging:frame rate" in hd.meta:
+                fr = hd.meta["imaging:frame rate"]
+                if "frame" in hd:
                     # compute time from frame rate and frame numbers
-                    self.time = self.h5in["/events/frame"] / fr
+                    self.time = hd["frame"] / fr
                     self.time -= self.time[0]
                 else:
                     # compute time using frame rate (approximate)

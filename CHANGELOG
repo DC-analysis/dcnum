@@ -1,6 +1,7 @@
 0.16.3
  - enh: define valid DCNumJobRunner state
  - enh: more robust computation of progress
+ - enh: use HDF5Data when loading input data for background computation
  - ref: move dataset generation default kwargs to writer submodule
  - ref: warn above 0.5% of discarded events in EventExtractorManagerThread
 0.16.2
