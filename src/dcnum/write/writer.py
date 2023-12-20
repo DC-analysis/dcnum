@@ -21,11 +21,7 @@ class HDF5Writer:
         """Write deformability cytometry HDF5 data"""
         self.h5 = h5py.File(path, mode=mode, libver="latest")
         self.events = self.h5.require_group("events")
-        if ds_kwds is None:
-            ds_kwds = {}
-        for key, val in dict(hdf5plugin.Zstd(clevel=5)).items():
-            ds_kwds.setdefault(key, val)
-        ds_kwds.setdefault("fletcher32", True)
+        ds_kwds = set_default_filter_kwargs(ds_kwds)
         self.ds_kwds = ds_kwds
 
     def __enter__(self):
@@ -249,10 +245,7 @@ def copy_metadata(h5_src: h5py.File,
     are not defined already are added.
     """
     # compress data
-    ds_kwds = {}
-    for key, val in dict(hdf5plugin.Zstd(clevel=5)).items():
-        ds_kwds.setdefault(key, val)
-    ds_kwds.setdefault("fletcher32", True)
+    ds_kwds = set_default_filter_kwargs()
     # set attributes
     src_attrs = dict(h5_src.attrs)
     for kk in src_attrs:
@@ -283,3 +276,15 @@ def copy_metadata(h5_src: h5py.File,
                                       f"dcnum {version}"]
                         soft_strgs = [s for s in soft_strgs if s is not None]
                         ds.attrs["software"] = " | ".join(soft_strgs)
+
+
+def set_default_filter_kwargs(ds_kwds=None, compression=True):
+    if ds_kwds is None:
+        ds_kwds = {}
+    if compression:
+        # compression
+        for key, val in dict(hdf5plugin.Zstd(clevel=4)).items():
+            ds_kwds.setdefault(key, val)
+    # checksums
+    ds_kwds.setdefault("fletcher32", True)
+    return ds_kwds

@@ -7,12 +7,11 @@ import uuid
 import warnings
 
 import h5py
-import hdf5plugin
 import numpy as np
 
 from ...meta import ppid
 from ...read import HDF5Data
-from ...write import create_with_basins
+from ...write import create_with_basins, set_default_filter_kwargs
 
 
 # All subprocesses should use 'spawn' to avoid issues with threads
@@ -112,10 +111,7 @@ class Background(abc.ABC):
             self.h5out = h5py.File(output_path, "a", libver="latest")
 
         # Initialize background data
-        if compress:
-            compression_kwargs = hdf5plugin.Zstd(clevel=5)
-        else:
-            compression_kwargs = {}
+        ds_kwargs = set_default_filter_kwargs(compression=compress)
         h5bg = self.h5out.require_dataset(
             "events/image_bg",
             shape=self.input_data.shape,
@@ -123,8 +119,7 @@ class Background(abc.ABC):
             chunks=(min(100, self.image_count),
                     self.image_shape[0],
                     self.image_shape[1]),
-            fletcher32=True,
-            **compression_kwargs,
+            **ds_kwargs,
         )
         h5bg.attrs.create('CLASS', np.string_('IMAGE'))
         h5bg.attrs.create('IMAGE_VERSION', np.string_('1.2'))

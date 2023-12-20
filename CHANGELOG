@@ -1,6 +1,7 @@
 0.16.3
  - enh: define valid DCNumJobRunner state
  - enh: more robust computation of progress
+ - ref: move dataset generation default kwargs to writer submodule
 0.16.2
  - fix: ignore empty HDF5 datasets when copying metadata
  - fix: logging from subprocesses did not work as expected

@@ -13,7 +13,6 @@ import time
 import traceback
 import uuid
 
-import hdf5plugin
 import h5py
 
 from ..feat.feat_background.base import get_available_background_methods
@@ -26,7 +25,7 @@ from ..read import HDF5Data
 from .._version import version_tuple
 from ..write import (
     DequeWriterThread, HDF5Writer, QueueCollectorThread,
-    copy_metadata, create_with_basins,
+    copy_metadata, create_with_basins, set_default_filter_kwargs
 )
 
 from .job import DCNumPipelineJob
@@ -480,8 +479,7 @@ class DCNumJobRunner(threading.Thread):
         self.logger.info("Starting segmentation and feature extraction")
         # Start writer thread
         writer_dq = collections.deque()
-        ds_kwds = dict(hdf5plugin.Zstd(clevel=5))
-        ds_kwds["fletcher32"] = True
+        ds_kwds = set_default_filter_kwargs()
         thr_write = DequeWriterThread(
             path_out=self.path_temp_out,
             dq=writer_dq,
