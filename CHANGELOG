@@ -2,6 +2,7 @@
  - enh: define valid DCNumJobRunner state
  - enh: more robust computation of progress
  - ref: move dataset generation default kwargs to writer submodule
+ - ref: warn above 0.5% of discarded events in EventExtractorManagerThread
 0.16.2
  - fix: ignore empty HDF5 datasets when copying metadata
  - fix: logging from subprocesses did not work as expected
