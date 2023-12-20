@@ -185,8 +185,9 @@ def test_pickling_state():
     assert np.all(h5d1.image[0] == h5d2.image[0])
     assert len(h5d1) == 40
     assert len(h5d1) == 40
-    assert h5d1.image_cache_size == 5
-    assert h5d2.image_cache_size == 5
+    # cache size changed from 5 to 2 in dcnum 0.16.3
+    assert h5d1.image_cache_size == 2
+    assert h5d2.image_cache_size == 2
     assert len(h5d1.basins) == 0
     assert len(h5d2.basins) == 0
 
