@@ -500,6 +500,11 @@ class DCNumJobRunner(threading.Thread):
             num_extractors = 1
             num_segmenters = 1
         elif seg_cls.hardware_processor == "cpu":  # CPU segmenter
+            # We could in principle set the number of slots to one and
+            # jave both number of extractors and number of segmenters set
+            # to the total number of CPUs. However, we would need more RAM
+            # (for caching the image data) and we also have more overhead.
+            # Having two slots shared between all workers is more efficient.
             num_slots = 2
             # Split segmentation and feature extraction workers evenly.
             num_extractors = self.job["num_procs"] // 2

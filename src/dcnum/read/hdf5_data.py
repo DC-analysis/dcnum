@@ -25,7 +25,7 @@ class HDF5Data:
                  basins: List[Dict[List[str] | str]] = None,
                  logs: Dict[List[str]] = None,
                  tables: Dict[np.ndarray] = None,
-                 image_cache_size: int = 5,
+                 image_cache_size: int = 2,
                  ):
         # Init is in __setstate__ so we can pickle this class
         # and use it for multiprocessing.

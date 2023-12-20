@@ -11,7 +11,7 @@ class HDF5ImageCache:
     def __init__(self,
                  h5ds: h5py.Dataset,
                  chunk_size: int = 1000,
-                 cache_size: int = 5,
+                 cache_size: int = 2,
                  boolean: bool = False):
         """An HDF5 image cache
 
