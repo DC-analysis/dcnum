@@ -236,6 +236,25 @@ def test_pickling_state_tables():
                            h5d2.tables["sample_table"][lk])
 
 
+def test_read_empty_logs():
+    path = retrieve_data(
+        data_path / "fmt-hdf5_cytoshot_full-features_legacy_allev_2023.zip")
+    with h5py.File(path, "a") as h5:
+        h5.require_group("logs").create_dataset(name="empty_log",
+                                                data=[])
+    h5r = read.HDF5Data(path)
+    assert "empty_log" not in h5r.logs
+
+
+def test_read_zero_size():
+    path = retrieve_data(data_path / "fmt-hdf5_shapein_empty.zip")
+    with read.HDF5Data(path) as hd:
+        assert len(hd) == 0
+        with pytest.warns(read.cache.EmptyDatasetWarning,
+                          match=f"{path.name} has zero length"):
+            assert len(hd.image) == 0
+
+
 def test_table_with_length_one():
     path = retrieve_data(
         data_path / "fmt-hdf5_cytoshot_full-features_legacy_allev_2023.zip")
@@ -262,13 +281,3 @@ def test_table_with_length_one():
     table = h5d1.tables["sample_table"]
     assert len(table) == 3
     assert h5d1.tables["sample_table"]["alot"].shape == (1,)
-
-
-def test_read_empty_logs():
-    path = retrieve_data(
-        data_path / "fmt-hdf5_cytoshot_full-features_legacy_allev_2023.zip")
-    with h5py.File(path, "a") as h5:
-        h5.require_group("logs").create_dataset(name="empty_log",
-                                                data=[])
-    h5r = read.HDF5Data(path)
-    assert "empty_log" not in h5r.logs

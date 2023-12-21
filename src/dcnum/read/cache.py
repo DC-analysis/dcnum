@@ -2,9 +2,15 @@ import collections
 import functools
 import hashlib
 import pathlib
+import warnings
 
 import h5py
 import numpy as np
+
+
+class EmptyDatasetWarning(UserWarning):
+    """Used for files that contain no actual data"""
+    pass
 
 
 class HDF5ImageCache:
@@ -22,9 +28,15 @@ class HDF5ImageCache:
         `HDF5ImageCache` class caches the chunks from the HDF5 files
         into memory, making single-image-access very fast.
         """
+        self.shape = h5ds.shape
+        self._len = self.shape[0]
+        if self._len == 0:
+            warnings.warn(f"Input image '{h5ds.name}' in "
+                          f"file {h5ds.file.filename} has zero length.",
+                          EmptyDatasetWarning)
         # TODO:
         # - adjust chunking to multiples of the chunks in the dataset
-        #   (which will slightly speed up things)
+        #   (which might slightly speed up things)
         chunk_size = min(h5ds.shape[0], chunk_size)
         self.h5ds = h5ds
         self.chunk_size = chunk_size
@@ -32,11 +44,9 @@ class HDF5ImageCache:
         self.cache_size = cache_size
         #: This is a FILO cache for the chunks
         self.cache = collections.OrderedDict()
-        self.shape = h5ds.shape
         self.image_shape = self.shape[1:]
         self.chunk_shape = (chunk_size,) + self.shape[1:]
-        self._len = self.shape[0]
-        self.num_chunks = int(np.ceil(self._len / self.chunk_size))
+        self.num_chunks = int(np.ceil(self._len / (self.chunk_size or 1)))
 
     def _get_chunk_index_for_index(self, index):
         if index < 0:
