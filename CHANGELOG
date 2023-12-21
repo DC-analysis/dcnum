@@ -1,6 +1,7 @@
 0.16.4
  - fix: there was no progress for background copying
  - enh: detect data files that contain no events
+ - tests: add test for sparsemed bg worker
 0.16.3
  - enh: define valid DCNumJobRunner state
  - enh: more robust computation of progress

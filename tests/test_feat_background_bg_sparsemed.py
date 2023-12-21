@@ -1,3 +1,5 @@
+import threading
+
 import h5py
 import numpy as np
 import pytest
@@ -188,3 +190,47 @@ def test_median_sparsemend_small_file(tmp_path):
         assert bic.get_ppid() == "sparsemed:k=200^s=0.01^t=0^f=0.8"
 
     assert output_path.exists()
+
+
+@pytest.mark.filterwarnings(
+    "ignore::dcnum.write.writer.CreatingFileWithoutBasinWarning")
+def test_median_sparsemend_worker(tmp_path):
+    event_count = 34
+    kernel_size = 200
+    split_time = 0.01
+    output_path = tmp_path / "test.h5"
+    # image shape: 5 * 7
+    input_data = np.arange(5*7).reshape(1, 5, 7) * np.ones((event_count, 1, 1))
+    assert np.all(input_data[0] == input_data[1])
+    assert np.all(input_data[0].flatten() == np.arange(5*7))
+
+    with bg_sparse_median.BackgroundSparseMed(input_data=input_data,
+                                              output_path=output_path,
+                                              kernel_size=kernel_size,
+                                              split_time=split_time,
+                                              thresh_cleansing=0,
+                                              frac_cleansing=.8,
+                                              num_cpus=1,
+                                              ) as bic:
+        # make all workers join
+        bic.worker_counter.value = -1000
+        [w.join() for w in bic.workers]
+        bic.worker_counter.value = 0
+        # create our own worker
+        worker = bg_sparse_median.MedianWorkerSingle(
+            job_queue=bic.queue,
+            counter=bic.worker_counter,
+            shared_input=bic.shared_input_raw,
+            shared_output=bic.shared_output_raw,
+            kernel_size=bic.kernel_size)
+        # run the worker in a thread
+        thr = threading.Thread(target=worker.run)
+        thr.start()
+        # request the worker to do its thing
+        bic.process()
+        bic.worker_counter.value = -1000
+        thr.join()
+
+    assert output_path.exists()
+    with h5py.File(output_path) as h5:
+        assert len(h5["events/image_bg"]) == 34
