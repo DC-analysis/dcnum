@@ -20,3 +20,6 @@ class BackgroundCopy(Background):
                           dst_loc=self.h5out["events"].id,
                           dst_name=b"image_bg",
                           )
+
+        # set progress to 100%
+        self.image_proc.value = self.image_count
