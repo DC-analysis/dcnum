@@ -534,6 +534,7 @@ class DCNumJobRunner(threading.Thread):
         fe_kwargs = QueueEventExtractor.get_init_kwargs(
             data=self.dtin,
             gate=gate.Gate(self.dtin, **self.job["gate_kwargs"]),
+            num_extractors=num_extractors,
             log_queue=self.log_queue,
             log_level=logging.DEBUG if self.job["debug"] else logging.INFO,
             )

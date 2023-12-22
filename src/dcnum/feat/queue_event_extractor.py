@@ -36,8 +36,10 @@ class QueueEventExtractor:
                  label_array: mp.Array,
                  finalize_extraction: mp.Value,
                  invalid_mask_counter: mp.Value,
+                 worker_monitor: mp.RawArray,
                  log_level: int = logging.INFO,
                  extract_kwargs: dict = None,
+                 worker_index: int = None,
                  *args, **kwargs):
         """Base class for event extraction from label images
 
@@ -69,14 +71,21 @@ class QueueEventExtractor:
             soon as the `raw_queue` is empty.
         invalid_mask_counter:
             Counts masks labeled as invalid by the feature extractor
+        worker_monitor:
+            Monitors the frames each worker has processed. Only the
+            value in `worker_monitor[worker_index]` is modified.
         log_level:
             Logging level to use
         extract_kwargs:
             Keyword arguments for the extraction process. See the
             keyword-only arguments in
             :func:`QueueEventExtractor.get_events_from_masks`.
+        worker_index:
+            The index to increment values in `worker_monitor`
         """
         super(QueueEventExtractor, self).__init__(*args, **kwargs)
+        #: Worker index for populating
+        self.worker_index = worker_index or 0
         #: Data instance
         self.data = data
         #: Gating information
@@ -89,6 +98,8 @@ class QueueEventExtractor:
         self.log_queue = log_queue
         #: invalid mask counter
         self.invalid_mask_counter = invalid_mask_counter
+        #: worker busy counter
+        self.worker_monitor = worker_monitor
         # Logging needs to be set up after `start` is called, otherwise
         # it looks like we have the same PID as the parent process. We
         # are setting up logging in `run`.
@@ -112,6 +123,7 @@ class QueueEventExtractor:
     @staticmethod
     def get_init_kwargs(data: HDF5Data,
                         gate: Gate,
+                        num_extractors: int,
                         log_queue: mp.Queue,
                         log_level: int = logging.INFO,
                         preselect: None = None,
@@ -129,6 +141,8 @@ class QueueEventExtractor:
             Input data
         gate: HDF5Data
             Gating class to use
+        num_extractors: int
+            Number of extractors that will be used
         log_queue: mp.Queue
             Queue the worker uses for sending log messages
         log_level: int
@@ -168,6 +182,7 @@ class QueueEventExtractor:
             int(np.prod(data.image.chunk_shape)))
         args["finalize_extraction"] = mp_spawn.Value("b", False)
         args["invalid_mask_counter"] = mp_spawn.Value("L", 0)
+        args["worker_monitor"] = mp_spawn.RawArray("L", num_extractors)
         args["log_level"] = log_level
         return args
 
@@ -300,6 +315,7 @@ class QueueEventExtractor:
 
     def run(self):
         """Main loop of worker process"""
+        self.worker_monitor[self.worker_index] = 0
         # Don't wait for these two queues when joining workers
         self.raw_queue.cancel_join_thread()
         #: logger sends all logs to `self.log_queue`
@@ -331,8 +347,7 @@ class QueueEventExtractor:
                 if self.finalize_extraction.value:
                     # The manager told us that there is nothing more coming.
                     self.logger.debug(
-                        f"Finalizing worker {self} with PID {os.getpid()}; "
-                        f"{self.event_queue.qsize()} events are still queued")
+                        f"Finalizing worker {self} with PID {os.getpid()}")
                     break
             else:
                 try:
@@ -348,6 +363,7 @@ class QueueEventExtractor:
                     else:
                         self.feat_nevents[index] = 0
                     self.event_queue.put((index, events))
+                self.worker_monitor[self.worker_index] += 1
 
         self.logger.debug(f"Finalizing `run` for PID {os.getpid()}, {self}")
         if close_queues:

@@ -77,12 +77,14 @@ class EventExtractorManagerThread(threading.Thread):
             worker_cls = EventExtractorThread
         else:
             worker_cls = EventExtractorProcess
-        workers = [worker_cls(*list(self.fe_kwargs.values()))
-                   for _ in range(self.num_workers)]
+        workers = [worker_cls(*list(self.fe_kwargs.values()), worker_index=ii)
+                   for ii in range(self.num_workers)]
         [w.start() for w in workers]
+        worker_monitor = self.fe_kwargs["worker_monitor"]
 
         num_slots = len(self.slot_states)
         chunks_processed = 0
+        frames_processed = 0
         while True:
             cur_slot = 0
             unavailable_slots = 0
@@ -117,12 +119,13 @@ class EventExtractorManagerThread(threading.Thread):
                 self.label_array[len(new_labels):] = 0
             else:
                 raise ValueError("labels_list contains bad size data!")
+
             # Let the workers know there is work
-            for ii in range(self.data.image.get_chunk_size(chunk)):
-                self.raw_queue.put((chunk, ii))
+            chunk_size = self.data.image.get_chunk_size(chunk)
+            [self.raw_queue.put((chunk, ii)) for ii in range(chunk_size)]
 
             # Make sure the entire chunk has been processed.
-            while self.raw_queue.qsize():
+            while np.sum(worker_monitor) != frames_processed + chunk_size:
                 time.sleep(.1)
 
             # We are done here. The segmenter may continue its deed.
@@ -132,23 +135,10 @@ class EventExtractorManagerThread(threading.Thread):
             self.t_count += time.monotonic() - t1
 
             chunks_processed += 1
+            frames_processed += chunk_size
 
             if chunks_processed == self.data.image.num_chunks:
                 break
-
-        # Wait until the event queue is empty.
-        self.logger.debug("Waiting for event_queue to empty")
-        event_queue = self.fe_kwargs["event_queue"]
-        while not event_queue.empty():
-            # The collector thread is still sorting things out. Wait
-            # before joining the threads.
-            time.sleep(.05)
-
-        # Wait until log queue is empty
-        self.logger.debug("Waiting for log_queue to empty")
-        log_queue = self.fe_kwargs["log_queue"]
-        while not log_queue.empty():
-            time.sleep(.05)
 
         inv_masks = self.fe_kwargs["invalid_mask_counter"].value
         if inv_masks:
