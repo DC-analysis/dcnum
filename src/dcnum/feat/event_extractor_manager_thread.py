@@ -137,7 +137,7 @@ class EventExtractorManagerThread(threading.Thread):
                 break
 
         # Wait until the event queue is empty.
-        self.logger.debug("Waiting for event_queue to empty.")
+        self.logger.debug("Waiting for event_queue to empty")
         event_queue = self.fe_kwargs["event_queue"]
         while not event_queue.empty():
             # The collector thread is still sorting things out. Wait
@@ -145,22 +145,22 @@ class EventExtractorManagerThread(threading.Thread):
             time.sleep(.05)
 
         # Wait until log queue is empty
-        self.logger.debug("Waiting for log_queue to empty.")
+        self.logger.debug("Waiting for log_queue to empty")
         log_queue = self.fe_kwargs["log_queue"]
         while not log_queue.empty():
             time.sleep(.05)
 
         inv_masks = self.fe_kwargs["invalid_mask_counter"].value
         if inv_masks:
-            self.logger.info(f"Encountered {inv_masks} invalid masks.")
+            self.logger.info(f"Encountered {inv_masks} invalid masks")
             inv_frac = inv_masks / len(self.data)
             if inv_frac > 0.005:  # warn above one half percent
-                self.logger.warning(f"Discarded {inv_frac:.1%} of the masks. "
-                                    f"Please check segmenter applicability.")
+                self.logger.warning(f"Discarded {inv_frac:.1%} of the masks, "
+                                    f"please check segmenter applicability")
 
-        self.logger.debug("Requesting extraction workers to join.")
+        self.logger.debug("Requesting extraction workers to join")
         self.fe_kwargs["finalize_extraction"].value = True
         [w.join() for w in workers]
 
-        self.logger.debug("Finished extraction.")
+        self.logger.debug("Finished extraction")
         self.logger.info(f"Extraction time: {self.t_count:.1f}s")

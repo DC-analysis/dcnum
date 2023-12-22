@@ -275,7 +275,7 @@ class BackgroundSparseMed(Background):
             step_times = self.step_times[used]
             bg_images = self.bg_images[used]
         else:
-            logger.info("Background series cleansing disabled.")
+            logger.info("Background series cleansing disabled")
             step_times = self.step_times
             bg_images = self.bg_images
 

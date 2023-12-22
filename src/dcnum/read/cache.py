@@ -32,7 +32,7 @@ class HDF5ImageCache:
         self._len = self.shape[0]
         if self._len == 0:
             warnings.warn(f"Input image '{h5ds.name}' in "
-                          f"file {h5ds.file.filename} has zero length.",
+                          f"file {h5ds.file.filename} has zero length",
                           EmptyDatasetWarning)
         # TODO:
         # - adjust chunking to multiples of the chunks in the dataset

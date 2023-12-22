@@ -331,8 +331,8 @@ class QueueEventExtractor:
                 if self.finalize_extraction.value:
                     # The manager told us that there is nothing more coming.
                     self.logger.debug(
-                        f"Finalizing worker {self} with PID {os.getpid()}. "
-                        f"{self.event_queue.qsize()} events are still queued.")
+                        f"Finalizing worker {self} with PID {os.getpid()}; "
+                        f"{self.event_queue.qsize()} events are still queued")
                     break
             else:
                 try:
@@ -369,7 +369,7 @@ class QueueEventExtractor:
     @classmethod
     def get_ppid_from_kwargs(cls, kwargs):
         warnings.warn(
-            "Please use get_ppid_from_ppkw instead of get_ppid_from_kwargs.",
+            "Please use get_ppid_from_ppkw instead of get_ppid_from_kwargs",
             DeprecationWarning)
         return cls.get_ppid_from_ppkw(kwargs)
 

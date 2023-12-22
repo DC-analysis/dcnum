@@ -171,7 +171,7 @@ class QueueCollectorThread(threading.Thread):
         self.event_queue.cancel_join_thread()
         # Indexes the current frame in `self.data`.
         last_idx = 0
-        self.logger.debug("Started collector thread.")
+        self.logger.debug("Started collector thread")
         while True:
             # Slice of the shared nevents array. If it contains -1 values,
             # this means that some of the frames have not yet been processed.
@@ -187,7 +187,7 @@ class QueueCollectorThread(threading.Thread):
                     "Reached dataset end (frame "
                     # `last_idx` is the size of the dataset in the end,
                     # because `len(cur_nevents)` is always added to it.
-                    f"{last_idx} of {len(self.feat_nevents)}).")
+                    f"{last_idx} of {len(self.feat_nevents)})")
                 break
 
             # We have reached the writer threshold. This means the extractor
@@ -274,5 +274,5 @@ class QueueCollectorThread(threading.Thread):
             # Increment current frame index.
             last_idx += len(cur_nevents)
 
-        self.logger.info(f"Counted {self.written_events} events.")
-        self.logger.debug(f"Counted {self.written_frames} frames.")
+        self.logger.info(f"Counted {self.written_events} events")
+        self.logger.debug(f"Counted {self.written_frames} frames")

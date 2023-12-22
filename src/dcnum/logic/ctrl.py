@@ -119,7 +119,7 @@ class DCNumJobRunner(threading.Thread):
         if job["debug"]:
             self.main_logger.info("Note that in debugging mode, duplicate "
                                   "log entries may appear (logs that are "
-                                  "recorded via queues).")
+                                  "recorded via queues)")
 
         self.logger = logging.getLogger(f"dcnum.Runner-{self.pphash[:2]}")
 
@@ -574,7 +574,7 @@ class DCNumJobRunner(threading.Thread):
             if counted_frames == data_size:
                 break
 
-        self.logger.debug("Flushing data to disk...")
+        self.logger.debug("Flushing data to disk")
 
         # join threads
         join_thread_helper(thr=thr_segm,
@@ -606,7 +606,7 @@ class DCNumJobRunner(threading.Thread):
         if self.event_count == 0:
             self.logger.error(
                 f"No events found in {self.draw.path}! Please check the "
-                f"input file or revise your pipeline.")
+                f"input file or revise your pipeline")
 
         self.logger.info("Finished segmentation and feature extraction")
 
@@ -618,7 +618,7 @@ class DCNumJobRunner(threading.Thread):
                 for feat in features:
                     if feat not in hout["events"]:
                         self.logger.debug(
-                            f"Transferring {feat} to output file.")
+                            f"Transferring {feat} to output file")
                         h5py.h5o.copy(src_loc=hindat.h5["events"].id,
                                       src_name=feat.encode(),
                                       dst_loc=hout["events"].id,

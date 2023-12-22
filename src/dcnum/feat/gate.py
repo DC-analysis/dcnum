@@ -188,6 +188,6 @@ class Gate:
     @classmethod
     def get_ppid_from_kwargs(cls, kwargs):
         warnings.warn(
-            "Please use get_ppid_from_ppkw instead of get_ppid_from_kwargs.",
+            "Please use get_ppid_from_ppkw instead of get_ppid_from_kwargs",
             DeprecationWarning)
         return cls.get_ppid_from_ppkw(kwargs)
