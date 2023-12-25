@@ -66,6 +66,16 @@ class Segmenter(abc.ABC):
 
     @staticmethod
     @functools.cache
+    def get_border(shape):
+        """Cached boolean image with outer pixels set to True"""
+        border = np.zeros(shape, dtype=bool)
+        border[0] = True
+        border[-1] = True
+        border[:, 0] = True
+        border[:, -1] = True
+
+    @staticmethod
+    @functools.cache
     def get_disk(radius):
         """Cached `skimage.morphology.disk(radius)`"""
         return morphology.disk(radius)
@@ -178,11 +188,7 @@ class Segmenter(abc.ABC):
             #
             if (labels[0, :].sum() or labels[-1, :].sum()
                     or labels[:, 0].sum() or labels[:, -1].sum()):
-                border = np.zeros_like(labels, dtype=bool)
-                border[0] = True
-                border[-1] = True
-                border[:, 0] = True
-                border[:, -1] = True
+                border = Segmenter.get_border(labels.shape)
                 indices = sorted(np.unique(labels[border]))
                 for ii in indices[1:]:
                     labels[labels == ii] = 0
