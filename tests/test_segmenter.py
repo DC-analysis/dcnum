@@ -245,3 +245,31 @@ def test_ppid_no_union_kwonlykwargs(segm_method):
     annot = meta["annotations"]["segment_approach"]
     for key in annot:
         assert not isinstance(annot[key], types.UnionType), segm_method
+
+
+def test_segmenter_process_mask_clear_border():
+    # labels image with al-filled border values
+    label = np.array([
+        [1, 1, 1, 1, 1, 1, 1, 1],
+        [1, 1, 1, 1, 1, 1, 1, 1],
+        [1, 1, 1, 0, 1, 0, 0, 1],
+        [2, 0, 1, 3, 3, 3, 0, 1],
+        [2, 0, 0, 3, 3, 3, 0, 1],
+        [2, 0, 0, 3, 3, 3, 0, 2],
+        [2, 0, 2, 2, 2, 0, 0, 2],
+        [2, 0, 2, 2, 2, 0, 0, 2],
+        [2, 2, 2, 2, 2, 2, 2, 2],
+        ], dtype=int)
+
+    lbs = segm.Segmenter.process_mask(label,
+                                      clear_border=True,
+                                      fill_holes=False,
+                                      closing_disk=False,
+                                      )
+    assert np.sum(lbs) > 0
+    assert np.sum(lbs > 0) == 9
+    assert lbs[:, 0].sum() == 0
+    assert lbs[:, -1].sum() == 0
+    assert lbs[0, :].sum() == 0
+    assert lbs[-1, :].sum() == 0
+    assert lbs[3, 3] == 3

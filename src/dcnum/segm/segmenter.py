@@ -69,10 +69,11 @@ class Segmenter(abc.ABC):
     def get_border(shape):
         """Cached boolean image with outer pixels set to True"""
         border = np.zeros(shape, dtype=bool)
-        border[0] = True
-        border[-1] = True
+        border[0, :] = True
+        border[-1, :] = True
         border[:, 0] = True
         border[:, -1] = True
+        return border
 
     @staticmethod
     @functools.cache
@@ -190,8 +191,11 @@ class Segmenter(abc.ABC):
                     or labels[:, 0].sum() or labels[:, -1].sum()):
                 border = Segmenter.get_border(labels.shape)
                 indices = sorted(np.unique(labels[border]))
-                for ii in indices[1:]:
-                    labels[labels == ii] = 0
+                for li in indices:
+                    if li == 0:
+                        # ignore background values
+                        continue
+                    labels[labels == li] = 0
 
         # scikit-image is too slow for us here. So we use OpenCV.
         # https://github.com/scikit-image/scikit-image/issues/1190
