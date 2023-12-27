@@ -1,5 +1,6 @@
 """Feature gating"""
 import copy
+import numbers
 import warnings
 
 import numpy as np
@@ -54,10 +55,10 @@ class Gate:
         }
 
     def _extract_online_gates(self, data):
-        all_online_filters = {}
+        ogates = {}
         # Extract online filters from the dataset
-        of = data.meta_nest.get("online_filter", {})
-        for key in of:
+        source_meta = data.meta_nest.get("online_filter", {})
+        for key in source_meta:
             if key.endswith("polygon points"):
                 raise NotImplementedError("Polygon gating not implemented!")
             elif (key.endswith("soft limit")
@@ -65,24 +66,30 @@ class Gate:
                 # we only want hard gates
                 continue
             else:
-                # only add the filter if it is not a soft limit
-                sl = of.get(f"{key.rsplit(' ', 1)[0]} soft limit", True)
-                if not sl:
-                    all_online_filters[key] = of[key]
+                try:
+                    feat, lim = key.rsplit(' ', 1)
+                    lim_idx = ["min", "max"].index(lim)
+                except ValueError:
+                    warnings.warn(f"Unexpected online gate '{key}'")
+                else:
+                    # make sure we are not dealing with a soft limit
+                    if not source_meta.get(f"{feat} soft limit", True):
+                        ogates.setdefault(feat, [None, None])
+                        ogates[feat][lim_idx] = source_meta[key]
 
         # This is somehow hard-coded in Shape-In (minimum size is 3px)
         px_size = data.pixel_size
-        all_online_filters["size_x min"] = max(
-            all_online_filters.get("size_x min", 0), 3 * px_size)
-        all_online_filters["size_y min"] = max(
-            all_online_filters.get("size_y min", 0), 3 * px_size)
+        ogates["size_x"] = [
+            max(ogates.get("size_x min", 0), 3 * px_size), None]
+        ogates["size_y"] = [
+            max(ogates.get("size_y min", 0), 3 * px_size), None]
 
-        return all_online_filters
+        return ogates
 
     @property
     def features(self):
         """Sorted list of feature gates defined"""
-        return list(set([kk.split()[0] for kk in list(self.box_gates.keys())]))
+        return sorted(self.box_gates.keys())
 
     def get_ppid(self):
         """Return a unique gating pipeline identifier
@@ -163,14 +170,21 @@ class Gate:
             raise ValueError("Empty events provided!")
         return valid
 
-    def gate_feature(self, feat, data):
-        valid_left = True
-        valid_right = True
-        if f"{feat} min" in self.box_gates:
-            valid_left = data > self.box_gates[f"{feat} min"]
-        if f"{feat} max" in self.box_gates:
-            valid_right = data < self.box_gates[f"{feat} max"]
-        return np.logical_and(valid_left, valid_right)
+    def gate_feature(self,
+                     feat: str,
+                     data: numbers.Number | np.ndarray):
+        """Return boolean indicating whether `data` value is in box gate
+
+        `data` may be a number or an array. If no box filter is defined
+        for `feat`, `True` is always returned. Otherwise, either a boolean
+        or a boolean array is returned, depending on the type of `data`.
+        Not that `np.logical_and` can deal with mixed argument types
+        (scalar and array).
+        """
+        bound_lo, bound_up = self.box_gates[feat]
+        valid_lo = data >= bound_lo if bound_lo is not None else True
+        valid_up = data <= bound_up if bound_up is not None else True
+        return np.logical_and(valid_lo, valid_up)
 
     def gate_mask(self, mask, mask_sum=None):
         """Gate the mask, return False if the mask should not be used

@@ -6,6 +6,7 @@
  - ref: rename internal background worker classes
  - ref: simplify Gate initialization
  - ref: Gate instance does not have to keep a reference to the data
+ - ref: better box_gates management for Gate class
  - tests: increase coverage
 0.16.5
  - fix: replace unreliable Queue.empty and Queue.qsize (macOS support)

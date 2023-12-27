@@ -29,6 +29,60 @@ def test_features():
         assert gt.features.count("area_um") == 1
 
 
+def test_gate_event():
+    path = retrieve_data(
+        "fmt-hdf5_cytoshot_full-features_legacy_allev_2023.zip")
+    # Since these are CytoShot data, there are no online filters here.
+    with h5py.File(path, "a") as h5:
+        h5.attrs["online_contour:bin area min"] = 20
+        h5.attrs["online_filter:deform min"] = 0.1
+        h5.attrs["online_filter:deform max"] = 0.5
+        h5.attrs["online_filter:deform soft limit"] = False
+        h5.attrs["online_filter:area_um min"] = 50
+        h5.attrs["online_filter:area_um soft limit"] = False
+
+    with HDF5Data(path) as hd:
+        skw = {"size_x": 200, "size_y": 200}
+        gt = Gate(data=hd, online_gates=True)
+
+        assert gt.gate_event(dict(deform=0.3, area_um=55, **skw))
+        assert gt.gate_event(dict(deform=0.3, area_um=55,
+                                  userdef1=0.3, userdef2=55, **skw))
+
+        assert not gt.gate_event(dict(deform=0.01, area_um=55, **skw))
+        assert not gt.gate_event(dict(deform=0.3, area_um=40, **skw))
+        assert not gt.gate_event(dict(deform=0.6, area_um=55, **skw))
+        assert not gt.gate_event(dict(deform=0.6, area_um=22, **skw))
+
+
+def test_gate_events():
+    path = retrieve_data(
+        "fmt-hdf5_cytoshot_full-features_legacy_allev_2023.zip")
+    # Since these are CytoShot data, there are no online filters here.
+    with h5py.File(path, "a") as h5:
+        h5.attrs["online_contour:bin area min"] = 20
+        h5.attrs["online_filter:deform min"] = 0.1
+        h5.attrs["online_filter:deform max"] = 0.5
+        h5.attrs["online_filter:deform soft limit"] = False
+        h5.attrs["online_filter:area_um min"] = 50
+        h5.attrs["online_filter:area_um soft limit"] = False
+
+    with HDF5Data(path) as hd:
+        gt = Gate(data=hd, online_gates=True)
+
+        exp = np.array([True, True, False, False, False, False],
+                       dtype=bool)
+        act = gt.gate_events(dict(
+            deform=np.array([0.3, 0.3, 0.01, 0.3, 0.6, 0.6], dtype=float),
+            area_um=np.array([55, 55, 55, 40, 55, 22], dtype=float),
+            size_x=np.full(6, 200, dtype=float),
+            size_y=np.full(6, 200, dtype=float),
+        ))
+
+        assert isinstance(act, np.ndarray)
+        assert np.all(exp == act)
+
+
 def test_gate_feature():
     path = retrieve_data(
         "fmt-hdf5_cytoshot_full-features_legacy_allev_2023.zip")
