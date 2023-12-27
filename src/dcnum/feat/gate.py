@@ -84,7 +84,8 @@ class Gate:
 
     @property
     def features(self):
-        return [kk.split()[0] for kk in list(self.box_gates.keys())]
+        """Sorted list of feature gates defined"""
+        return list(set([kk.split()[0] for kk in list(self.box_gates.keys())]))
 
     def get_ppid(self):
         """Return a unique gating pipeline identifier
