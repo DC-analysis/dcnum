@@ -1,4 +1,4 @@
-"""Feature computation: gating after feature extraction"""
+"""Feature gating"""
 import copy
 import warnings
 
@@ -11,7 +11,8 @@ class Gate:
     #: the default value for `size_thresh_mask` if not given as kwarg
     _default_size_thresh_mask = 10
 
-    def __init__(self, data, *, online_gates: bool = False,
+    def __init__(self, data, *,
+                 online_gates: bool = False,
                  size_thresh_mask: int = None):
         """Gate feature data
 
@@ -20,12 +21,16 @@ class Gate:
         data: .HDF5Data
             dcevent data instance
         online_gates: bool
-            set to True to enable gating with `online_filters`
+            set to True to enable gating with "online" gates stored
+            in the input file; online gates are applied in real-time
+            deformability cytometry before writing data to disk during
+            a measurement
         size_thresh_mask: int
             Only masks with more pixels than `size_thresh_mask` are
-            considered to be a valid event; Originally, this
-            `trig_thresh` value defaulted to 200, but this seemed to
-            be a little too large, defaults to 10.
+            considered to be a valid event; Originally, the
+            `bin area min`/`trig_thresh` value defaulted to 200 which is
+            too large; defaults to 10 or the original value in case
+            `online_gates` is set.
         """
         #: dcevent .HDF5Data instance
         self.data = data
@@ -36,8 +41,10 @@ class Gate:
         if online_gates:
             self.box_gates = self._compute_online_gates()
             # Set triggering threshold to value from source dataset
-            self._set_kwarg("size_thresh_mask", "online_contour",
-                            "bin area min", size_thresh_mask)
+            self._set_kwarg(name="size_thresh_mask",
+                            sec="online_contour",
+                            key="bin area min",
+                            user_value=size_thresh_mask)
             # If the user did not provide a value and there is nothing in the
             # original file, then set the default value.
             if self.kwargs.get("size_thresh_mask") is None:
