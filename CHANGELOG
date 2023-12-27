@@ -5,6 +5,7 @@
  - ref: cache empty border image creation for clear_border
  - ref: rename internal background worker classes
  - ref: simplify Gate initialization
+ - ref: Gate instance does not have to keep a reference to the data
  - tests: increase coverage
 0.16.5
  - fix: replace unreliable Queue.empty and Queue.qsize (macOS support)

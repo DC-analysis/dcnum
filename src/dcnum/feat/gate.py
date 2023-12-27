@@ -32,20 +32,17 @@ class Gate:
             too large; defaults to 10 or the original value in case
             `online_gates` is set.
         """
-        #: dcevent .HDF5Data instance
-        self.data = data
-
         #: box gating (value range for each feature)
         self.box_gates = {}
 
         if online_gates:
             # Deal with online gates.
             # First, compute the box gates.
-            self.box_gates.update(self._compute_online_gates())
+            self.box_gates.update(self._extract_online_gates(data))
             # If the user did not specify a threshold, attempt to extract
             # it from the metadata.
             if size_thresh_mask is None:
-                size_thresh_mask = self.data.meta_nest.get(
+                size_thresh_mask = data.meta_nest.get(
                     "online_contour", {}).get("bin area min")
 
         #: gating keyword arguments
@@ -56,10 +53,10 @@ class Gate:
                 size_thresh_mask or self._default_size_thresh_mask
         }
 
-    def _compute_online_gates(self):
+    def _extract_online_gates(self, data):
         all_online_filters = {}
         # Extract online filters from the dataset
-        of = self.data.meta_nest.get("online_filter", {})
+        of = data.meta_nest.get("online_filter", {})
         for key in of:
             if key.endswith("polygon points"):
                 raise NotImplementedError("Polygon gating not implemented!")
@@ -74,7 +71,7 @@ class Gate:
                     all_online_filters[key] = of[key]
 
         # This is somehow hard-coded in Shape-In (minimum size is 3px)
-        px_size = self.data.pixel_size
+        px_size = data.pixel_size
         all_online_filters["size_x min"] = max(
             all_online_filters.get("size_x min", 0), 3 * px_size)
         all_online_filters["size_y min"] = max(
