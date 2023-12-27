@@ -1,3 +1,5 @@
+import threading
+
 import h5py
 import numpy as np
 import pytest
@@ -149,6 +151,7 @@ def test_median_rollmed_small_file(tmp_path):
     input_data = np.arange(5*7).reshape(1, 5, 7) * np.ones((event_count, 1, 1))
     assert np.all(input_data[0] == input_data[1])
     assert np.all(input_data[0].flatten() == np.arange(5*7))
+    assert np.median(np.arange(5*7)) == 17, "sanity check"
 
     with pytest.raises(ValueError, match="Cannot compute background"):
         with bg_roll_median.BackgroundRollMed(input_data=input_data,
@@ -157,3 +160,47 @@ def test_median_rollmed_small_file(tmp_path):
                                               batch_size=1000,
                                               ):
             pass
+
+
+@pytest.mark.filterwarnings(
+    "ignore::dcnum.write.writer.CreatingFileWithoutBasinWarning")
+def test_median_rollmed_worker(tmp_path):
+    event_count = 720
+    kernel_size = 100
+    batch_size = 200
+    output_path = tmp_path / "test.h5"
+    # image shape: 5 * 7
+    input_data = np.arange(5*7).reshape(1, 5, 7) * np.ones((event_count, 1, 1))
+    assert np.all(input_data[0] == input_data[1])
+    assert np.all(input_data[0].flatten() == np.arange(5*7))
+
+    with bg_roll_median.BackgroundRollMed(input_data=input_data,
+                                          output_path=output_path,
+                                          kernel_size=kernel_size,
+                                          batch_size=batch_size,
+                                          ) as bic:
+        # make all workers join
+        bic.worker_counter.value = -1000
+        [w.join() for w in bic.workers]
+        bic.worker_counter.value = 0
+        # create our own worker
+        worker = bg_roll_median.MedianWorker(
+            job_queue=bic.queue,
+            counter=bic.worker_counter,
+            shared_input=bic.shared_input_raw,
+            shared_output=bic.shared_output_raw,
+            kernel_size=bic.kernel_size,
+            batch_size=batch_size
+        )
+        # run the worker in a thread
+        thr = threading.Thread(target=worker.run)
+        thr.start()
+        # request the worker to do its thing
+        bic.process()
+        bic.worker_counter.value = -1000
+        thr.join()
+
+    assert output_path.exists()
+    with h5py.File(output_path) as h5:
+        assert len(h5["events/image_bg"]) == 720
+        assert np.median(h5["events/image_bg"][0]) == 17

@@ -1,6 +1,7 @@
 0.16.6
  - fix: correctly handle mask images with no background on border
  - ref: cache empty border image creation for clear_border
+ - tests: increase coverage
 0.16.5
  - fix: replace unreliable Queue.empty and Queue.qsize (macOS support)
 0.16.4
