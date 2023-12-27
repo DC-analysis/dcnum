@@ -95,12 +95,12 @@ class BackgroundRollMed(Background):
         #: queue for median computation jobs
         self.queue = mp_spawn.Queue()
         #: list of workers (processes)
-        self.workers = [MedianWorker(self.queue,
-                                     self.worker_counter,
-                                     self.shared_input_raw,
-                                     self.shared_output_raw,
-                                     self.batch_size,
-                                     self.kernel_size)
+        self.workers = [WorkerRollMed(self.queue,
+                                      self.worker_counter,
+                                      self.shared_input_raw,
+                                      self.shared_output_raw,
+                                      self.batch_size,
+                                      self.kernel_size)
                         for _ in range(self.num_cpus)]
         [w.start() for w in self.workers]
 
@@ -216,11 +216,11 @@ class BackgroundRollMed(Background):
         self.image_proc.value += self.batch_size
 
 
-class MedianWorker(mp_spawn.Process):
+class WorkerRollMed(mp_spawn.Process):
     def __init__(self, job_queue, counter, shared_input, shared_output,
                  batch_size, kernel_size, *args, **kwargs):
         """Worker process for median computation"""
-        super(MedianWorker, self).__init__(*args, **kwargs)
+        super(WorkerRollMed, self).__init__(*args, **kwargs)
         self.queue = job_queue
         self.queue.cancel_join_thread()
         self.counter = counter

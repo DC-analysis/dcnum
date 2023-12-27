@@ -184,7 +184,7 @@ def test_median_rollmed_worker(tmp_path):
         [w.join() for w in bic.workers]
         bic.worker_counter.value = 0
         # create our own worker
-        worker = bg_roll_median.MedianWorker(
+        worker = bg_roll_median.WorkerRollMed(
             job_queue=bic.queue,
             counter=bic.worker_counter,
             shared_input=bic.shared_input_raw,

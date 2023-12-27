@@ -152,11 +152,11 @@ class BackgroundSparseMed(Background):
         #: queue for median computation jobs
         self.queue = mp_spawn.Queue()
         #: list of workers (processes)
-        self.workers = [MedianWorkerSingle(self.queue,
-                                           self.worker_counter,
-                                           self.shared_input_raw,
-                                           self.shared_output_raw,
-                                           self.kernel_size)
+        self.workers = [WorkerSparseMed(self.queue,
+                                        self.worker_counter,
+                                        self.shared_input_raw,
+                                        self.shared_output_raw,
+                                        self.kernel_size)
                         for _ in range(self.num_cpus)]
         [w.start() for w in self.workers]
 
@@ -348,11 +348,11 @@ class BackgroundSparseMed(Background):
         self.image_proc.value = idx_stop
 
 
-class MedianWorkerSingle(mp_spawn.Process):
+class WorkerSparseMed(mp_spawn.Process):
     def __init__(self, job_queue, counter, shared_input, shared_output,
                  kernel_size, *args, **kwargs):
         """Worker process for median computation"""
-        super(MedianWorkerSingle, self).__init__(*args, **kwargs)
+        super(WorkerSparseMed, self).__init__(*args, **kwargs)
         self.queue = job_queue
         self.queue.cancel_join_thread()
         self.counter = counter
