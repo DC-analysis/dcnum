@@ -44,6 +44,18 @@ def test_features_scalar_frame_from_basin_nested():
         assert "time" in hd.features_scalar_frame
 
 
+def test_get_ppkw_from_ppid_error():
+    with pytest.raises(ValueError,
+                       match="Could not find data method 'peter'"):
+        read.HDF5Data.get_ppkw_from_ppid("peter:p=0.44")
+
+
+def test_get_ppkw_from_ppid_pixel_size():
+    ppkw = read.HDF5Data.get_ppkw_from_ppid("hdf:p=0.44")
+    assert np.allclose(ppkw["pixel_size"], 0.44)
+    assert len(ppkw.keys()) == 1
+
+
 def test_image_cache(tmp_path):
     path = tmp_path / "test.hdf5"
     with h5py.File(path, "w") as hw:
