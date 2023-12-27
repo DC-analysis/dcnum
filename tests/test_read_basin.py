@@ -4,7 +4,6 @@ import numpy as np
 from dcnum.write import HDF5Writer, create_with_basins
 from dcnum.read import HDF5Data
 
-
 from helper_methods import retrieve_data
 
 
@@ -184,3 +183,25 @@ def test_basin_scalar_features():
         assert np.allclose(hd["deform"][0], 0.0740563677588885)
         assert np.allclose(hd["area_um"][0], 0.559682)
         assert np.allclose(hd["area_um"][1], 91.193185875)
+
+
+def test_basin_self_reference():
+    """Paths can self-reference in basins, no recursion errors"""
+    h5path = retrieve_data("fmt-hdf5_cytoshot_full-features_2023.zip")
+
+    # Dataset creation
+    with HDF5Writer(h5path, "a") as hw:
+        # Next, store the basin information in the new dataset
+        hw.store_basin(name="test",
+                       paths=[h5path])
+
+    # Now open the scalar dataset and check whether basins are defined
+    with HDF5Data(h5path) as hd:
+        assert "image" in hd.get_basin_data(0)[1]
+        assert "image" in hd.keys()
+        assert np.median(hd["image"][0]) == 187
+        assert np.median(hd.image[0]) == 187
+        assert np.median(hd.image_corr[0]) == 1
+        assert np.allclose(np.mean(hd["deform"]),
+                           0.23354564471483724,
+                           atol=0, rtol=1e-7)
