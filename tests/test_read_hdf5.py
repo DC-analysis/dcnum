@@ -139,6 +139,17 @@ def test_keyerror_when_image_is_none(tmp_path):
         _ = h5dat["image"]
 
 
+def test_meta_nest():
+    path = retrieve_data(
+        "fmt-hdf5_cytoshot_full-features_legacy_allev_2023.zip")
+    with read.HDF5Data(path) as hd:
+        meta = hd.meta_nest
+        print(meta)
+        assert meta["imaging"]["pixel size"] == .2645
+        assert meta["experiment"]["time"] == '15:24:17'
+        assert meta["user"]["dcevent ppid feature"] == 'legacy:b=1^h=1'
+
+
 def test_pixel_size_getset(tmp_path):
     path = tmp_path / "test.hdf5"
     with h5py.File(path, "w") as hw:
