@@ -35,37 +35,26 @@ class Gate:
         #: dcevent .HDF5Data instance
         self.data = data
 
-        #: gating keyword arguments
-        self.kwargs = {}
+        #: box gating (value range for each feature)
+        self.box_gates = {}
 
         if online_gates:
-            self.box_gates = self._compute_online_gates()
-            # Set triggering threshold to value from source dataset
-            self._set_kwarg(name="size_thresh_mask",
-                            sec="online_contour",
-                            key="bin area min",
-                            user_value=size_thresh_mask)
-            # If the user did not provide a value and there is nothing in the
-            # original file, then set the default value.
-            if self.kwargs.get("size_thresh_mask") is None:
-                self.kwargs["size_thresh_mask"] = \
-                    self._default_size_thresh_mask
-        else:
-            self.box_gates = {}
-            # If the user did not provide a size_thresh_mask, use the default.
+            # Deal with online gates.
+            # First, compute the box gates.
+            self.box_gates.update(self._compute_online_gates())
+            # If the user did not specify a threshold, attempt to extract
+            # it from the metadata.
             if size_thresh_mask is None:
-                size_thresh_mask = self._default_size_thresh_mask
-            self.kwargs["size_thresh_mask"] = size_thresh_mask
+                size_thresh_mask = self.data.meta_nest.get(
+                    "online_contour", {}).get("bin area min")
 
-        self.kwargs["online_gates"] = online_gates
-
-    def _set_kwarg(self, name, sec, key, user_value):
-        if user_value is None:
-            value = self.data.meta_nest.get(sec, {}).get(key)
-        else:
-            value = user_value
-        if value is not None:
-            self.kwargs[name] = value
+        #: gating keyword arguments
+        self.kwargs = {
+            "online_gates": online_gates,
+            # Set the size threshold, defaulting to `_default_size_thresh_mask`
+            "size_thresh_mask":
+                size_thresh_mask or self._default_size_thresh_mask
+        }
 
     def _compute_online_gates(self):
         all_online_filters = {}

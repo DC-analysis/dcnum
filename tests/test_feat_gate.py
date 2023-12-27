@@ -2,8 +2,6 @@ from dcnum.feat import Gate
 from dcnum.read import HDF5Data
 import h5py
 
-import pytest
-
 from helper_methods import retrieve_data
 
 
@@ -25,4 +23,3 @@ def test_parse_online_features_size_thresh_mask():
         assert gt3.kwargs["size_thresh_mask"] == 22, "user override"
 
         assert gt3.get_ppid() == "norm:o=1^s=22"
-

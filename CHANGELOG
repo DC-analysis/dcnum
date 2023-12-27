@@ -3,6 +3,7 @@
  - fix: enforce user-defined features in concatenated_hdf5_data
  - ref: cache empty border image creation for clear_border
  - ref: rename internal background worker classes
+ - ref: simplify Gate initialization
  - tests: increase coverage
 0.16.5
  - fix: replace unreliable Queue.empty and Queue.qsize (macOS support)
