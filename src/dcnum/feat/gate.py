@@ -82,52 +82,9 @@ class Gate:
 
         return all_online_filters
 
-    def gate_feature(self, feat, data):
-        valid_left = True
-        valid_right = True
-        if f"{feat} min" in self.box_gates:
-            valid_left = data > self.box_gates[f"{feat} min"]
-        if f"{feat} max" in self.box_gates:
-            valid_right = data < self.box_gates[f"{feat} max"]
-        return np.logical_and(valid_left, valid_right)
-
-    def gate_event(self, event):
-        """Return None if the event should not be used, else `event`"""
-        if self.box_gates and event:
-            # Only use those events that are within the limits of the
-            # online filters.
-            for feat in self.features:
-                if not self.gate_feature(feat, event[feat]):
-                    return
-        return event
-
-    def gate_events(self, events):
-        """Return boolean array with events that should be used"""
-        if self.box_gates and bool(events):
-            key0 = list(events.keys())[0]
-            size = len(events[key0])
-            valid = np.ones(size, dtype=bool)
-            for feat in self.features:
-                valid = np.logical_and(valid,
-                                       self.gate_feature(feat, events[feat])
-                                       )
-        else:
-            raise ValueError("Empty events provided!")
-        return valid
-
-    def gate_mask(self, mask, mask_sum=None):
-        """Gate the mask, return False if the mask should not be used
-
-        Parameters
-        ----------
-        mask: 2d ndarray
-            The boolean mask image for the event.
-        mask_sum: int
-            The sum of the mask (if not specified, it is computed)
-        """
-        if mask_sum is None:
-            mask_sum = np.sum(mask)
-        return mask_sum > self.kwargs["size_thresh_mask"]
+    @property
+    def features(self):
+        return [kk.split()[0] for kk in list(self.box_gates.keys())]
 
     def get_ppid(self):
         """Return a unique gating pipeline identifier
@@ -177,13 +134,56 @@ class Gate:
                                 ppid=pp_gate_kwargs)
         return kwargs
 
-    @property
-    def features(self):
-        return [kk.split()[0] for kk in list(self.box_gates.keys())]
-
     @classmethod
     def get_ppid_from_kwargs(cls, kwargs):
         warnings.warn(
             "Please use get_ppid_from_ppkw instead of get_ppid_from_kwargs",
             DeprecationWarning)
         return cls.get_ppid_from_ppkw(kwargs)
+
+    def gate_event(self, event):
+        """Return None if the event should not be used, else `event`"""
+        if self.box_gates and event:
+            # Only use those events that are within the limits of the
+            # online filters.
+            for feat in self.features:
+                if not self.gate_feature(feat, event[feat]):
+                    return
+        return event
+
+    def gate_events(self, events):
+        """Return boolean array with events that should be used"""
+        if self.box_gates and bool(events):
+            key0 = list(events.keys())[0]
+            size = len(events[key0])
+            valid = np.ones(size, dtype=bool)
+            for feat in self.features:
+                valid = np.logical_and(valid,
+                                       self.gate_feature(feat, events[feat])
+                                       )
+        else:
+            raise ValueError("Empty events provided!")
+        return valid
+
+    def gate_feature(self, feat, data):
+        valid_left = True
+        valid_right = True
+        if f"{feat} min" in self.box_gates:
+            valid_left = data > self.box_gates[f"{feat} min"]
+        if f"{feat} max" in self.box_gates:
+            valid_right = data < self.box_gates[f"{feat} max"]
+        return np.logical_and(valid_left, valid_right)
+
+    def gate_mask(self, mask, mask_sum=None):
+        """Gate the mask, return False if the mask should not be used
+
+        Parameters
+        ----------
+        mask: 2d ndarray
+            The boolean mask image for the event.
+        mask_sum: int
+            The sum of the mask (if not specified, it is computed)
+        """
+        if mask_sum is None:
+            mask_sum = np.sum(mask)
+        return mask_sum > self.kwargs["size_thresh_mask"]
