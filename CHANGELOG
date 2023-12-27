@@ -1,5 +1,6 @@
 0.16.6
  - fix: correctly handle mask images with no background on border
+ - fix: enforce user-defined features in concatenated_hdf5_data
  - ref: cache empty border image creation for clear_border
  - ref: rename internal background worker classes
  - tests: increase coverage

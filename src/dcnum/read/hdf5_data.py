@@ -386,8 +386,8 @@ def concatenated_hdf5_data(paths: List[pathlib.Path],
     path_out:
         If `None`, then the dataset is created in memory. If `True`
         (default), create a file on disk. If a pathlib.Path is specified,
-        the dataset is written to that file. Note that files in memory
-        are liekely not pickable (so don't use for multiprocessing).
+        the dataset is written to that file. Note that datasets in memory
+        are likely not pickable (so don't use them for multiprocessing).
     compute_frame:
         Whether to compute the "events/frame" feature, taking the frame
         data from the input files and properly incrementing them along
@@ -435,7 +435,8 @@ def concatenated_hdf5_data(paths: List[pathlib.Path],
                 # get metadata
                 if ii == 0:
                     meta = dict(h5.attrs)
-                    features = featsi
+                    if not features:
+                        features = featsi
                 # make sure number of features are consistent
                 if not set(features) <= set(featsi):
                     raise ValueError(

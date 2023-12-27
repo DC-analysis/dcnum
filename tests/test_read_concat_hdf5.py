@@ -52,3 +52,63 @@ def test_concat_basic_to_file(tmp_path):
                                        path_out=path_out)
     assert len(data) == 120
     assert path_out.exists()
+
+
+def test_concat_invalid_input_feature_number():
+    path = retrieve_data(data_path /
+                         "fmt-hdf5_cytoshot_full-features_2023.zip")
+    path2 = retrieve_data(data_path /
+                          "fmt-hdf5_cytoshot_full-features_2023.zip")
+
+    # Add a new feature to path2
+    with h5py.File(path2, mode="a") as h5:
+        deform = h5["/events/deform"][:]
+        h5["events/userdef1"] = deform * 10
+
+    with pytest.raises(ValueError, match="contains more features"):
+        read.concatenated_hdf5_data([path2, path])
+
+
+def test_concat_invalid_input_path():
+    path = retrieve_data(data_path /
+                         "fmt-hdf5_cytoshot_full-features_2023.zip")
+    invalid_output = 42
+    with pytest.raises(ValueError, match="Invalid type"):
+        read.concatenated_hdf5_data([path, path, path],
+                                    path_out=invalid_output)
+
+
+def test_concat_invalid_input_path_number():
+    path = retrieve_data(data_path /
+                         "fmt-hdf5_cytoshot_full-features_2023.zip")
+    with pytest.raises(ValueError, match="Please specify at least two"):
+        read.concatenated_hdf5_data([path])
+
+
+def test_concat_specify_input_feature_number():
+    path = retrieve_data(data_path /
+                         "fmt-hdf5_cytoshot_full-features_2023.zip")
+    path2 = retrieve_data(data_path /
+                          "fmt-hdf5_cytoshot_full-features_2023.zip")
+
+    # Add a new feature to path2
+    with h5py.File(path2, mode="a") as h5:
+        deform = h5["/events/deform"][:]
+        h5["events/userdef1"] = deform * 10
+
+    path_out = path.with_name("output.rtdc")
+
+    read.concatenated_hdf5_data([path2, path],
+                                path_out=path_out,
+                                features=["deform", "area_um"],
+                                compute_frame=False,
+                                )
+    # Check outcome
+    with h5py.File(path_out) as h5:
+        assert len(h5["events"].keys()) == 2
+        assert np.allclose(h5["events/deform"][0],
+                           0.07405636775888857,
+                           atol=0, rtol=1e-7)
+        assert np.allclose(h5["events/area_um"][0],
+                           0.559682,
+                           atol=0, rtol=1e-5)
