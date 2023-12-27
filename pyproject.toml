@@ -6,6 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "dcnum"
 authors = [
     # In alphabetical order.
+    {name = "Maximilian Schlögel"},
     {name = "Paul Müller"},
 ]
 maintainers = [
