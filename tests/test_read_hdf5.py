@@ -44,10 +44,27 @@ def test_features_scalar_frame_from_basin_nested():
         assert "time" in hd.features_scalar_frame
 
 
-def test_get_ppkw_from_ppid_error():
+def test_get_ppid():
+    path = retrieve_data(
+        "fmt-hdf5_cytoshot_full-features_legacy_allev_2023.zip")
+
+    with read.HDF5Data(path) as hd:
+        assert hd.get_ppid() == "hdf:p=0.2645"
+
+    with read.HDF5Data(path, pixel_size=0.49) as hd:
+        assert hd.get_ppid() == "hdf:p=0.49"
+
+
+def test_get_ppkw_from_ppid_error_bad_code():
     with pytest.raises(ValueError,
                        match="Could not find data method 'peter'"):
         read.HDF5Data.get_ppkw_from_ppid("peter:p=0.44")
+
+
+def test_get_ppkw_from_ppid_error_bad_parameter():
+    with pytest.raises(ValueError,
+                       match="Invalid parameter 'k'"):
+        read.HDF5Data.get_ppkw_from_ppid("hdf:k=0.44")
 
 
 def test_get_ppkw_from_ppid_pixel_size():
