@@ -35,7 +35,7 @@ class HDF5Writer:
 
     @staticmethod
     def get_best_nd_chunks(item_shape, feat_dtype=np.float64):
-        """Return best chunks for image data
+        """Return best chunks for HDF5 datasets
 
         Chunking has performance implications. It’s recommended to keep the
         total size of dataset chunks between 10 KiB and 1 MiB. This number
@@ -44,6 +44,7 @@ class HDF5Writer:
         """
         # set image feature chunk size to approximately 1MiB
         num_bytes = 1024 ** 2
+        # Note that `np.prod(()) == 1`
         event_size = np.prod(item_shape) * np.dtype(feat_dtype).itemsize
         chunk_size = num_bytes / event_size
         # Set minimum chunk size to 10 so that we can have at least some
