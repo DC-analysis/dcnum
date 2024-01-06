@@ -99,7 +99,7 @@ class EventExtractorManagerThread(threading.Thread):
             if ldq > 100:
                 stallsec = ldq / 100
                 self.logger.warning(
-                    f"Stalling {stallsec:.1f}s for slow writer.")
+                    f"Stalling {stallsec:.1f}s for slow writer")
                 time.sleep(stallsec)
 
             cur_slot = 0
