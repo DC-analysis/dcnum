@@ -1,3 +1,5 @@
+0.16.7
+ - enh: optimize DequeWriterThread loop
 0.16.6
  - fix: correctly handle mask images with no background on border
  - fix: enforce user-defined features in concatenated_hdf5_data

@@ -41,11 +41,13 @@ class DequeWriterThread(threading.Thread):
 
     def run(self):
         while True:
+            ldq = len(self.dq)
             if self.must_stop_loop:
                 break
-            elif len(self.dq):
-                feat, data = self.dq.popleft()
-                self.writer.store_feature_chunk(feat=feat, data=data)
+            elif ldq:
+                for _ in range(ldq):
+                    feat, data = self.dq.popleft()
+                    self.writer.store_feature_chunk(feat=feat, data=data)
             elif self.may_stop_loop:
                 break
             else:
