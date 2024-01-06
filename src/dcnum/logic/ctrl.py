@@ -124,21 +124,23 @@ class DCNumJobRunner(threading.Thread):
         self.logger = logging.getLogger(f"dcnum.Runner-{self.pphash[:2]}")
 
         # Sanity checks
-        for os_env in [
-            "OMP_NUM_THREADS",
-            "MKL_NUM_THREADS",
-            "NUMEXPR_NUM_THREADS",
-                "NUMBA_NUM_THREADS"]:
+        for os_env in ["MKL_NUM_THREADS", "NUMBA_NUM_THREADS",
+                       "NUMEXPR_NUM_THREADS", "NUMPY_NUM_THREADS",
+                       "OPENBLAS_NUM_THREADS", "OMP_NUM_THREADS",
+                       "VECLIB_MAXIMUM_THREADS"]:
             # You should disable multithreading for all major tools that
             # use dcnum.logic. We don't want multithreading, because dcnum
             # uses linear code and relies on multiprocessing for
             # parallelization. This has to be done before importing numpy
             # or any other library affected. In your scripts, you can use:
             #
-            #    os.environ.setdefault("OMP_NUM_THREADS", "1")
             #    os.environ.setdefault("MKL_NUM_THREADS", "1")
-            #    os.environ.setdefault("NUMEXPR_NUM_THREADS", "1")
             #    os.environ.setdefault("NUMBA_NUM_THREADS", "1")
+            #    os.environ.setdefault("NUMEXPR_NUM_THREADS", "1")
+            #    os.environ.setdefault("NUMPY_NUM_THREADS", "1")
+            #    os.environ.setdefault("OPENBLAS_NUM_THREADS", "1")
+            #    os.environ.setdefault("OMP_NUM_THREADS", "1")
+            #    os.environ.setdefault("VECLIB_MAXIMUM_THREADS", "1")
             #
             val_act = os.environ.get(os_env)
             if val_act != "1":
