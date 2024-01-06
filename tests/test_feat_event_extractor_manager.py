@@ -1,3 +1,4 @@
+import collections
 import logging
 import multiprocessing as mp
 import queue
@@ -48,6 +49,7 @@ def test_event_extractor_manager_thread():
         fe_kwargs=fe_kwargs,
         num_workers=1,
         labels_list=thr_segm.labels_list,
+        writer_dq=collections.deque(),
         debug=True)
     thr_feat.run()
     thr_segm.join()
