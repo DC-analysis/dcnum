@@ -54,12 +54,11 @@ class HDF5Writer:
 
     def require_feature(self, feat, item_shape, feat_dtype, ds_kwds=None):
         """Create a new feature in the "events" group"""
-
-        if ds_kwds is None:
-            ds_kwds = {}
-        for key in self.ds_kwds:
-            ds_kwds.setdefault(key, self.ds_kwds[key])
         if feat not in self.events:
+            if ds_kwds is None:
+                ds_kwds = {}
+            for key in self.ds_kwds:
+                ds_kwds.setdefault(key, self.ds_kwds[key])
             dset = self.events.create_dataset(
                 feat,
                 shape=tuple([0] + list(item_shape)),
