@@ -1,4 +1,5 @@
 0.16.7
+ - fix: if the writer dequeue fills up, stall the feature extractor
  - enh: optimize DequeWriterThread loop
  - enh: minor optimization in HDF5Writer.require_feature
 0.16.6

@@ -1,4 +1,5 @@
 """Feature computation: managing event extraction threads"""
+import collections
 import logging
 import multiprocessing as mp
 import threading
@@ -17,6 +18,7 @@ class EventExtractorManagerThread(threading.Thread):
                  labels_list: List,
                  fe_kwargs: Dict,
                  num_workers: int,
+                 writer_dq: collections.deque,
                  debug: bool = False,
                  *args, **kwargs):
         """Manage event extraction threads or precesses
@@ -40,6 +42,9 @@ class EventExtractorManagerThread(threading.Thread):
             :func:`.EventExtractor.get_init_kwargs` for more information.
         num_workers:
             Number of child threads or worker processes to use.
+        writer_dq:
+            The queue the writer uses. We monitor this queue. If it
+            fills up, we take a break.
         debug:
             Whether to run in debugging mode which means more log
             messages and only one thread (`num_workers` has no effect).
@@ -66,6 +71,8 @@ class EventExtractorManagerThread(threading.Thread):
         self.label_array = np.ctypeslib.as_array(
             self.fe_kwargs["label_array"]).reshape(
             self.data.image.chunk_shape)
+        #: Writer deque to monitor
+        self.writer_dq = writer_dq
         #: Time counter for feature extraction
         self.t_count = 0
         #: Whether debugging is enabled
@@ -86,6 +93,15 @@ class EventExtractorManagerThread(threading.Thread):
         chunks_processed = 0
         frames_processed = 0
         while True:
+            # If the writer_dq starts filling up, then this could lead to
+            # an oom-kill signal. Stall for the writer to prevent this.
+            ldq = len(self.writer_dq)
+            if ldq > 100:
+                stallsec = ldq / 100
+                self.logger.warning(
+                    f"Stalling {stallsec:.1f}s for slow writer.")
+                time.sleep(stallsec)
+
             cur_slot = 0
             unavailable_slots = 0
             # Check all slots for segmented labels

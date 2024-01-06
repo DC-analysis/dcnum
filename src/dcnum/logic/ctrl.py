@@ -546,6 +546,7 @@ class DCNumJobRunner(threading.Thread):
             fe_kwargs=fe_kwargs,
             num_workers=num_extractors,
             labels_list=thr_segm.labels_list,
+            writer_dq=writer_dq,
             debug=self.job["debug"])
         thr_feat.start()
 
