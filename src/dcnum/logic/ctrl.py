@@ -515,7 +515,7 @@ class DCNumJobRunner(threading.Thread):
             num_segmenters = 1
         num_extractors = max(1, num_extractors)
         num_segmenters = max(1, num_segmenters)
-        self.job["segmenter_kwargs"]["num_workers"] = num_segmenters
+        self.job.kwargs["segmenter_kwargs"]["num_workers"] = num_segmenters
 
         slot_chunks = mp_spawn.Array("i", num_slots)
         slot_states = mp_spawn.Array("u", num_slots)
