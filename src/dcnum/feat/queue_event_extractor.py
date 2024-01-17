@@ -7,7 +7,6 @@ import os
 import queue
 import threading
 import traceback
-import warnings
 
 import numpy as np
 
@@ -126,8 +125,7 @@ class QueueEventExtractor:
                         num_extractors: int,
                         log_queue: mp.Queue,
                         log_level: int = logging.INFO,
-                        preselect: None = None,
-                        ptp_median: None = None):
+                        ):
         """Get initialization arguments for :cass:`.QueueEventExtractor`
 
         This method was created for convenience reasons:
@@ -147,8 +145,6 @@ class QueueEventExtractor:
             Queue the worker uses for sending log messages
         log_level: int
             Logging level to use in the worker process
-        preselect, ptp_median:
-            Deprecated
 
         Returns
         -------
@@ -159,13 +155,6 @@ class QueueEventExtractor:
         raw_queue = mp_spawn.Queue()
         # queue with event-wise feature dictionaries
         event_queue = mp_spawn.Queue()
-
-        if preselect is not None:
-            warnings.warn("The `preselect` argument is deprecated!",
-                          DeprecationWarning)
-        if ptp_median is not None:
-            warnings.warn("The `ptp_median` argument is deprecated!",
-                          DeprecationWarning)
 
         # Note that the order must be identical to  __init__
         args = collections.OrderedDict()
@@ -381,13 +370,6 @@ class QueueEventExtractor:
             # earlier.
             self.log_queue.close()
             self.log_queue.join_thread()
-
-    @classmethod
-    def get_ppid_from_kwargs(cls, kwargs):
-        warnings.warn(
-            "Please use get_ppid_from_ppkw instead of get_ppid_from_kwargs",
-            DeprecationWarning)
-        return cls.get_ppid_from_ppkw(kwargs)
 
 
 class EventExtractorProcess(QueueEventExtractor, mp_spawn.Process):

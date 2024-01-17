@@ -162,20 +162,6 @@ class HDF5Data:
 
         if state["pixel_size"] is not None:
             self.pixel_size = state["pixel_size"]
-        else:
-            # Set known pixel size if possible
-            did = self.meta.get("setup:identifier", "EMPTY")
-            if (did.startswith("RC-")
-                    and (self.pixel_size < 0.255 or self.pixel_size > 0.275)):
-                warnings.warn(
-                    f"Correcting for invalid pixel size in '{self.path}'!")
-                warnings.warn(
-                    "Correcting the pixel size is deprecated in dcnum; please "
-                    "make sure your input data are clean before processing",
-                    DeprecationWarning
-                )
-                # Set default pixel size for Rivercyte devices
-                self.pixel_size = 0.2645
 
         self.image_cache_size = state["image_cache_size"]
 

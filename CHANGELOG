@@ -1,3 +1,10 @@
+0.17.0
+ - ref: remove deprecated `get_ppid_from_kwargs` methods
+ - ref: remove deprecated `preselect` and `ptp_median` keyword
+   arguments from `QueueEventExtractor`
+ - ref: remove deprecated "key" from `get_class_method_info` info dict
+ - ref: issue UserWarning instead of DeprecationWarning when
+ - ref: remove pixel size check for HDF5 data
 0.16.8
  - fix: correctly set number of workers for CPUSegmenter
  - enh: update list of environment variables that should be set to

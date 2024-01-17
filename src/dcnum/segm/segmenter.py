@@ -4,7 +4,6 @@ import functools
 import inspect
 import logging
 from typing import Dict
-import warnings
 
 import cv2
 import numpy as np
@@ -279,13 +278,6 @@ class Segmenter(abc.ABC):
     @abc.abstractmethod
     def segment_batch(self, data, start=None, stop=None):
         """Return the integer labels for an entire batch"""
-
-    @classmethod
-    def get_ppid_from_kwargs(cls, *args, **kwargs):
-        warnings.warn(
-            "Please use get_ppid_from_ppkw instead of get_ppid_from_kwargs.",
-            DeprecationWarning)
-        return cls.get_ppid_from_ppkw(*args, **kwargs)
 
 
 @functools.cache

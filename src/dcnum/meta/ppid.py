@@ -71,14 +71,8 @@ def get_class_method_info(class_obj: ClassWithPPIDCapabilities,
         are extracted.
     """
     doc = class_obj.__doc__ or class_obj.__init__.__doc__
-    if hasattr(class_obj, "key"):
-        warnings.warn(f"{class_obj.__class__} implements `key` which is "
-                      f"deprecated. Please rename to `get_ppid_code`.",
-                      DeprecationWarning)
-        setattr(class_obj, "get_ppid_code", class_obj.key)
     info = {
         "code": class_obj.get_ppid_code(),
-        "key": class_obj.get_ppid_code(),  # Deprecated
         "doc": doc,
         "title": doc.split("\n")[0],
         }
@@ -116,11 +110,10 @@ def kwargs_to_ppid(cls: ClassWithPPIDCapabilities,
                    f"segmenter and had to implement `__init__`, make sure "
                    f"that it accepts all kwonly-arguments its super class "
                    f"accepts. If this is not the case, you are probably "
-                   f"passing bad kwargs to the segmenter!"
+                   f"passing invalid kwargs to the segmenter."
                    )
             if allow_invalid_keys:
-                warnings.warn(msg + " Please cleanup your code!",
-                              DeprecationWarning)
+                warnings.warn(msg, UserWarning)
             else:
                 raise KeyError(msg)
         kwannot = info["annotations"][method]

@@ -4,7 +4,6 @@ import inspect
 import multiprocessing as mp
 import pathlib
 import uuid
-import warnings
 
 import h5py
 import numpy as np
@@ -211,13 +210,6 @@ class Background(abc.ABC):
     @abc.abstractmethod
     def process_approach(self):
         """The actual background computation approach"""
-
-    @classmethod
-    def get_ppid_from_kwargs(cls, kwargs):
-        warnings.warn(
-            "Please use get_ppid_from_ppkw instead of get_ppid_from_kwargs",
-            DeprecationWarning)
-        return cls.get_ppid_from_ppkw(kwargs)
 
 
 @functools.cache

@@ -139,13 +139,6 @@ class Gate:
                                 ppid=pp_gate_kwargs)
         return kwargs
 
-    @classmethod
-    def get_ppid_from_kwargs(cls, kwargs):
-        warnings.warn(
-            "Please use get_ppid_from_ppkw instead of get_ppid_from_kwargs",
-            DeprecationWarning)
-        return cls.get_ppid_from_ppkw(kwargs)
-
     def gate_event(self, event):
         """Return None if the event should not be used, else `event`"""
         if self.box_gates and event:
