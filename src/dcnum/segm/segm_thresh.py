@@ -15,6 +15,10 @@ class SegmentThresh(CPUSegmenter):
 
         Parameters
         ----------
+        thresh: int
+            grayscale threhold value for creating the mask image;
+            For a background-corrected image, pixels with values below
+            this value are considered to be part of the mask.
         """
         super(SegmentThresh, self).__init__(thresh=thresh, *args, **kwargs)
 

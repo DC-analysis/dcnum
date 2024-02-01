@@ -131,10 +131,10 @@ class Segmenter(abc.ABC):
         # Start with the default mask kwargs defined for this subclass
         kwargs_mask_used = copy.deepcopy(cls.mask_default_kwargs)
         kwargs_mask_used.update(kwargs_mask)
-        key = cls.get_ppid_code()
+        code = cls.get_ppid_code()
         csegm = kwargs_to_ppid(cls, "segment_approach", kwargs)
         cmask = kwargs_to_ppid(cls, "process_mask", kwargs_mask_used)
-        return ":".join([key, csegm, cmask])
+        return ":".join([code, csegm, cmask])
 
     @staticmethod
     def get_ppkw_from_ppid(segm_ppid):
