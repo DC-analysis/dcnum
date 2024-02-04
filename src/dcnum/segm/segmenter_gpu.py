@@ -1,5 +1,4 @@
 import abc
-import pathlib
 from typing import Dict
 
 import numpy as np
@@ -38,11 +37,6 @@ class GPUSegmenter(Segmenter, abc.ABC):
         super(GPUSegmenter, self).__init__(kwargs_mask=kwargs_mask,
                                            debug=debug,
                                            **kwargs)
-
-    @staticmethod
-    def _get_model_path(model_file):
-        """Custom hook that may be defined by subclasses"""
-        return pathlib.Path(model_file)
 
     def segment_batch(self,
                       image_data: np.ndarray,
