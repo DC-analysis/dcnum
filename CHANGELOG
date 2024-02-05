@@ -1,4 +1,5 @@
 0.17.0
+ - feat: allow to register topical search paths
  - ref: remove deprecated `get_ppid_from_kwargs` methods
  - ref: remove deprecated `preselect` and `ptp_median` keyword
    arguments from `QueueEventExtractor`
