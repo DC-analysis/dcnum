@@ -201,7 +201,10 @@ def test_open_real_data():
 
         # scalar features
         fsc = h5dat.features_scalar_frame
-        exp = ['bg_med', 'frame', 'time']
+        # Changed in version 0.17.1: bg_med is not returned anymore,
+        # because it is computed from the background image which
+        # depends on the background method employed.
+        exp = ['frame', 'time']
         assert set(fsc) == set(exp)
 
         # feature names

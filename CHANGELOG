@@ -1,3 +1,7 @@
+0.17.1
+ - ref: remove "bg_med" and "index_online" from protected scalar features,
+   because "bg_med" may change due to a different background computation
+   method and "index_online" enumerates events from online segmentation
 0.17.0
  - feat: allow to register topical search paths
  - ref: remove deprecated `get_ppid_from_kwargs` methods

@@ -1,10 +1,9 @@
-#: Scalar features that apply to all events in a frame
+#: Scalar features that apply to all events in a frame and which are
+#: not computed from image or image_bg data.
 PROTECTED_FEATURES = [
-    "bg_med",
     "flow_rate",
     "frame",
     "g_force",
-    "index_online",
     "pressure",
     "temp",
     "temp_amb",
