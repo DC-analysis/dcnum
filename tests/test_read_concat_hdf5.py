@@ -72,7 +72,7 @@ def test_concat_ignore_contour(tmp_path):
                                            path_out=path_out)
 
     assert "deform" in data
-    assert not "conotur" in data
+    assert "conotur" not in data
 
 
 def test_concat_invalid_input_feature_number():
