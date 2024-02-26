@@ -54,6 +54,27 @@ def test_concat_basic_to_file(tmp_path):
     assert path_out.exists()
 
 
+def test_concat_ignore_contour(tmp_path):
+    # get file wtih contour information
+    path = retrieve_data(data_path /
+                         "fmt-hdf5_cytoshot_full-features_2023.zip")
+    cdata = np.array([[2, 2], [2, 3], [2, 5], [4, 5], [4, 2]])
+    with h5py.File(path, mode="a") as h5:
+        contour = h5["events"].create_group("contour")
+
+        for ii in range(40):
+            contour.create_dataset(name=f"{ii}", data=cdata, dtype=np.uint64)
+
+    path_out = tmp_path / "test.rtdc"
+    with pytest.warns(UserWarning,
+                      match="Ignoring contour; not implemented yet!"):
+        data = read.concatenated_hdf5_data([path, path, path],
+                                           path_out=path_out)
+
+    assert "deform" in data
+    assert not "conotur" in data
+
+
 def test_concat_invalid_input_feature_number():
     path = retrieve_data(data_path /
                          "fmt-hdf5_cytoshot_full-features_2023.zip")

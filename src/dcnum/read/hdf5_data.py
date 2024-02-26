@@ -432,6 +432,7 @@ def concatenated_hdf5_data(paths: List[pathlib.Path],
                     if not isinstance(h5["events"][feat], h5py.Dataset):
                         warnings.warn(
                             f"Ignoring {feat}; not implemented yet!")
+                        continue
                     if feat in ["frame", "time"]:
                         continue
                     shapes.setdefault(feat, []).append(

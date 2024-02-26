@@ -1,3 +1,6 @@
+0.17.2
+ - fix: make sure unsupported features are not propagated in
+   `concatenated_hdf5_data` (#27)
 0.17.1
  - ref: remove "bg_med" and "index_online" from protected scalar features,
    because "bg_med" may change due to a different background computation
