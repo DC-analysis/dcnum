@@ -11,7 +11,8 @@
  - ref: remove deprecated `preselect` and `ptp_median` keyword
    arguments from `QueueEventExtractor`
  - ref: remove deprecated "key" from `get_class_method_info` info dict
- - ref: issue UserWarning instead of DeprecationWarning when
+ - ref: issue UserWarning instead of DeprecationWarning when checking
+   segmenter keyword arguments
  - ref: remove pixel size check for HDF5 data
  - ref: remove unused `_get_model_file` from GPUSegmenter
 0.16.8

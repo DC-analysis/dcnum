@@ -503,7 +503,7 @@ class DCNumJobRunner(threading.Thread):
             num_segmenters = 1
         elif seg_cls.hardware_processor == "cpu":  # CPU segmenter
             # We could in principle set the number of slots to one and
-            # jave both number of extractors and number of segmenters set
+            # have both number of extractors and number of segmenters set
             # to the total number of CPUs. However, we would need more RAM
             # (for caching the image data) and we also have more overhead.
             # Having two slots shared between all workers is more efficient.
@@ -522,7 +522,7 @@ class DCNumJobRunner(threading.Thread):
         slot_chunks = mp_spawn.Array("i", num_slots)
         slot_states = mp_spawn.Array("u", num_slots)
 
-        # Initialize thread
+        # Initialize segmenter manager thread
         thr_segm = SegmenterManagerThread(
             segmenter=seg_cls(**self.job["segmenter_kwargs"]),
             image_data=imdat,
