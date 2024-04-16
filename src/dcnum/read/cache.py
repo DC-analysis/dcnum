@@ -69,6 +69,9 @@ class HDF5ImageCache:
     def get_chunk(self, chunk_index):
         """Return one chunk of images"""
         if chunk_index not in self.cache:
+            if len(self.cache) >= self.cache_size:
+                # Remove the first item
+                self.cache.popitem(last=False)
             fslice = slice(self.chunk_size * chunk_index,
                            self.chunk_size * (chunk_index + 1)
                            )
@@ -76,9 +79,6 @@ class HDF5ImageCache:
             if self.boolean:
                 data = np.array(data, dtype=bool)
             self.cache[chunk_index] = data
-            if len(self.cache) > self.cache_size:
-                # Remove the first item
-                self.cache.popitem(last=False)
         return self.cache[chunk_index]
 
     def get_chunk_size(self, chunk_index):

@@ -1,3 +1,5 @@
+0.17.3
+ - enh: pop read-cache items before adding a new one
 0.17.2
  - fix: make sure unsupported features are not propagated in
    `concatenated_hdf5_data` (#27)
