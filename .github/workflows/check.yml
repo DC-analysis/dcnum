@@ -29,6 +29,8 @@ jobs:
         python -m pip install coverage flake8 pytest
     - name: Install dcnum
       run: |
+        # https://github.com/luispedro/mahotas/issues/144
+        pip install mahotas==1.4.13
         pip install -e .
     - name: List installed packages
       run: |
