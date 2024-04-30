@@ -68,10 +68,8 @@ class Segmenter(abc.ABC):
     def get_border(shape):
         """Cached boolean image with outer pixels set to True"""
         border = np.zeros(shape, dtype=bool)
-        border[0, :] = True
-        border[-1, :] = True
-        border[:, 0] = True
-        border[:, -1] = True
+        border[[0, -1], :] = True
+        border[:, [0, -1]] = True
         return border
 
     @staticmethod
@@ -159,7 +157,7 @@ class Segmenter(abc.ABC):
     def process_mask(labels, *,
                      clear_border: bool = True,
                      fill_holes: bool = True,
-                     closing_disk: int = 5):
+                     closing_disk: int | None = 5):
         """Post-process retrieved mask image
 
         This is an optional convenience method that is called for each
