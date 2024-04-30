@@ -6,7 +6,7 @@ from .contour import contour_single_opencv
 
 
 def moments_based_features(
-        masks: np.ndarray,
+        mask: np.ndarray,
         pixel_size: float,
         ret_contour: bool = False,
         ):
@@ -14,7 +14,7 @@ def moments_based_features(
 
     Parameters
     ----------
-    masks: np.ndarray
+    mask: np.ndarray
         3D stack of 2D boolean mask images to analyze
     pixel_size: float
         pixel size of the mask image in µm
@@ -24,7 +24,7 @@ def moments_based_features(
     assert pixel_size is not None and pixel_size != 0
     raw_contours = []
 
-    size = masks.shape[0]
+    size = mask.shape[0]
 
     empty = np.full(size, np.nan, dtype=np.float64)
 
@@ -57,7 +57,7 @@ def moments_based_features(
 
     for ii in range(size):
         # raw contour
-        cont_raw = contour_single_opencv(masks[ii])
+        cont_raw = contour_single_opencv(mask[ii])
         # only continue if the contour is valid
         not_valid = len(cont_raw.shape) < 2 or cv2.contourArea(cont_raw) == 0
 
