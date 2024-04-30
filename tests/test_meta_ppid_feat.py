@@ -2,7 +2,7 @@ from dcnum.feat import QueueEventExtractor
 
 
 def test_ppid_decoding_extr_check_kwargs():
-    extr_ppid = "legacy:b=1^h=0"
+    extr_ppid = "legacy:b=1^h=0^v=1"
     kwargs = QueueEventExtractor.get_ppkw_from_ppid(extr_ppid)
     assert kwargs["haralick"] is False
     assert kwargs["brightness"] is True
@@ -11,7 +11,7 @@ def test_ppid_decoding_extr_check_kwargs():
 def test_ppid_encoding_extr_check_kwargs():
     kwargs = {"haralick": True, "brightness": False}
     ppid = QueueEventExtractor.get_ppid_from_ppkw(kwargs)
-    assert ppid == "legacy:b=0^h=1"
+    assert ppid == "legacy:b=0^h=1^v=1"
 
 
 def test_ppid_required_method_definitions():

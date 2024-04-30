@@ -35,10 +35,10 @@ def test_compute_pipeline_hash():
         dat_id="hdf:p=0.34",
         bg_id="sparsemed:k=200^s=1^t=0^f=0.8",
         seg_id="thresh:t=-3:cle=1^f=1^clo=2",
-        feat_id="legacy:b=1^h=0",
+        feat_id="legacy:b=1^h=0^v=1",
         gate_id="norm:o=0^s=11",
     )
-    assert pp_hash == "ec11977fc233e133c29642736161f201"
+    assert pp_hash == "b849ad6060b993624e2b4df6ccfbd3be"
 
 
 @pytest.mark.parametrize("in_list,out_list", [

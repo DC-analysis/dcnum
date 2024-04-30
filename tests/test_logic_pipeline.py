@@ -306,7 +306,7 @@ def test_simple_pipeline(debug):
     dat_id = "hdf:p=0.2645"
     bg_id = "sparsemed:k=200^s=1^t=0^f=0.8"
     seg_id = "thresh:t=-6:cle=1^f=1^clo=2"
-    feat_id = "legacy:b=1^h=1"
+    feat_id = "legacy:b=1^h=1^v=1"
     gate_id = "norm:o=0^s=10"
     jobid = "|".join([gen_id, dat_id, bg_id, seg_id, feat_id, gate_id])
 
@@ -404,7 +404,7 @@ def test_recomputation_of_background_metadata_changed(attr, oldval, newbg):
         h5.attrs["pipeline:dcnum data"] = "hdf:p=0.2645"
         h5.attrs["pipeline:dcnum background"] = "sparsemed:k=200^s=1^t=0^f=0.8"
         h5.attrs["pipeline:dcnum segmenter"] = "thresh:t=-6:cle=1^f=1^clo=2"
-        h5.attrs["pipeline:dcnum feature"] = "legacy:b=1^h=1"
+        h5.attrs["pipeline:dcnum feature"] = "legacy:b=1^h=1^v=1"
         h5.attrs["pipeline:dcnum gate"] = "norm:o=0^s=10"
         h5.attrs["pipeline:dcnum yield"] = h5["events/image"].shape[0]
 
@@ -451,7 +451,7 @@ def test_task_background():
     dat_id = "hdf:p=0.2645"
     bg_id = "sparsemed:k=200^s=1^t=0^f=0.8"
     seg_id = "thresh:t=-6:cle=1^f=1^clo=2"
-    feat_id = "legacy:b=1^h=1"
+    feat_id = "legacy:b=1^h=1^v=1"
     gate_id = "norm:o=0^s=10"
     jobid = "|".join([gen_id, dat_id, bg_id, seg_id, feat_id, gate_id])
 

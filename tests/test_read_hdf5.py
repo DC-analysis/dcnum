@@ -176,6 +176,7 @@ def test_meta_nest():
         print(meta)
         assert meta["imaging"]["pixel size"] == .2645
         assert meta["experiment"]["time"] == '15:24:17'
+        # no volume yet in this file:
         assert meta["user"]["dcevent ppid feature"] == 'legacy:b=1^h=1'
 
 

@@ -14,7 +14,7 @@ from ..meta.ppid import kwargs_to_ppid, ppid_to_kwargs
 from ..read import HDF5Data
 
 from .feat_brightness import brightness_features
-from .feat_contour import moments_based_features
+from .feat_contour import moments_based_features, volume_from_contours
 from .feat_texture import haralick_texture_features
 from .gate import Gate
 
@@ -178,6 +178,7 @@ class QueueEventExtractor:
     def get_events_from_masks(self, masks, data_index, *,
                               brightness: bool = True,
                               haralick: bool = True,
+                              volume: bool = True,
                               ):
         """Get events dictionary, performing event-based gating"""
         events = {"mask": masks}
@@ -189,6 +190,7 @@ class QueueEventExtractor:
             moments_based_features(
                 masks,
                 pixel_size=self.data.pixel_size,
+                ret_contour=volume,
                 ))
 
         if brightness:
@@ -199,6 +201,14 @@ class QueueEventExtractor:
         if haralick:
             events.update(haralick_texture_features(
                 mask=masks, image=image, image_corr=image_corr
+            ))
+
+        if volume:
+            events.update(volume_from_contours(
+                contour=events.pop("contour"),  # remove contour from events!
+                pos_x=events["pos_x"],
+                pos_y=events["pos_y"],
+                pixel_size=self.data.pixel_size,
             ))
 
         # gating on feature arrays

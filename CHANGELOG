@@ -1,4 +1,5 @@
 0.18.0
+ - feat: volume computation via contour revolve algorithm
  - enh: pop read-cache items before adding a new one
  - enh: allow to request the raw contour from `moments_based_features`
  - ref: minor cleanup
