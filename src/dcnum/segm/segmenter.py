@@ -157,7 +157,7 @@ class Segmenter(abc.ABC):
     def process_mask(labels, *,
                      clear_border: bool = True,
                      fill_holes: bool = True,
-                     closing_disk: int | None = 5):
+                     closing_disk: int = 5):
         """Post-process retrieved mask image
 
         This is an optional convenience method that is called for each
