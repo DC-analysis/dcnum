@@ -188,7 +188,9 @@ class QueueEventExtractor:
         events.update(
             moments_based_features(
                 masks,
-                pixel_size=self.data.pixel_size))
+                pixel_size=self.data.pixel_size,
+                ))
+
         if brightness:
             events.update(brightness_features(
                 mask=masks, image=image, image_bg=image_bg,

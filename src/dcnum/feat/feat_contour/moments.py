@@ -6,28 +6,25 @@ from .contour import contour_single_opencv
 
 
 def moments_based_features(
-        mask: np.ndarray,
+        masks: np.ndarray,
         pixel_size: float,
-        contour_raw: np.ndarray = None,
-        contour_cvx: np.ndarray = None):
+        ret_contour: bool = False,
+        ):
     """Compute moment-based features for a mask image
 
     Parameters
     ----------
-    mask: np.ndarray
-        2D boolean mask image to analyze
+    masks: np.ndarray
+        3D stack of 2D boolean mask images to analyze
     pixel_size: float
         pixel size of the mask image in µm
-    contour_raw: np.ndarray
-        array of shape (N, 2) for the raw contour; if not provided,
-        it is computed from the `mask`
-    contour_cvx: np.ndarray
-        array of shape (N, 2) for the convex contour; if not provided,
-        it is computed from `contour_raw`
+    ret_contour: bool
+        whether to also return the raw contour
     """
     assert pixel_size is not None and pixel_size != 0
+    raw_contours = []
 
-    size = mask.shape[0]
+    size = masks.shape[0]
 
     empty = np.full(size, np.nan, dtype=np.float64)
 
@@ -60,24 +57,22 @@ def moments_based_features(
 
     for ii in range(size):
         # raw contour
-        if contour_raw is None:
-            cont_raw = contour_single_opencv(mask[ii])
-            if len(cont_raw.shape) < 2:
-                continue
-            if cv2.contourArea(cont_raw) == 0:
-                continue
-        else:
-            cont_raw = contour_raw
+        cont_raw = contour_single_opencv(masks[ii])
+        # only continue if the contour is valid
+        not_valid = len(cont_raw.shape) < 2 or cv2.contourArea(cont_raw) == 0
+
+        if ret_contour:
+            raw_contours.append(None if not_valid else cont_raw)
+
+        if not_valid:
+            continue
 
         mu_raw = cv2.moments(cont_raw)
         arc_raw = np.float64(cv2.arcLength(cont_raw, True))
         area_raw = np.float64(mu_raw["m00"])
 
         # convex hull
-        if contour_cvx is None:
-            cont_cvx = np.squeeze(cv2.convexHull(cont_raw))
-        else:
-            cont_cvx = contour_cvx
+        cont_cvx = np.squeeze(cv2.convexHull(cont_raw))
 
         mu_cvx = cv2.moments(cont_cvx)
         arc_cvx = np.float64(cv2.arcLength(cont_cvx, True))
@@ -136,7 +131,7 @@ def moments_based_features(
         # specify validity
         valid[ii] = True
 
-    return {
+    data = {
         "area_msd": feat_area_msd,
         "area_ratio": feat_area_ratio,
         "area_um": feat_area_um,
@@ -157,3 +152,6 @@ def moments_based_features(
         "tilt": feat_tilt,
         "valid": valid,
     }
+    if ret_contour:
+        data["contour"] = raw_contours
+    return data

@@ -1,6 +1,6 @@
 0.18.0
  - enh: pop read-cache items before adding a new one
- - enh: allow to pass the precomputed contour to `moments_based_features`
+ - enh: allow to request the raw contour from `moments_based_features`
  - ref: minor cleanup
  - ref: rename submodule `feat_moments` to `feat_contour`
 0.17.2
