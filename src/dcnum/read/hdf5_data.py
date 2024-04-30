@@ -27,6 +27,31 @@ class HDF5Data:
                  tables: Dict[np.ndarray] = None,
                  image_cache_size: int = 2,
                  ):
+        """
+
+        Parameters
+        ----------
+        path:
+            path to data file
+        pixel_size:
+            pixel size in µm
+        md5_5m:
+            MD5 sum of the first 5 MiB; computed if not provided
+        meta:
+            metadata dictionary; extracted from HDF5 attributes
+            if not provided
+        basins:
+            list of basin dictionaries; extracted from HDF5 attributes
+            if not provided
+        logs:
+            dictionary of logs; extracted from HDF5 attributes
+            if not provided
+        tables:
+            dictionary of tables; extracted from HDF5 attributes
+            if not provided
+        image_cache_size:
+            size of the image cache to use when accessing image data
+        """
         # Init is in __setstate__ so we can pickle this class
         # and use it for multiprocessing.
         if isinstance(path, h5py.File):
@@ -116,7 +141,7 @@ class HDF5Data:
         if self.md5_5m is None:
             if isinstance(self.path, pathlib.Path):
                 # 5MB md5sum of input file
-                self.md5_5m = md5sum(self.path, count=80)
+                self.md5_5m = md5sum(self.path, blocksize=65536, count=80)
             else:
                 self.md5_5m = str(uuid.uuid4()).replace("-", "")
         self.meta = state["meta"]
