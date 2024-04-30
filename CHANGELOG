@@ -1,6 +1,8 @@
-0.17.3
+0.18.0
  - enh: pop read-cache items before adding a new one
+ - enh: allow to pass the precomputed contour to `moments_based_features`
  - ref: minor cleanup
+ - ref: rename submodule `feat_moments` to `feat_contour`
 0.17.2
  - fix: make sure unsupported features are not propagated in
    `concatenated_hdf5_data` (#27)

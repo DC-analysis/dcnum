@@ -14,7 +14,7 @@ from ..meta.ppid import kwargs_to_ppid, ppid_to_kwargs
 from ..read import HDF5Data
 
 from .feat_brightness import brightness_features
-from .feat_moments import moments_based_features
+from .feat_contour import moments_based_features
 from .feat_texture import haralick_texture_features
 from .gate import Gate
 

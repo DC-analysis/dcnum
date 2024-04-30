@@ -2,10 +2,29 @@ import cv2
 import numpy as np
 
 
-from .ct_opencv import contour_single_opencv
+from .contour import contour_single_opencv
 
 
-def moments_based_features(mask, pixel_size):
+def moments_based_features(
+        mask: np.ndarray,
+        pixel_size: float,
+        contour_raw: np.ndarray = None,
+        contour_cvx: np.ndarray = None):
+    """Compute moment-based features for a mask image
+
+    Parameters
+    ----------
+    mask: np.ndarray
+        2D boolean mask image to analyze
+    pixel_size: float
+        pixel size of the mask image in µm
+    contour_raw: np.ndarray
+        array of shape (N, 2) for the raw contour; if not provided,
+        it is computed from the `mask`
+    contour_cvx: np.ndarray
+        array of shape (N, 2) for the convex contour; if not provided,
+        it is computed from `contour_raw`
+    """
     assert pixel_size is not None and pixel_size != 0
 
     size = mask.shape[0]
@@ -41,18 +60,25 @@ def moments_based_features(mask, pixel_size):
 
     for ii in range(size):
         # raw contour
-        cont_raw = contour_single_opencv(mask[ii])
-        if len(cont_raw.shape) < 2:
-            continue
-        if cv2.contourArea(cont_raw) == 0:
-            continue
+        if contour_raw is None:
+            cont_raw = contour_single_opencv(mask[ii])
+            if len(cont_raw.shape) < 2:
+                continue
+            if cv2.contourArea(cont_raw) == 0:
+                continue
+        else:
+            cont_raw = contour_raw
 
         mu_raw = cv2.moments(cont_raw)
         arc_raw = np.float64(cv2.arcLength(cont_raw, True))
         area_raw = np.float64(mu_raw["m00"])
 
         # convex hull
-        cont_cvx = np.squeeze(cv2.convexHull(cont_raw))
+        if contour_cvx is None:
+            cont_cvx = np.squeeze(cv2.convexHull(cont_raw))
+        else:
+            cont_cvx = contour_cvx
+
         mu_cvx = cv2.moments(cont_cvx)
         arc_cvx = np.float64(cv2.arcLength(cont_cvx, True))
 

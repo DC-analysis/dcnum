@@ -3,7 +3,7 @@ import pathlib
 import h5py
 import numpy as np
 
-from dcnum.feat import feat_moments
+from dcnum.feat import feat_contour
 
 from helper_methods import retrieve_data
 
@@ -26,7 +26,7 @@ def test_moments_based_features():
 
     # Make data available
     with h5py.File(path) as h5:
-        data = feat_moments.moments_based_features(
+        data = feat_contour.moments_based_features(
             mask=h5["events/mask"][:],
             pixel_size=0.2645
         )
@@ -48,7 +48,7 @@ def test_mask_2d():
         [0, 0, 0, 0, 0, 0],
         [0, 0, 0, 0, 0, 0],
     ], dtype=bool)[np.newaxis]
-    data = feat_moments.moments_based_features(
+    data = feat_contour.moments_based_features(
                 mask=masks,
                 pixel_size=0.2645
             )

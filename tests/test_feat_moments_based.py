@@ -4,7 +4,7 @@ import h5py
 import numpy as np
 import scipy.ndimage as ndi
 
-from dcnum.feat import feat_moments
+from dcnum.feat import feat_contour
 
 from helper_methods import retrieve_data
 
@@ -28,7 +28,7 @@ def test_inert_ratio_prnc():
     # sanity check that fill_holes worked
     assert np.sum(mask) > 22000
 
-    data = feat_moments.moments_based_features(
+    data = feat_contour.moments_based_features(
         mask=mask[np.newaxis],
         pixel_size=0.2645
     )
@@ -59,7 +59,7 @@ def test_inert_ratio_prnc():
                 assert not np.any(maskij[:, 0])
                 assert not np.any(maskij[:, -1])
 
-                dataij = feat_moments.moments_based_features(
+                dataij = feat_contour.moments_based_features(
                     mask=maskij[np.newaxis],
                     pixel_size=0.2645
                 )
@@ -99,7 +99,7 @@ def test_inert_ratio_prnc_simple_1():
     # sanity check that fill_holes worked
     assert np.sum(mask) == 12
 
-    data = feat_moments.moments_based_features(
+    data = feat_contour.moments_based_features(
         mask=mask[np.newaxis],
         pixel_size=0.2645
     )
@@ -135,7 +135,7 @@ def test_inert_ratio_prnc_simple_2():
     # sanity check that fill_holes worked
     assert np.sum(mask) == 18
 
-    data = feat_moments.moments_based_features(
+    data = feat_contour.moments_based_features(
         mask=mask[np.newaxis],
         pixel_size=0.2645
     )
@@ -171,7 +171,7 @@ def test_moments_based_features():
 
     # Make data available
     with h5py.File(path) as h5:
-        data = feat_moments.moments_based_features(
+        data = feat_contour.moments_based_features(
             mask=h5["events/mask"][:],
             pixel_size=0.2645
         )
@@ -200,7 +200,7 @@ def test_mask_0d():
         [0, 0, 0, 0, 0, 0],
         [0, 0, 0, 0, 0, 0],
     ], dtype=bool)[np.newaxis]
-    data = feat_moments.moments_based_features(
+    data = feat_contour.moments_based_features(
                 mask=masks,
                 pixel_size=0.2645
             )
@@ -218,7 +218,7 @@ def test_mask_1d():
         [0, 0, 0, 0, 0, 0],
         [0, 0, 0, 0, 0, 0],
     ], dtype=bool)[np.newaxis]
-    data = feat_moments.moments_based_features(
+    data = feat_contour.moments_based_features(
                 mask=masks,
                 pixel_size=0.2645
             )
@@ -236,7 +236,7 @@ def test_mask_1d_large():
         [0, 0, 1, 0, 0, 0],
         [0, 0, 1, 0, 0, 0],
     ], dtype=bool)[np.newaxis]
-    data = feat_moments.moments_based_features(
+    data = feat_contour.moments_based_features(
                 mask=masks,
                 pixel_size=0.2645
             )
@@ -256,7 +256,7 @@ def test_mask_1d_large_no_border():
         [0, 0, 1, 0, 0, 0],
         [0, 0, 0, 0, 0, 0],
     ], dtype=bool)[np.newaxis]
-    data = feat_moments.moments_based_features(
+    data = feat_contour.moments_based_features(
                 mask=masks,
                 pixel_size=0.2645
             )
@@ -274,7 +274,7 @@ def test_mask_2d():
         [0, 0, 0, 0, 0, 0],
         [0, 0, 0, 0, 0, 0],
     ], dtype=bool)[np.newaxis]
-    data = feat_moments.moments_based_features(
+    data = feat_contour.moments_based_features(
                 mask=masks,
                 pixel_size=0.2645
             )
@@ -304,7 +304,7 @@ def test_mask_mixed():
     ], dtype=bool)
     mixed_masks = np.append(mask_valid[None, ...],
                             mask_invalid[None, ...], axis=0)
-    data = feat_moments.moments_based_features(
+    data = feat_contour.moments_based_features(
                 mask=mixed_masks,
                 pixel_size=0.2645)
     assert data["deform"].shape == (2,)
@@ -340,7 +340,7 @@ def test_tilt():
         assert not np.any(mask[:, 0])
         assert not np.any(mask[:, -1])
 
-        data = feat_moments.moments_based_features(
+        data = feat_contour.moments_based_features(
             mask=mask[np.newaxis],
             pixel_size=0.2645
         )
