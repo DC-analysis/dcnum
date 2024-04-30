@@ -92,7 +92,7 @@ class HDF5Data:
     def __setstate__(self, state):
         # Make sure these properties exist (we rely on __init__, because
         # we want this class to be pickable and __init__ is not called by
-        # `pickle.load`.
+        # `pickle.load`).
         # Cached properties
         self._feats = None
         self._keys = None

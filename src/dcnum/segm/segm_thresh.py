@@ -25,7 +25,7 @@ class SegmentThresh(CPUSegmenter):
     @staticmethod
     def segment_approach(image, *,
                          thresh: float = -6):
-        """Mask retrieval as it is done in Shape-In
+        """Mask retrieval using basic thresholding
 
         Parameters
         ----------
