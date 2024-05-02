@@ -59,7 +59,13 @@ def test_chained_pipeline():
                == "sparsemed:k=250^s=1^t=0^f=0.8"
 
 
-def test_duplicate_pipeline():
+@pytest.mark.parametrize("index_mapping,size,mapping_out", [
+    (None, 395, "0"),
+    (5, 12, "5"),
+    (slice(3, 5, None), 6, "3-5-n"),
+    ([3, 5, 6, 7], 7, "h-6e582938"),
+])
+def test_duplicate_pipeline(index_mapping, size, mapping_out):
     """Test running the same pipeline twice
 
     When the pipeline is run on a file with the same pipeline
@@ -70,7 +76,12 @@ def test_duplicate_pipeline():
     path2 = path.with_name("path_intermediate.rtdc")
     with read.concatenated_hdf5_data(5 * [path_orig], path_out=path):
         pass
-    job = logic.DCNumPipelineJob(path_in=path, path_out=path2, debug=True)
+    job = logic.DCNumPipelineJob(
+        path_in=path,
+        path_out=path2,
+        data_kwargs={"index_mapping": index_mapping},
+        debug=True)
+    assert job.kwargs["data_kwargs"]["index_mapping"] == index_mapping
 
     # perform the initial pipeline
     with logic.DCNumJobRunner(job=job) as runner:
@@ -85,15 +96,26 @@ def test_duplicate_pipeline():
         assert "Flushing data to disk" in logdat
         assert "Finished segmentation and feature extraction" in logdat
 
+    # get the first image for reference
+    with h5py.File(path) as h5:
+        if index_mapping is None:
+            idx0 = 0
+        else:
+            idx0 = read.get_mapping_indices(index_mapping)[0]
+        im0 = h5["/events/image"][idx0]
+
     # remove all logs just to be sure nothing interferes
     with h5py.File(path2, "a") as h5:
+        assert h5.attrs["pipeline:dcnum mapping"] == mapping_out
+        assert len(h5["events/deform"]) == size
         del h5["logs"]
 
-    # now when we do everything again, not a things should be done
-    job2 = logic.DCNumPipelineJob(path_in=path2,
-                                  path_out=path2.with_name("final_out.rtdc"),
-                                  no_basins_in_output=True,
-                                  debug=True)
+    # now when we do everything again, not a thing should be done
+    job2 = logic.DCNumPipelineJob(
+        path_in=path2,
+        path_out=path2.with_name("final_out.rtdc"),
+        no_basins_in_output=True,
+        debug=True)
     with logic.DCNumJobRunner(job=job2) as runner2:
         runner2.run()
     # Real check for second run (not the `not`s [sic]!)
@@ -110,7 +132,9 @@ def test_duplicate_pipeline():
         assert "deform" in h5["events"]
         assert "image" in h5["events"]
         assert "image_bg" in h5["events"]
-        assert len(h5["events/deform"]) == 395
+        assert len(h5["events/deform"]) == size
+        assert h5.attrs["pipeline:dcnum mapping"] == "0"
+        assert np.all(h5["events/image"][0] == im0)
 
 
 def test_duplicate_transfer_basin_data():

@@ -13,6 +13,7 @@ import numpy as np
 
 from .cache import HDF5ImageCache, ImageCorrCache, md5sum
 from .const import PROTECTED_FEATURES
+from .mapped import get_mapped_object, get_mapping_indices
 
 
 class HDF5Data:
@@ -26,6 +27,7 @@ class HDF5Data:
                  logs: Dict[List[str]] = None,
                  tables: Dict[np.ndarray] = None,
                  image_cache_size: int = 2,
+                 index_mapping: int | slice | List | np.ndarray = None,
                  ):
         """
 
@@ -51,12 +53,21 @@ class HDF5Data:
             if not provided
         image_cache_size:
             size of the image cache to use when accessing image data
+        index_mapping:
+            select only a subset of input events, transparently reducing the
+            size of the dataset, possible data types are
+            - int `N`: use the first `N` events
+            - slice: use the events defined by a slice
+            - list: list of integers specifying the event indices to use
+            Numpy indexing rules apply. E.g. to only process the first
+            100 events, set this to `100` or `slice(0, 100)`.
         """
         # Init is in __setstate__ so we can pickle this class
         # and use it for multiprocessing.
         if isinstance(path, h5py.File):
             self.h5 = path
             path = path.filename
+
         self.__setstate__({"path": path,
                            "pixel_size": pixel_size,
                            "md5_5m": md5_5m,
@@ -65,6 +76,7 @@ class HDF5Data:
                            "logs": logs,
                            "tables": tables,
                            "image_cache_size": image_cache_size,
+                           "index_mapping": index_mapping,
                            })
 
     def __contains__(self, item):
@@ -78,7 +90,7 @@ class HDF5Data:
 
     def __getitem__(self, feat):
         if feat in ["image", "image_bg", "mask"]:
-            data = self.get_image_cache(feat)
+            data = self.get_image_cache(feat)  # already index-mapped
             if data is None:
                 raise KeyError(f"Feature '{feat}' not found in {self}!")
             else:
@@ -87,19 +99,25 @@ class HDF5Data:
             return self._cache_scalar[feat]
         elif (feat in self.h5["events"]
               and len(self.h5["events"][feat].shape) == 1):  # cache scalar
-            self._cache_scalar[feat] = self.h5["events"][feat][:]
+            if self.index_mapping is None:
+                idx_map = slice(None)  # no mapping indices, just slice
+            else:
+                idx_map = get_mapping_indices(self.index_mapping)
+            self._cache_scalar[feat] = self.h5["events"][feat][idx_map]
             return self._cache_scalar[feat]
         else:
             if feat in self.h5["events"]:
                 # Not cached (possibly slow)
                 warnings.warn(f"Feature {feat} not cached (possibly slow)")
-                return self.h5["events"][feat]
+                return get_mapped_object(
+                    obj=self.h5["events"][feat],
+                    index_mapping=self.index_mapping)
             else:
                 # Check the basins
                 for idx in range(len(self.basins)):
                     bn, bn_features = self.get_basin_data(idx)
                     if bn_features and feat in bn_features:
-                        return bn[feat]
+                        return bn[feat]  # already index-mapped
         # If we got here, then the feature data does not exist.
         raise KeyError(f"Feature '{feat}' not found in {self}!")
 
@@ -111,7 +129,8 @@ class HDF5Data:
                 "logs": self.logs,
                 "tables": self.tables,
                 "basins": self.basins,
-                "image_cache_size": self.image.cache_size
+                "image_cache_size": self.image.cache_size,
+                "index_mapping": self.index_mapping,
                 }
 
     def __setstate__(self, state):
@@ -190,12 +209,17 @@ class HDF5Data:
 
         self.image_cache_size = state["image_cache_size"]
 
+        self.index_mapping = state["index_mapping"]
+
         if self.h5 is None:
             self.h5 = h5py.File(self.path, libver="latest")
 
     def __len__(self):
         if self._len is None:
-            self._len = self.h5.attrs["experiment:event count"]
+            if self.index_mapping is not None:
+                self._len = get_mapping_indices(self.index_mapping).size
+            else:
+                self._len = self.h5.attrs["experiment:event count"]
         return self._len
 
     @property
@@ -280,20 +304,26 @@ class HDF5Data:
         # Data does not really fit into the PPID scheme we use for the rest
         # of the pipeline. This implementation here is custom.
         code = cls.get_ppid_code()
-        kwid = f"p={kwargs['pixel_size']:.8f}".rstrip("0")
+        ppid_ps = f"{kwargs['pixel_size']:.8f}".rstrip("0")
+        kwid = "^".join([f"p={ppid_ps}"])
         return ":".join([code, kwid])
 
     @staticmethod
     def get_ppkw_from_ppid(dat_ppid):
         # Data does not fit in the PPID scheme we use, but we still
         # would like to pass pixel_size to __init__ if we need it.
-        code, pp_dat_kwargs = dat_ppid.split(":")
+        code, kwargs_str = dat_ppid.split(":")
         if code != HDF5Data.get_ppid_code():
             raise ValueError(f"Could not find data method '{code}'!")
-        p, val = pp_dat_kwargs.split("=")
-        if p != "p":
-            raise ValueError(f"Invalid parameter '{p}'!")
-        return {"pixel_size": float(val)}
+        kwitems = kwargs_str.split("^")
+        kwargs = {}
+        for item in kwitems:
+            var, val = item.split("=")
+            if var == "p":
+                kwargs["pixel_size"] = float(val)
+            else:
+                raise ValueError(f"Invalid parameter '{var}'!")
+        return kwargs
 
     def get_basin_data(self, index):
         """Return HDF5Data info for a basin index in `self.basins`
@@ -323,7 +353,7 @@ class HDF5Data:
             if path is None:
                 self._basin_data[index] = (None, None)
             else:
-                h5dat = HDF5Data(path)
+                h5dat = HDF5Data(path, index_mapping=self.index_mapping)
                 features = bn_dict.get("features")
                 if features is None:
                     # Only get the features from the actual HDF5 file.
@@ -361,7 +391,8 @@ class HDF5Data:
 
             if ds is not None:
                 image = HDF5ImageCache(
-                    h5ds=ds,
+                    h5ds=get_mapped_object(obj=ds,
+                                           index_mapping=self.index_mapping),
                     cache_size=self.image_cache_size,
                     boolean=feat == "mask")
             else:
@@ -411,6 +442,7 @@ def concatenated_hdf5_data(paths: List[pathlib.Path],
     - If one of the input files does not contain a feature from the first
       input `paths`, then a `ValueError` is raised. Use the `features`
       argument to specify which features you need instead.
+    - Basins are not considered.
     """
     h5kwargs = {"mode": "w", "libver": "latest"}
     if isinstance(path_out, (pathlib.Path, str)):

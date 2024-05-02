@@ -1,9 +1,11 @@
 import collections
 import datetime
+import hashlib
 import json
 import logging
 from logging.handlers import QueueListener
 import multiprocessing as mp
+import numbers
 import os
 import pathlib
 import platform
@@ -14,6 +16,7 @@ import traceback
 import uuid
 
 import h5py
+import numpy as np
 
 from ..feat.feat_background.base import get_available_background_methods
 from ..feat.queue_event_extractor import QueueEventExtractor
@@ -382,6 +385,24 @@ class DCNumJobRunner(threading.Thread):
             hw.h5.attrs["pipeline:dcnum gate"] = self.ppdict["gate_id"]
             hw.h5.attrs["pipeline:dcnum hash"] = self.pphash
             hw.h5.attrs["pipeline:dcnum yield"] = self.event_count
+            # index mapping information
+            im = self.job.kwargs["data_kwargs"].get("index_mapping", None)
+            if im is None:
+                dim = "0"
+            elif isinstance(im, numbers.Number):
+                dim = f"{im}"
+            elif isinstance(im, slice):
+                dim = (f"{im.start if im.start is not None else 'n'}"
+                       + f"-{im.stop if im.stop is not None else 'n'}"
+                       + f"-{im.step if im.step is not None else 'n'}"
+                       )
+            elif isinstance(im, (list, np.ndarray)):
+                idhash = hashlib.md5(
+                    np.array(im, dtype=np.uint32).tobytes()).hexdigest()
+                dim = f"h-{idhash[:8]}"
+            else:
+                dim = "unknown"
+            hw.h5.attrs["pipeline:dcnum mapping"] = dim
             # regular metadata
             hw.h5.attrs["experiment:event count"] = self.event_count
             hw.h5.attrs["imaging:pixel size"] = self.draw.pixel_size
