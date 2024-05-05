@@ -93,8 +93,6 @@ class Background(abc.ABC):
         else:
             self.input_data = input_data
 
-        #: unique identifier
-        self.name = str(uuid.uuid4())
         #: shape of event images
         self.image_shape = self.input_data[0].shape
         #: total number of events
