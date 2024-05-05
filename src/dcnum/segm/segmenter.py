@@ -119,25 +119,40 @@ class Segmenter(abc.ABC):
         get_ppid: Same method for class instances
         """
         kwargs = copy.deepcopy(kwargs)
-        if kwargs_mask is None and kwargs.get("kwargs_mask", None) is None:
-            raise KeyError("`kwargs_mask` must be either specified as "
-                           "keyword argument to this method or as a key "
-                           "in `kwargs`!")
-        if kwargs_mask is None:
-            # see check above (kwargs_mask may also be {})
-            kwargs_mask = kwargs.pop("kwargs_mask")
-        # Start with the default mask kwargs defined for this subclass
-        kwargs_mask_used = copy.deepcopy(cls.mask_default_kwargs)
-        kwargs_mask_used.update(kwargs_mask)
-        code = cls.get_ppid_code()
-        csegm = kwargs_to_ppid(cls, "segment_approach", kwargs)
-        cmask = kwargs_to_ppid(cls, "process_mask", kwargs_mask_used)
-        return ":".join([code, csegm, cmask])
+        if cls.mask_postprocessing:
+            if kwargs_mask is None and kwargs.get("kwargs_mask", None) is None:
+                raise KeyError("`kwargs_mask` must be either specified as "
+                               "keyword argument to this method or as a key "
+                               "in `kwargs`!")
+            if kwargs_mask is None:
+                # see check above (kwargs_mask may also be {})
+                kwargs_mask = kwargs.pop("kwargs_mask")
+            # Start with the default mask kwargs defined for this subclass
+            kwargs_mask_used = copy.deepcopy(cls.mask_default_kwargs)
+            kwargs_mask_used.update(kwargs_mask)
+        elif kwargs_mask:
+            raise ValueError(f"The segmenter '{cls.__name__}' does not "
+                             f"support mask postprocessing, but 'kwargs_mask' "
+                             f"was provided: {kwargs_mask}")
+
+        ppid_parts = [
+            cls.get_ppid_code(),
+            kwargs_to_ppid(cls, "segment_approach", kwargs),
+            ]
+
+        if cls.mask_postprocessing:
+            ppid_parts.append(
+                kwargs_to_ppid(cls, "process_mask", kwargs_mask_used))
+
+        return ":".join(ppid_parts)
 
     @staticmethod
     def get_ppkw_from_ppid(segm_ppid):
         """Return keyword arguments for this pipeline identifier"""
-        code, pp_kwargs, pp_kwargs_mask = segm_ppid.split(":")
+        ppid_parts = segm_ppid.split(":")
+        code = ppid_parts[0]
+        pp_kwargs = ppid_parts[1]
+
         for cls_code in get_available_segmenters():
             if cls_code == code:
                 cls = get_available_segmenters()[cls_code]
@@ -148,9 +163,11 @@ class Segmenter(abc.ABC):
         kwargs = ppid_to_kwargs(cls=cls,
                                 method="segment_approach",
                                 ppid=pp_kwargs)
-        kwargs["kwargs_mask"] = ppid_to_kwargs(cls=cls,
-                                               method="process_mask",
-                                               ppid=pp_kwargs_mask)
+        if cls.mask_postprocessing:
+            pp_kwargs_mask = ppid_parts[2]
+            kwargs["kwargs_mask"] = ppid_to_kwargs(cls=cls,
+                                                   method="process_mask",
+                                                   ppid=pp_kwargs_mask)
         return kwargs
 
     @staticmethod
