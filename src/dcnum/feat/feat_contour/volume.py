@@ -54,7 +54,7 @@ def volume_from_contours(
         # If the contour has less than 4 pixels, the computation will fail.
         # In that case, the value np.nan is already assigned.
         cc = contour[ii]
-        if cc.shape[0] >= 4:
+        if cc is not None and cc.shape[0] >= 4:
             # Center contour coordinates with given centroid
             contour_x = cc[:, 0] - pos_x[ii] / pixel_size
             contour_y = cc[:, 1] - pos_y[ii] / pixel_size

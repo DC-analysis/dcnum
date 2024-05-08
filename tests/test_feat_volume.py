@@ -126,6 +126,15 @@ def test_volume_from_file():
                        rtol=0)
 
 
+def test_volume_from_none():
+    vevents = volume_from_contours(contour=[None],
+                                   pos_x=np.atleast_1d([10.5]),
+                                   pos_y=np.atleast_1d([100.5]),
+                                   pixel_size=0.2665,
+                                   )
+    assert np.all(np.isnan(vevents["volume"]))
+
+
 @pytest.mark.parametrize("npoints,rtol", [[100, 6.72e-4],
                                           [1000, 6.6e-6]])
 def test_vol_revolve_circular_toroid(npoints, rtol):
