@@ -61,6 +61,7 @@ class HDF5Writer:
         self.close()
 
     def close(self):
+        self.h5.flush()
         if self.h5_owned:
             self.h5.close()
 
@@ -90,7 +91,6 @@ class HDF5Writer:
                 ds_kwds = {}
             for key in self.ds_kwds:
                 ds_kwds.setdefault(key, self.ds_kwds[key])
-            print(feat)
             dset = self.events.create_dataset(
                 feat,
                 shape=tuple([0] + list(item_shape)),
@@ -169,7 +169,6 @@ class HDF5Writer:
         dsize = data.shape[0]
         ds.resize(offset + dsize, axis=0)
         ds[offset:offset + dsize] = data
-        print(ds.size)
 
     def store_log(self,
                   log: str,

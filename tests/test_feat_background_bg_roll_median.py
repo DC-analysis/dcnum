@@ -96,7 +96,7 @@ def test_median_process_next_batch(tmp_path, event_count):
 
     with h5py.File(output_path) as h5:
         ds = h5["events/image_bg"]
-        assert ds.shape == (event_count, 5, 7)
+        assert ds.shape == (90, 5, 7)
         assert np.all(ds[90:] == 0), "not processed"
         assert np.all(ds[:90, 0, 0] == 0)
         assert np.all(ds[:90, 0, 1] == 1)

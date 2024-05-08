@@ -5,11 +5,10 @@ import multiprocessing as mp
 import pathlib
 
 import h5py
-import numpy as np
 
 from ...meta import ppid
 from ...read import HDF5Data
-from ...write import create_with_basins, set_default_filter_kwargs
+from ...write import HDF5Writer, create_with_basins, set_default_filter_kwargs
 
 
 # All subprocesses should use 'spawn' to avoid issues with threads
@@ -106,25 +105,17 @@ class Background(abc.ABC):
             # "a", because output file already exists
             self.h5out = h5py.File(output_path, "a", libver="latest")
 
-        # Initialize background data
-        ds_kwargs = set_default_filter_kwargs(compression=compress)
-        h5bg = self.h5out.require_dataset(
-            "events/image_bg",
-            shape=self.input_data.shape,
-            dtype=np.uint8,
-            chunks=(min(100, self.image_count),
-                    self.image_shape[0],
-                    self.image_shape[1]),
-            **ds_kwargs,
+        # Initialize writer
+        self.writer = HDF5Writer(
+            obj=self.h5out,
+            ds_kwds=set_default_filter_kwargs(compression=compress),
         )
-        h5bg.attrs.create('CLASS', np.string_('IMAGE'))
-        h5bg.attrs.create('IMAGE_VERSION', np.string_('1.2'))
-        h5bg.attrs.create('IMAGE_SUBCLASS', np.string_('IMAGE_GRAYSCALE'))
 
     def __enter__(self):
         return self
 
     def __exit__(self, type, value, tb):
+        self.writer.close()
         # Close h5in and h5out
         if self.hdin is not None:  # we have an input file
             self.hdin.close()  # this closes self.h5in

@@ -172,11 +172,18 @@ class BackgroundRollMed(Background):
         num_steps = int(np.ceil(self.image_count / self.batch_size))
         for ii in range(num_steps):
             self.process_next_batch()
-        # Set the remaining kernel_size median values to the last one
-        last_image = self.h5out["events/image_bg"][-self.kernel_size-1]
-        for ii in range(self.kernel_size):
-            self.h5out["events/image_bg"][self.image_count-ii-1] = last_image
-        self.image_proc.value = self.image_count
+
+        # Set the remaining median bg images to the last one.
+        num_remaining = (self.input_data.shape[0]
+                         - self.h5out["events/image_bg"].shape[0])
+        if num_remaining:
+            last_image = self.h5out["events/image_bg"][-1]
+            last_chunk = np.repeat(
+                last_image[np.newaxis],
+                num_remaining,
+                axis=0)
+            self.writer.store_feature_chunk("image_bg", last_chunk)
+            self.image_proc.value += num_remaining
 
     def process_next_batch(self):
         """Process one batch of input data"""
@@ -208,9 +215,11 @@ class BackgroundRollMed(Background):
             # TODO:
             #  Do this in a different thread so workers can keep going
             #  and use a lock somewhere in case the disk is too slow.
-            self.h5out["events/image_bg"][cur_slice_out] = \
+            self.writer.store_feature_chunk(
+                "image_bg",
                 self.shared_output[:output_size].reshape(output_size,
-                                                         *self.image_shape)
+                                                         *self.image_shape),
+            )
 
         self.current_batch += 1
         self.image_proc.value += self.batch_size

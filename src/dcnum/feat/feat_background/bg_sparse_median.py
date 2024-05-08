@@ -300,8 +300,8 @@ class BackgroundSparseMed(Background):
         while pos < self.image_count:
             stop = min(pos + step, self.image_count)
             cur_slice = slice(pos, stop)
-            self.h5out["events/image_bg"][cur_slice] = \
-                bg_images[bg_idx[cur_slice]]
+            self.writer.store_feature_chunk("image_bg",
+                                            bg_images[bg_idx[cur_slice]])
             pos += step
 
     def process_second(self,
