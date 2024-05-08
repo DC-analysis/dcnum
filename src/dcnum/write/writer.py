@@ -1,7 +1,7 @@
 import hashlib
 import json
 import pathlib
-from typing import List
+from typing import Dict, List
 import warnings
 
 import h5py
@@ -17,9 +17,39 @@ class CreatingFileWithoutBasinWarning(UserWarning):
 
 
 class HDF5Writer:
-    def __init__(self, path, mode="a", ds_kwds=None):
-        """Write deformability cytometry HDF5 data"""
-        self.h5 = h5py.File(path, mode=mode, libver="latest")
+    def __init__(self,
+                 # TODO: make this a mandatory argument when `path` is
+                 #       properly removed
+                 obj: h5py.File | pathlib.Path | str = None,
+                 mode: str = "a",
+                 ds_kwds: Dict = None,
+                 path: pathlib.Path | str = None,
+                 ):
+        """Write deformability cytometry HDF5 data
+
+        Parameters
+        ----------
+        obj: h5py.File | pathlib.Path | str
+            object to instantiate the writer from; If this is already
+            a :class:`h5py.File` object, then it is used, otherwise the
+            argument is passed to :class:`h5py.File`
+        mode: str
+            opening mode when using :class:`h5py.File`
+        ds_kwds: Dict
+            keyword arguments with which to initialize new Datasets
+            (e.g. compression)
+        """
+        if path is not None:
+            obj = path
+            warnings.warn("The `path` keyword argument is deprecated, use "
+                          "`obj` instead",
+                          DeprecationWarning)
+        if isinstance(obj, h5py.File):
+            self.h5 = obj
+            self.h5_owned = False
+        else:
+            self.h5 = h5py.File(obj, mode=mode, libver="latest")
+            self.h5_owned = True
         self.events = self.h5.require_group("events")
         ds_kwds = set_default_filter_kwargs(ds_kwds)
         self.ds_kwds = ds_kwds
@@ -31,7 +61,8 @@ class HDF5Writer:
         self.close()
 
     def close(self):
-        self.h5.close()
+        if self.h5_owned:
+            self.h5.close()
 
     @staticmethod
     def get_best_nd_chunks(item_shape, feat_dtype=np.float64):
@@ -59,6 +90,7 @@ class HDF5Writer:
                 ds_kwds = {}
             for key in self.ds_kwds:
                 ds_kwds.setdefault(key, self.ds_kwds[key])
+            print(feat)
             dset = self.events.create_dataset(
                 feat,
                 shape=tuple([0] + list(item_shape)),
@@ -137,6 +169,7 @@ class HDF5Writer:
         dsize = data.shape[0]
         ds.resize(offset + dsize, axis=0)
         ds[offset:offset + dsize] = data
+        print(ds.size)
 
     def store_log(self,
                   log: str,

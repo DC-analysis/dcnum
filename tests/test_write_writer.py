@@ -170,6 +170,20 @@ def test_create_with_basins_relative_and_absolute():
         assert np.allclose(hd["deform"][0], 0.07405636775888857)
 
 
+def test_open_from_h5py_object(tmp_path):
+    path = tmp_path / "test.rtdc"
+    with write.HDF5Writer(path) as hw:
+        hw.store_feature_chunk("userdef1", np.arange(10))
+
+    with h5py.File(path, "a") as h5:
+        with write.HDF5Writer(h5, "a") as hw:
+            hw.store_feature_chunk("userdef1", np.arange(10, 20))
+        assert h5.id, "file should not be closed"
+
+    with h5py.File(path) as h5:
+        assert np.all(h5["events"]["userdef1"] == np.arange(20))
+
+
 def test_writer_basic():
     path = retrieve_data("fmt-hdf5_cytoshot_full-features_2023.zip")
     path_wrt = path.with_name("written.hdf5")

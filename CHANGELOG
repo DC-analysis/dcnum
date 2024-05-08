@@ -2,6 +2,7 @@
  - feat: allow to specify ranges when creating an HDF5Data instance to
    enable e.g. processing only a portion an input file
  - feat: volume computation via contour revolve algorithm
+ - enh: allow creating HDF5Writer from h5py.File
  - fix: remove mask ppid part for segmenters that do not use it
  - enh: pop read-cache items before adding a new one
  - enh: allow to request the raw contour from `moments_based_features`
