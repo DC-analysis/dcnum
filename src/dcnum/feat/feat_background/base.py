@@ -3,7 +3,6 @@ import functools
 import inspect
 import multiprocessing as mp
 import pathlib
-import uuid
 
 import h5py
 import numpy as np
