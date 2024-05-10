@@ -6,6 +6,7 @@
  - fix: remove mask ppid part for segmenters that do not use it
  - enh: pop read-cache items before adding a new one
  - enh: allow to request the raw contour from `moments_based_features`
+ - ref: added new super class `BaseImageChunkCache`
  - ref: use HDF5Writer in Background class
  - ref: minor cleanup
  - ref: rename submodule `feat_moments` to `feat_contour`
