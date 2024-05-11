@@ -96,11 +96,11 @@ class CPUSegmenter(Segmenter, abc.ABC):
         batch_size: int
             Number of images in the array
         dtype:
-            ctype, e.g. `np.ctypeslib.ctypes.c_uint8`
-            or `np.ctypeslib.ctypes.c_bool`
+            numpy dtype
         """
         sx, sy = image_shape
-        sa_raw = mp_spawn.RawArray(dtype, int(sx * sy * batch_size))
+        ctype = np.ctypeslib.as_ctypes_type(dtype)
+        sa_raw = mp_spawn.RawArray(ctype, int(sx * sy * batch_size))
         # Convert the RawArray to something we can write to fast
         # (similar to memory view, but without having to cast) using
         # np.ctypeslib.as_array. See discussion in
@@ -172,14 +172,14 @@ class CPUSegmenter(Segmenter, abc.ABC):
             self.mp_image_raw, self._mp_image_np = self._create_shared_array(
                 image_shape=self.image_shape,
                 batch_size=batch_size,
-                dtype=np.ctypeslib.ctypes.c_int32,
+                dtype=image_data.dtype,
             )
 
         if self._mp_labels_np is None:
             self.mp_labels_raw, self._mp_labels_np = self._create_shared_array(
                 image_shape=self.image_shape,
                 batch_size=batch_size,
-                dtype=np.ctypeslib.ctypes.c_uint16,
+                dtype=np.uint16,
             )
 
         # populate image data
