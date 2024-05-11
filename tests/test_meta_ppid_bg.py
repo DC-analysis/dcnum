@@ -8,11 +8,12 @@ import pytest
 @pytest.mark.filterwarnings(
     "ignore::dcnum.write.writer.CreatingFileWithoutBasinWarning")
 @pytest.mark.parametrize("bg_ppid", [
-    "sparsemed:k=200^s=1^t=0^f=0.8",
-    "sparsemed:k=210^s=1^t=0^f=0.8",
-    "sparsemed:k=200^s=2^t=0^f=0.8",
-    "sparsemed:k=200^s=1^t=0.1^f=0.8",
-    "sparsemed:k=200^s=1^t=0^f=0.9",
+    "sparsemed:k=200^s=1^t=0^f=0.8^o=1",
+    "sparsemed:k=210^s=1^t=0^f=0.8^o=1",
+    "sparsemed:k=200^s=2^t=0^f=0.8^o=1",
+    "sparsemed:k=200^s=1^t=0.1^f=0.8^o=1",
+    "sparsemed:k=200^s=1^t=0^f=0.9^o=1",
+    "sparsemed:k=200^s=1^t=0^f=0.9^o=0",
 ])
 def test_ppid_decoding_sparsemed(bg_ppid, tmp_path):
     input_data = np.arange(5 * 7).reshape(1, 5, 7) * np.ones((120, 1, 1))
@@ -26,13 +27,14 @@ def test_ppid_decoding_sparsemed(bg_ppid, tmp_path):
 
 
 def test_ppid_decoding_sparsemed_check_kwargs():
-    bg_ppid = "sparsemed:k=210^s=1^t=0^f=0.8"
+    bg_ppid = "sparsemed:k=210^s=1^t=0^f=0.8^o=0"
     bg_class = fbg.get_available_background_methods()["sparsemed"]
     kwargs = bg_class.get_ppkw_from_ppid(bg_ppid)
     assert kwargs["kernel_size"] == 210
     assert np.allclose(kwargs["split_time"], 1.0)
     assert np.allclose(kwargs["thresh_cleansing"], 0.0)
     assert np.allclose(kwargs["frac_cleansing"], 0.8)
+    assert np.allclose(kwargs["offset_correction"], False)
 
 
 @pytest.mark.parametrize("bg_code",
@@ -56,4 +58,4 @@ def test_ppid_bg_base_with_sparsemed(tmp_path):
               output_path=path_out,
               thresh_cleansing=.22) as sthr:
         assert sthr.get_ppid_code() == "sparsemed"
-        assert sthr.get_ppid() == "sparsemed:k=200^s=1^t=0.22^f=0.8"
+        assert sthr.get_ppid() == "sparsemed:k=200^s=1^t=0.22^f=0.8^o=1"

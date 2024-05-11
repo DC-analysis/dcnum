@@ -547,6 +547,7 @@ class DCNumJobRunner(threading.Thread):
         thr_segm = SegmenterManagerThread(
             segmenter=seg_cls(**self.job["segmenter_kwargs"]),
             image_data=imdat,
+            bg_off=self.dtin["bg_off"] if "bg_off" in self.dtin else None,
             slot_states=slot_states,
             slot_chunks=slot_chunks,
             debug=self.job["debug"],

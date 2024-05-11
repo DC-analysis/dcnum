@@ -17,6 +17,7 @@ class SegmenterManagerThread(threading.Thread):
                  image_data: HDF5ImageCache | ImageCorrCache,
                  slot_states: mp.Array,
                  slot_chunks: mp.Array,
+                 bg_off: np.ndarray = None,
                  debug: bool = False,
                  *args, **kwargs):
         """Manage the segmentation of image data
@@ -38,6 +39,10 @@ class SegmenterManagerThread(threading.Thread):
         slot_chunks:
             For each slot in `slot_states`, this shared array defines
             on which chunk in `image_data` the segmentation took place.
+        bg_off:
+            1d array containing additional background image offset values
+            that are added to each background image before subtraction
+            from the input image
         debug:
             Whether to run in debugging mode (more verbose messages and
             CPU-based segmentation is done in one single thread instead
@@ -65,6 +70,8 @@ class SegmenterManagerThread(threading.Thread):
         self.segmenter = segmenter
         #: Image data which is being segmented
         self.image_data = image_data
+        #: Additional, optional background offset
+        self.bg_off = bg_off
         #: Slot states
         self.slot_states = slot_states
         #: Current slot chunk index for the slot states
@@ -89,7 +96,7 @@ class SegmenterManagerThread(threading.Thread):
                 # - "s" the extractor processed the data and is waiting
                 #   for the segmenter
                 if self.slot_states[cur_slot] != "e":
-                    # It's the segmenters turn. Note that we use '!= "e"',
+                    # It's the segmenter's turn. Note that we use '!= "e"',
                     # because the initial value is "\x00".
                     break
                 else:
@@ -106,7 +113,9 @@ class SegmenterManagerThread(threading.Thread):
             # We have a free slot to compute the segmentation
             labels = self.segmenter.segment_chunk(
                 image_data=self.image_data,
-                chunk=chunk)
+                chunk=chunk,
+                bg_off=self.bg_off,
+            )
 
             # TODO: make this more memory efficient (pre-shared mp.Arrays?)
             # Store labels in a list accessible by the main thread

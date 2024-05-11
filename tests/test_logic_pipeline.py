@@ -40,7 +40,7 @@ def test_chained_pipeline():
 
     with h5py.File(path2) as h5:
         assert h5.attrs["pipeline:dcnum background"] \
-               == "sparsemed:k=150^s=1^t=0^f=0.8"
+               == "sparsemed:k=150^s=1^t=0^f=0.8^o=1"
 
     # now when we do everything again, not a things should be done
     job2 = logic.DCNumPipelineJob(path_in=path2,
@@ -54,14 +54,14 @@ def test_chained_pipeline():
         assert "deform" in h5["events"]
         assert "image" in h5["events"]
         assert "image_bg" in h5["events"]
-        assert len(h5["events/deform"]) == 395
+        assert len(h5["events/deform"]) == 390
         assert h5.attrs["pipeline:dcnum background"] \
-               == "sparsemed:k=250^s=1^t=0^f=0.8"
+               == "sparsemed:k=250^s=1^t=0^f=0.8^o=1"
 
 
 @pytest.mark.parametrize("index_mapping,size,mapping_out", [
-    (None, 395, "0"),
-    (5, 12, "5"),
+    (None, 390, "0"),
+    (5, 11, "5"),
     (slice(3, 5, None), 6, "3-5-n"),
     ([3, 5, 6, 7], 7, "h-6e582938"),
 ])
@@ -328,13 +328,80 @@ def test_simple_pipeline(debug):
     # this is the default pipeline
     gen_id = ppid.DCNUM_PPID_GENERATION
     dat_id = "hdf:p=0.2645"
-    bg_id = "sparsemed:k=200^s=1^t=0^f=0.8"
+    bg_id = "sparsemed:k=200^s=1^t=0^f=0.8^o=1"
     seg_id = "thresh:t=-6:cle=1^f=1^clo=2"
     feat_id = "legacy:b=1^h=1^v=1"
     gate_id = "norm:o=0^s=10"
     jobid = "|".join([gen_id, dat_id, bg_id, seg_id, feat_id, gate_id])
 
     job = logic.DCNumPipelineJob(path_in=path, debug=debug)
+    assert job.get_ppid() == jobid
+
+    with logic.DCNumJobRunner(job=job) as runner:
+        assert len(runner.draw) == 200
+        runner.run()
+
+        assert job["path_out"].exists(), "output file must exist"
+        assert runner.path_temp_in.exists(), "tmp input still exists"
+
+    assert not runner.path_temp_in.exists(), "tmp input file mustn't exist"
+    assert not runner.path_temp_out.exists(), "tmp out file must not exist"
+
+    with read.HDF5Data(job["path_out"]) as hd:
+        assert "image" in hd
+        assert "image_bg" in hd
+        assert "deform" in hd
+        assert "inert_ratio_prnc" in hd
+        assert len(hd) == 390
+        assert hd["nevents"][0] == 1
+        assert hd["nevents"][1] == 2
+        assert np.all(hd["nevents"][:11] == [1, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3])
+        assert np.all(hd["frame"][:11] == [1, 2, 2, 4, 4, 5, 5, 5, 6, 6, 6])
+        assert np.allclose(hd["area_um"][2], 36.694151125,
+                           atol=0.5, rtol=0)
+        assert np.allclose(hd["deform"][2], 0.29053587689236526,
+                           atol=0.001, rtol=0)
+
+    with h5py.File(job["path_out"]) as h5:
+        assert h5.attrs["pipeline:dcnum generation"] == gen_id
+        assert h5.attrs["pipeline:dcnum data"] == dat_id
+        assert h5.attrs["pipeline:dcnum background"] == bg_id
+        assert h5.attrs["pipeline:dcnum segmenter"] == seg_id
+        assert h5.attrs["pipeline:dcnum feature"] == feat_id
+        assert h5.attrs["pipeline:dcnum gate"] == gate_id
+        assert h5.attrs["pipeline:dcnum yield"] == 390
+        assert h5.attrs["experiment:event count"] == 390
+        pp_hash = h5.attrs["pipeline:dcnum hash"]
+        # test for general metadata
+        assert h5.attrs["experiment:sample"] == "data"
+        assert h5.attrs["experiment:date"] == "2022-04-21"
+        assert h5.attrs["experiment:run identifier"] == f"dcn-{pp_hash[:7]}"
+
+
+@pytest.mark.parametrize("debug", [True, False])
+def test_simple_pipeline_no_offset_correction(debug):
+    path_orig = retrieve_data("fmt-hdf5_cytoshot_full-features_2023.zip")
+    path = path_orig.with_name("input.rtdc")
+    with read.concatenated_hdf5_data(5 * [path_orig], path_out=path):
+        pass
+
+    with read.HDF5Data(path) as hd:
+        assert len(hd) == 200, "sanity check"
+
+    # this is the default pipeline
+    gen_id = ppid.DCNUM_PPID_GENERATION
+    dat_id = "hdf:p=0.2645"
+    bg_id = "sparsemed:k=200^s=1^t=0^f=0.8^o=0"
+    seg_id = "thresh:t=-6:cle=1^f=1^clo=2"
+    feat_id = "legacy:b=1^h=1^v=1"
+    gate_id = "norm:o=0^s=10"
+    jobid = "|".join([gen_id, dat_id, bg_id, seg_id, feat_id, gate_id])
+
+    job = logic.DCNumPipelineJob(
+        path_in=path,
+        debug=debug,
+        background_kwargs={"offset_correction": False}
+    )
     assert job.get_ppid() == jobid
 
     with logic.DCNumJobRunner(job=job) as runner:
@@ -395,7 +462,7 @@ def test_simple_pipeline_in_thread():
     # Changes that trigger computation of new background
     ["pipeline:dcnum generation", "1", True],
     ["pipeline:dcnum data", "hdf:p=0.2656", True],
-    ["pipeline:dcnum background", "sparsemed:k=100^s=1^t=0^f=0.8", True],
+    ["pipeline:dcnum background", "sparsemed:k=100^s=1^t=0^f=0.8^o=1", True],
     # Changes that don't trigger background computation
     ["pipeline:dcnum segmenter", "thresh:t=-1:cle=1^f=1^clo=2", False],
     ["pipeline:dcnum feature", "thresh:t=-1:cle=1^f=1^clo=2", False],
@@ -426,7 +493,8 @@ def test_recomputation_of_background_metadata_changed(attr, oldval, newbg):
         # Set the default values
         h5.attrs["pipeline:dcnum generation"] = ppid.DCNUM_PPID_GENERATION
         h5.attrs["pipeline:dcnum data"] = "hdf:p=0.2645"
-        h5.attrs["pipeline:dcnum background"] = "sparsemed:k=200^s=1^t=0^f=0.8"
+        h5.attrs["pipeline:dcnum background"] = \
+            "sparsemed:k=200^s=1^t=0^f=0.8^o=1"
         h5.attrs["pipeline:dcnum segmenter"] = "thresh:t=-6:cle=1^f=1^clo=2"
         h5.attrs["pipeline:dcnum feature"] = "legacy:b=1^h=1^v=1"
         h5.attrs["pipeline:dcnum gate"] = "norm:o=0^s=10"
@@ -473,7 +541,7 @@ def test_task_background():
     # this is the default pipeline
     gen_id = ppid.DCNUM_PPID_GENERATION
     dat_id = "hdf:p=0.2645"
-    bg_id = "sparsemed:k=200^s=1^t=0^f=0.8"
+    bg_id = "sparsemed:k=200^s=1^t=0^f=0.8^o=1"
     seg_id = "thresh:t=-6:cle=1^f=1^clo=2"
     feat_id = "legacy:b=1^h=1^v=1"
     gate_id = "norm:o=0^s=10"

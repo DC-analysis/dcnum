@@ -185,6 +185,10 @@ class QueueEventExtractor:
         image = self.data.image[data_index][np.newaxis]
         image_bg = self.data.image_bg[data_index][np.newaxis]
         image_corr = self.data.image_corr[data_index][np.newaxis]
+        if "bg_off" in self.data:
+            bg_off = self.data["bg_off"][data_index]
+        else:
+            bg_off = None
 
         events.update(
             moments_based_features(
@@ -195,12 +199,17 @@ class QueueEventExtractor:
 
         if brightness:
             events.update(brightness_features(
-                mask=masks, image=image, image_bg=image_bg,
+                mask=masks,
+                image=image,
+                image_bg=image_bg,
+                bg_off=bg_off,
                 image_corr=image_corr
             ))
         if haralick:
             events.update(haralick_texture_features(
-                mask=masks, image=image, image_corr=image_corr
+                mask=masks,
+                image=image,
+                image_corr=image_corr,
             ))
 
         if volume:

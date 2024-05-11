@@ -249,9 +249,12 @@ class Segmenter(abc.ABC):
 
         return labels
 
-    def segment_chunk(self, image_data, chunk):
+    def segment_chunk(self, image_data, chunk, bg_off=None):
         """Return the integer labels for one `image_data` chunk"""
         data = image_data.get_chunk(chunk)
+        if bg_off is not None:
+            bg_off_chunk = bg_off[image_data.get_chunk_slice(chunk)]
+            data = data - bg_off_chunk.reshape(-1, 1, 1)
         return self.segment_batch(data)
 
     def segment_frame(self, image):

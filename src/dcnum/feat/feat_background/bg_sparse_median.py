@@ -15,6 +15,7 @@ logger = logging.getLogger(__name__)
 class BackgroundSparseMed(Background):
     def __init__(self, input_data, output_path, kernel_size=200,
                  split_time=1., thresh_cleansing=0, frac_cleansing=.8,
+                 offset_correction=True,
                  compress=True, num_cpus=None):
         """Sparse median background correction with cleansing
 
@@ -57,6 +58,21 @@ class BackgroundSparseMed(Background):
             Fraction between 0 and 1 indicating how many background images
             must still be present after cleansing (in case the cleansing
             factor is too large). Set to 1 to disable cleansing altogether.
+        offset_correction: bool
+            The sparse median background correction produces one median
+            image for multiple input frames (BTW this also leads to very
+            efficient data storage with HDF5 data compression filters). In
+            case the input frames are subject to frame-by-frame brightness
+            variations (e.g. flickering of the illumination source), it
+            is useful to have an offset value per frame that can then be
+            used in a later step to perform a more accurate background
+            correction. This offset is computed here by taking a 20px wide
+            slice from each frame (where the channel wall is located)
+            and computing the median therein relative to the computed
+            background image. The data are written to the "bg_off" feature
+            in the output file alongside "image_bg". To obtain the
+            corrected background image, add "image_bg" and "bg_off".
+            Set this to False if you don't need the "bg_off" feature.
         compress: bool
             Whether to compress background data. Set this to False
             for faster processing.
@@ -72,7 +88,9 @@ class BackgroundSparseMed(Background):
             kernel_size=kernel_size,
             split_time=split_time,
             thresh_cleansing=thresh_cleansing,
-            frac_cleansing=frac_cleansing)
+            frac_cleansing=frac_cleansing,
+            offset_correction=offset_correction,
+        )
 
         if kernel_size > len(self.input_data):
             logger.warning(
@@ -88,6 +106,8 @@ class BackgroundSparseMed(Background):
         self.thresh_cleansing = thresh_cleansing
         #: keep at least this many background images from the series
         self.frac_cleansing = frac_cleansing
+        #: offset/flickering correction
+        self.offset_correction = offset_correction
 
         # time axis
         self.time = None
@@ -175,11 +195,13 @@ class BackgroundSparseMed(Background):
                           kernel_size: int = 200,
                           split_time: float = 1.,
                           thresh_cleansing: float = 0,
-                          frac_cleansing: float = .8):
+                          frac_cleansing: float = .8,
+                          offset_correction: bool = True,
+                          ):
         """Initialize user-defined properties of this class
 
         This method primarily exists so that the CLI knows which
-        keyword arguements can be passed to this class.
+        keyword arguments can be passed to this class.
 
         Parameters
         ----------
@@ -197,6 +219,21 @@ class BackgroundSparseMed(Background):
             Fraction between 0 and 1 indicating how many background images
             must still be present after cleansing (in case the cleansing
             factor is too large). Set to 1 to disable cleansing altogether.
+        offset_correction: bool
+            The sparse median background correction produces one median
+            image for multiple input frames (BTW this also leads to very
+            efficient data storage with HDF5 data compression filters). In
+            case the input frames are subject to frame-by-frame brightness
+            variations (e.g. flickering of the illumination source), it
+            is useful to have an offset value per frame that can then be
+            used in a later step to perform a more accurate background
+            correction. This offset is computed here by taking a 20px wide
+            slice from each frame (where the channel wall is located)
+            and computing the median therein relative to the computed
+            background image. The data are written to the "bg_off" feature
+            in the output file alongside "image_bg". To obtain the
+            corrected background image, add "image_bg" and "bg_off".
+            Set this to False if you don't need the "bg_off" feature.
         """
         assert kernel_size > 0
         assert split_time > 0
@@ -300,8 +337,19 @@ class BackgroundSparseMed(Background):
         while pos < self.image_count:
             stop = min(pos + step, self.image_count)
             cur_slice = slice(pos, stop)
-            self.writer.store_feature_chunk("image_bg",
-                                            bg_images[bg_idx[cur_slice]])
+            cur_bg_data = bg_images[bg_idx[cur_slice]]
+            self.writer.store_feature_chunk("image_bg", cur_bg_data)
+            if self.offset_correction:
+                # Record background offset correction "bg_off". We take a
+                # slice of 20px from the top of the image (there are normally
+                # no events here, only the channel walls are visible).
+                sh, sw = self.input_data.shape[1:]
+                roi_full = (slice(None), slice(0, 20), slice(0, sw))
+                roi_cur = (cur_slice, slice(0, 20), slice(0, sw))
+                val_bg = np.mean(cur_bg_data[roi_full], axis=(1, 2))
+                val_dat = np.mean(self.input_data[roi_cur], axis=(1, 2))
+                # background image = image_bg + bg_off
+                self.writer.store_feature_chunk("bg_off", val_dat - val_bg)
             pos += step
 
     def process_second(self,

@@ -16,7 +16,7 @@ class SegmentThresh(CPUSegmenter):
         Parameters
         ----------
         thresh: int
-            grayscale threhold value for creating the mask image;
+            grayscale threshold value for creating the mask image;
             For a background-corrected image, pixels with values below
             this value are considered to be part of the mask.
         """
@@ -39,7 +39,7 @@ class SegmentThresh(CPUSegmenter):
         Returns
         -------
         mask: 2d boolean ndarray
-            Mask image for the give index
+            Mask image for the given index
         """
         assert thresh < 0, "threshold values above zero not supported!"
         return image < thresh

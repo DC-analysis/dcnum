@@ -187,7 +187,7 @@ def test_median_sparsemend_small_file(tmp_path):
         # even though the actual kernel size is smaller (which is properly
         # logged, the pipeline identifier should have a kernel size of 200.
         # This is good, because it helps to check for reproducibility.
-        assert bic.get_ppid() == "sparsemed:k=200^s=0.01^t=0^f=0.8"
+        assert bic.get_ppid() == "sparsemed:k=200^s=0.01^t=0^f=0.8^o=1"
 
     assert output_path.exists()
 
