@@ -277,9 +277,9 @@ def test_segmenter_process_mask_clear_border():
 
 
 def test_segmenter_labeled_mask_clear_border():
-    mask = np.array([
-        [1, 0, 0, 0, 0, 0, 0, 0],  # bad seed position for floodfill
-        [0, 1, 0, 0, 0, 0, 0, 0],
+    lab0 = np.array([
+        [2, 0, 0, 0, 0, 0, 0, 0],  # bad seed position for floodfill
+        [0, 2, 0, 0, 0, 0, 0, 0],
         [0, 0, 0, 0, 0, 0, 0, 0],
         [0, 0, 0, 0, 0, 0, 0, 0],
         [0, 0, 1, 1, 1, 0, 0, 0],
@@ -288,11 +288,36 @@ def test_segmenter_labeled_mask_clear_border():
         [0, 0, 0, 0, 0, 0, 0, 0],
         [0, 0, 0, 0, 0, 0, 0, 0],
         [0, 0, 0, 0, 0, 0, 0, 0],
-        ], dtype=bool)
+        ], dtype=int)
 
     sm = segm.segm_thresh.SegmentThresh(thresh=-6)
 
-    labels = sm.process_mask(mask,
+    labels = sm.process_mask(lab0,
+                             clear_border=False,
+                             fill_holes=True,
+                             closing_disk=False)
+
+    assert np.sum(labels == 0) > 20, "background should be largest"
+    assert np.sum(labels == 1) == 9
+
+
+def test_segmenter_labeled_mask_clear_border2():
+    lab0 = np.array([
+        [2, 2, 2, 0, 0, 0, 0, 0],  # bad seed position for floodfill
+        [0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 1, 1, 1, 0, 0, 0],
+        [0, 0, 1, 0, 1, 0, 0, 0],  # filled, 1
+        [0, 0, 1, 1, 1, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0],
+        ], dtype=int)
+
+    sm = segm.segm_thresh.SegmentThresh(thresh=-6)
+
+    labels = sm.process_mask(lab0,
                              clear_border=False,
                              fill_holes=True,
                              closing_disk=False)
