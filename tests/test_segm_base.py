@@ -5,7 +5,11 @@ import pytest
 
 from dcnum import segm
 from dcnum.meta import ppid
+import h5py
 import numpy as np
+
+from helper_methods import retrieve_data
+
 
 data_path = pathlib.Path(__file__).parent / "data"
 SEGM_METH = segm.get_available_segmenters()
@@ -273,3 +277,28 @@ def test_segmenter_process_mask_clear_border():
     assert lbs[0, :].sum() == 0
     assert lbs[-1, :].sum() == 0
     assert lbs[3, 3] == 3
+
+
+def test_segmenter_labeled_mask_clear_border():
+    mask = np.array([
+        [1, 0, 0, 0, 0, 0, 0, 0],  # bad seed position for floodfill
+        [0, 1, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 1, 1, 1, 0, 0, 0],
+        [0, 0, 1, 0, 1, 0, 0, 0],  # filled, 1
+        [0, 0, 1, 1, 1, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0],
+        ], dtype=bool)
+
+    sm = segm.segm_thresh.SegmentThresh(thresh=-6)
+
+    labels = sm.process_mask(mask,
+                             clear_border=False,
+                             fill_holes=True,
+                             closing_disk=False)
+
+    assert np.sum(labels == 0) > 20, "background should be largest"
+    assert np.sum(labels == 1) == 9

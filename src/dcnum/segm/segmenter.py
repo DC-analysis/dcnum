@@ -241,6 +241,9 @@ class Segmenter(abc.ABC):
             # Floodfill algorithm fills the background image and
             # the resulting inversion is the image with holes filled.
             # This will destroy labels (adding 2,147,483,647 to background)
+            # Since floodfill will use the upper left corner of the image as
+            # a seed, we have to make sure it is set to background.
+            labels[:2, :2] = 0
             cv2.floodFill(labels, None, (0, 0), 2147483647)
             mask = labels != 2147483647
             labels, _ = ndi.label(

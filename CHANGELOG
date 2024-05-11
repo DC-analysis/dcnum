@@ -7,6 +7,9 @@
    and "bg_off" everywhere else
  - enh: allow creating HDF5Writer from h5py.File
  - fix: remove mask ppid part for segmenters that do not use it
+ - fix: mask postprocessing with "fill_holes" using `cv2.floodFill`
+   sometimes segmented the entire frame if the upper left pixel was not
+   set to background
  - enh: pop read-cache items before adding a new one
  - enh: allow to request the raw contour from `moments_based_features`
  - ref: added new super class `BaseImageChunkCache`
