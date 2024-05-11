@@ -5,10 +5,7 @@ import pytest
 
 from dcnum import segm
 from dcnum.meta import ppid
-import h5py
 import numpy as np
-
-from helper_methods import retrieve_data
 
 
 data_path = pathlib.Path(__file__).parent / "data"
