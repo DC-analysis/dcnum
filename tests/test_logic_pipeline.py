@@ -54,13 +54,13 @@ def test_chained_pipeline():
         assert "deform" in h5["events"]
         assert "image" in h5["events"]
         assert "image_bg" in h5["events"]
-        assert len(h5["events/deform"]) == 390
+        assert len(h5["events/deform"]) == 285
         assert h5.attrs["pipeline:dcnum background"] \
                == "sparsemed:k=250^s=1^t=0^f=0.8^o=1"
 
 
 @pytest.mark.parametrize("index_mapping,size,mapping_out", [
-    (None, 390, "0"),
+    (None, 395, "0"),
     (5, 11, "5"),
     (slice(3, 5, None), 6, "3-5-n"),
     ([3, 5, 6, 7], 7, "h-6e582938"),
@@ -80,6 +80,10 @@ def test_duplicate_pipeline(index_mapping, size, mapping_out):
         path_in=path,
         path_out=path2,
         data_kwargs={"index_mapping": index_mapping},
+        background_code="copy",
+        segmenter_code="thresh",
+        segmenter_kwargs={"thresh": -6,
+                          "kwargs_mask": {"closing_disk": 0}},
         debug=True)
     assert job.kwargs["data_kwargs"]["index_mapping"] == index_mapping
 
@@ -115,6 +119,10 @@ def test_duplicate_pipeline(index_mapping, size, mapping_out):
         path_in=path2,
         path_out=path2.with_name("final_out.rtdc"),
         no_basins_in_output=True,
+        background_code="copy",
+        segmenter_code="thresh",
+        segmenter_kwargs={"thresh": -6,
+                          "kwargs_mask": {"closing_disk": 0}},
         debug=True)
     with logic.DCNumJobRunner(job=job2) as runner2:
         runner2.run()
@@ -329,12 +337,16 @@ def test_simple_pipeline(debug):
     gen_id = ppid.DCNUM_PPID_GENERATION
     dat_id = "hdf:p=0.2645"
     bg_id = "sparsemed:k=200^s=1^t=0^f=0.8^o=1"
-    seg_id = "thresh:t=-6:cle=1^f=1^clo=2"
+    seg_id = "thresh:t=-6:cle=1^f=1^clo=0"
     feat_id = "legacy:b=1^h=1^v=1"
     gate_id = "norm:o=0^s=10"
     jobid = "|".join([gen_id, dat_id, bg_id, seg_id, feat_id, gate_id])
 
-    job = logic.DCNumPipelineJob(path_in=path, debug=debug)
+    job = logic.DCNumPipelineJob(
+        path_in=path,
+        debug=debug,
+        segmenter_kwargs={"kwargs_mask": {"closing_disk": 0}},
+    )
     assert job.get_ppid() == jobid
 
     with logic.DCNumJobRunner(job=job) as runner:
@@ -352,7 +364,7 @@ def test_simple_pipeline(debug):
         assert "image_bg" in hd
         assert "deform" in hd
         assert "inert_ratio_prnc" in hd
-        assert len(hd) == 390
+        assert len(hd) == 395
         assert hd["nevents"][0] == 1
         assert hd["nevents"][1] == 2
         assert np.all(hd["nevents"][:11] == [1, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3])
@@ -369,8 +381,8 @@ def test_simple_pipeline(debug):
         assert h5.attrs["pipeline:dcnum segmenter"] == seg_id
         assert h5.attrs["pipeline:dcnum feature"] == feat_id
         assert h5.attrs["pipeline:dcnum gate"] == gate_id
-        assert h5.attrs["pipeline:dcnum yield"] == 390
-        assert h5.attrs["experiment:event count"] == 390
+        assert h5.attrs["pipeline:dcnum yield"] == 395
+        assert h5.attrs["experiment:event count"] == 395
         pp_hash = h5.attrs["pipeline:dcnum hash"]
         # test for general metadata
         assert h5.attrs["experiment:sample"] == "data"
@@ -392,7 +404,7 @@ def test_simple_pipeline_no_offset_correction(debug):
     gen_id = ppid.DCNUM_PPID_GENERATION
     dat_id = "hdf:p=0.2645"
     bg_id = "sparsemed:k=200^s=1^t=0^f=0.8^o=0"
-    seg_id = "thresh:t=-6:cle=1^f=1^clo=2"
+    seg_id = "thresh:t=-6:cle=1^f=1^clo=0"
     feat_id = "legacy:b=1^h=1^v=1"
     gate_id = "norm:o=0^s=10"
     jobid = "|".join([gen_id, dat_id, bg_id, seg_id, feat_id, gate_id])
@@ -400,7 +412,8 @@ def test_simple_pipeline_no_offset_correction(debug):
     job = logic.DCNumPipelineJob(
         path_in=path,
         debug=debug,
-        background_kwargs={"offset_correction": False}
+        background_kwargs={"offset_correction": False},
+        segmenter_kwargs={"kwargs_mask": {"closing_disk": 0}},
     )
     assert job.get_ppid() == jobid
 

@@ -211,25 +211,6 @@ class Segmenter(abc.ABC):
                         continue
                     labels[labels == li] = 0
 
-        # scikit-image is too slow for us here. So we use OpenCV.
-        # https://github.com/scikit-image/scikit-image/issues/1190
-
-        if closing_disk:
-            #
-            # from skimage import morphology
-            # morphology.binary_closing(
-            #    mask,
-            #    footprint=morphology.disk(closing_disk),
-            #    out=mask)
-            #
-            element = Segmenter.get_disk(closing_disk)
-            labels_uint8 = np.array(labels, dtype=np.uint8)
-            labels_dilated = cv2.dilate(labels_uint8, element)
-            labels_eroded = cv2.erode(labels_dilated, element)
-            labels, _ = ndi.label(
-                input=labels_eroded > 0,
-                structure=ndi.generate_binary_structure(2, 2))
-
         if fill_holes:
             # Floodfill only works with uint8 (too small) or int32
             if labels.dtype != np.int32:
@@ -251,6 +232,32 @@ class Segmenter(abc.ABC):
             mask = labels != 2147483647
             labels, _ = ndi.label(
                 input=mask,
+                structure=ndi.generate_binary_structure(2, 2))
+
+        if closing_disk:
+            # scikit-image is too slow for us here. So we use OpenCV.
+            # https://github.com/scikit-image/scikit-image/issues/1190
+            #
+            # from skimage import morphology
+            # morphology.binary_closing(
+            #    mask,
+            #    footprint=morphology.disk(closing_disk),
+            #    out=mask)
+            #
+            element = Segmenter.get_disk(closing_disk)
+            # Note: erode/dilate not implemented for int32
+            labels_uint8 = np.array(labels, dtype=np.uint8)
+            # Historically, we would like to do a closing (dilation followed
+            # by erosion) on the image data where lower brightness values
+            # meant "we have an event". However, since we are now working
+            # with labels instead of image data (0 is background and labels
+            # are enumerated with integers), high "brightness" values are
+            # actually the event. Thus, we have to perform an opening
+            # (erosion followed by dilation) of the label image.
+            labels_eroded = cv2.erode(labels_uint8, element)
+            labels_dilated = cv2.dilate(labels_eroded, element)
+            labels, _ = ndi.label(
+                input=labels_dilated > 0,
                 structure=ndi.generate_binary_structure(2, 2))
 
         return labels

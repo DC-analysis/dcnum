@@ -27,7 +27,9 @@ def test_event_extractor_manager_thread():
     slot_states = mp_spawn.Array("u", 1)
 
     thr_segm = SegmenterManagerThread(
-        segmenter=SegmentThresh(),
+        segmenter=SegmentThresh(
+            kwargs_mask={"closing_disk": 0},  # otherwise no event in 1st image
+        ),
         image_data=hd.image_corr,
         slot_states=slot_states,
         slot_chunks=slot_chunks,

@@ -1,4 +1,8 @@
 0.18.0
+ - BREAKING CHANGE: mask postprocessing did a morphological opening instead
+   of a morphological closing, failing to remove spurious noise
+ - BREAKING CHANGE: perform first fill_holes and then closing_disk in mask
+   postprocessing
  - feat: allow to specify ranges when creating an HDF5Data instance to
    enable e.g. processing only a portion of an input file
  - feat: volume computation via contour revolve algorithm
@@ -6,12 +10,17 @@
    "offset_correction" keyword for the "sparsemed" background computer
    and "bg_off" everywhere else
  - enh: allow creating HDF5Writer from h5py.File
+ - fix: mask postprocessing did a morphological opening instead
+   of a morphological closing, failing to remove spurious noise
  - fix: remove mask ppid part for segmenters that do not use it
  - fix: mask postprocessing with "fill_holes" using `cv2.floodFill`
    sometimes segmented the entire frame if the upper left pixel was not
    set to background
+ - enh: perform first fill_holes and then closing_disk in mask
+   postprocessing
  - enh: pop read-cache items before adding a new one
  - enh: allow to request the raw contour from `moments_based_features`
+ - ref: increment DCNUM_PPID_GENERATION to 8
  - ref: added new super class `BaseImageChunkCache`
  - ref: use HDF5Writer in Background class
  - ref: minor cleanup

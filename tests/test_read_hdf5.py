@@ -173,7 +173,6 @@ def test_meta_nest():
         "fmt-hdf5_cytoshot_full-features_legacy_allev_2023.zip")
     with read.HDF5Data(path) as hd:
         meta = hd.meta_nest
-        print(meta)
         assert meta["imaging"]["pixel size"] == .2645
         assert meta["experiment"]["time"] == '15:24:17'
         # no volume yet in this file:

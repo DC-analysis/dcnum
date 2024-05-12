@@ -104,7 +104,7 @@ def test_segmenter_labeled_mask():
     assert np.sum(labels4 == 3) == 12
 
 
-def test_segmenter_labeled_mask_closing_disk():
+def test_segmenter_labeled_mask_fill_holes():
     mask = np.array([
         [0, 0, 0, 0, 0, 0, 0, 0, 0],
         [0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -129,7 +129,7 @@ def test_segmenter_labeled_mask_closing_disk():
     sm1 = segm.segm_thresh.SegmentThresh(thresh=-6,
                                          kwargs_mask={"clear_border": True,
                                                       "fill_holes": True,
-                                                      "closing_disk": 1,
+                                                      "closing_disk": 0,
                                                       })
     labels1 = sm1.segment_frame(-10 * mask)
     assert np.sum(labels1 != 0) == 32
@@ -141,31 +141,31 @@ def test_segmenter_labeled_mask_closing_disk():
     sm2 = segm.segm_thresh.SegmentThresh(thresh=-6,
                                          kwargs_mask={"clear_border": True,
                                                       "fill_holes": False,
-                                                      "closing_disk": 1,
+                                                      "closing_disk": 0,
                                                       })
     labels2 = sm2.segment_frame(-10 * mask)
     _, l2a, l2b = np.unique(labels2)
-    assert np.sum(labels2 != 0) == 27
+    assert np.sum(labels2 != 0) == 23
     assert len(np.unique(labels2)) == 3  # (bg, filled, other)
-    assert np.sum(labels2 == l2a) == 9
-    assert np.sum(labels2 == l2b) == 18
+    assert np.sum(labels2 == l2a) == 8
+    assert np.sum(labels2 == l2b) == 15
 
     sm3 = segm.segm_thresh.SegmentThresh(thresh=-6,
                                          kwargs_mask={"clear_border": False,
                                                       "fill_holes": False,
-                                                      "closing_disk": 1,
+                                                      "closing_disk": 0,
                                                       })
     labels3 = sm3.segment_frame(-10 * mask)
-    assert np.sum(labels3 != 0) == 35
+    assert np.sum(labels3 != 0) == 31
     assert len(np.unique(labels3)) == 4  # (bg, filled, border, other)
-    assert np.sum(labels3 == 1) == 9
+    assert np.sum(labels3 == 1) == 8
     assert np.sum(labels3 == 2) == 8
-    assert np.sum(labels3 == 3) == 18
+    assert np.sum(labels3 == 3) == 15
 
     sm4 = segm.segm_thresh.SegmentThresh(thresh=-6,
                                          kwargs_mask={"clear_border": False,
                                                       "fill_holes": True,
-                                                      "closing_disk": 1,
+                                                      "closing_disk": 0,
                                                       })
     labels4 = sm4.segment_frame(-10 * mask)
     assert np.sum(labels4 != 0) == 40
@@ -207,7 +207,11 @@ def test_segmenter_labeled_mask_fill_holes_int32():
 
 
 def test_segmenter_segment_chunk():
-    with segm.segm_thresh.SegmentThresh(thresh=-12, debug=True) as sm:
+    with segm.segm_thresh.SegmentThresh(
+            thresh=-12,
+            kwargs_mask={"closing_disk": 0},
+            debug=True
+    ) as sm:
         image_data = MockImageData()
         labels_1 = np.copy(sm.segment_chunk(image_data, 0))  # below threshold
         assert sm.image_array.min() == -10
@@ -324,3 +328,58 @@ def test_segmenter_labeled_mask_clear_border2():
 
     assert np.sum(labels == 0) > 20, "background should be largest"
     assert np.sum(labels == 1) == 9
+
+
+def test_segmenter_labeled_mask_spurious_noise_closing():
+    lab0 = np.array([
+        [0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 2, 0, 0, 0],  # noise, 2
+        [0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 1, 1, 1, 1, 1, 0, 0],
+        [0, 1, 1, 1, 1, 1, 0, 0],
+        [0, 1, 1, 0, 1, 1, 0, 0],  # filled, 1
+        [0, 1, 1, 1, 1, 1, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 3, 3, 0, 0, 0, 0],  # noise, 3
+        [0, 0, 0, 0, 0, 0, 0, 0],
+        ], dtype=int)
+
+    # Structuring element disk 1:
+    # [0, 1, 0],
+    # [1, 1, 1],
+    # [0, 1, 0],
+
+    # After erosion:
+    # [0, 0, 0, 0, 0, 0, 0, 0],
+    # [0, 0, 0, 0, 0, 0, 0, 0],
+    # [0, 0, 0, 0, 0, 0, 0, 0],
+    # [0, 0, 0, 0, 0, 0, 0, 0],
+    # [0, 0, 1, 1, 1, 0, 0, 0],
+    # [0, 0, 1, 1, 1, 0, 0, 0],
+    # [0, 0, 0, 0, 0, 0, 0, 0],
+    # [0, 0, 0, 0, 0, 0, 0, 0],
+    # [0, 0, 0, 0, 0, 0, 0, 0],
+    # [0, 0, 0, 0, 0, 0, 0, 0],
+
+    # After dilation:
+    # [0, 0, 0, 0, 0, 0, 0, 0],
+    # [0, 0, 0, 0, 0, 0, 0, 0],
+    # [0, 0, 0, 0, 0, 0, 0, 0],
+    # [0, 0, 1, 1, 1, 0, 0, 0],
+    # [0, 1, 1, 1, 1, 1, 0, 0],
+    # [0, 1, 1, 1, 1, 1, 0, 0],
+    # [0, 0, 1, 1, 1, 0, 0, 0],
+    # [0, 0, 0, 0, 0, 0, 0, 0],
+    # [0, 0, 0, 0, 0, 0, 0, 0],
+    # [0, 0, 0, 0, 0, 0, 0, 0],
+
+    sm = segm.segm_thresh.SegmentThresh(thresh=-6)
+
+    labels = sm.process_mask(lab0,
+                             clear_border=False,
+                             fill_holes=True,
+                             closing_disk=1)
+
+    assert np.sum(labels == 0) > 20, "background should be largest"
+    assert np.sum(labels == 1) == 16
+    assert np.sum(labels) == 16, "only one label"

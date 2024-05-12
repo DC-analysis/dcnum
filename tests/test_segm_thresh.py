@@ -16,15 +16,11 @@ data_path = pathlib.Path(__file__).parent / "data"
 def test_segm_thresh_basic():
     """Basic thresholding segmenter
 
-    The segmenter is equivalent to the old dcevent legacy segmenter with
-    the options legacy:t=-6^bl=0^bi=0^d=1:cle=1^f=1^clo=3
-    (no blur, no binaryops, clear borders, fill holes, closing disk 3).
-    Since in the dcevent pipeline, the data are gated and small objects
-    are removed, we have to do this here manually before comparing mask
-    images.
+    The data in "fmt-hdf5_cytoshot_full-features_2024.zip" were
+    created in 2024 using ChipStream and the threshold segmenter.
     """
     path = retrieve_data(
-        data_path / "fmt-hdf5_cytoshot_full-features_legacy_allev_2023.zip")
+        data_path / "fmt-hdf5_cytoshot_full-features_2024.zip")
 
     # Get all the relevant information
     with h5py.File(path) as h5:
@@ -32,11 +28,12 @@ def test_segm_thresh_basic():
         image_bg = h5["events/image_bg"][:]
         mask = h5["events/mask"][:]
         frame = h5["events/frame"][:]
+        bg_off = h5["events/bg_off"][:]
 
     # Concatenate the masks
     frame_u, indices = np.unique(frame, return_index=True)
     image_u = image[indices]
-    image_bg_u = image_bg[indices]
+    image_bg_u = image_bg[indices] + bg_off[indices].reshape(-1, 1, 1)
     mask_u = np.zeros_like(image_u, dtype=bool)
     for ii, fr in enumerate(frame):
         idx = np.where(frame_u == fr)[0]
@@ -44,8 +41,7 @@ def test_segm_thresh_basic():
 
     image_u_c = np.array(image_u, dtype=int) - image_bg_u
 
-    sm = segm.segm_thresh.SegmentThresh(thresh=-6,
-                                        kwargs_mask={"closing_disk": 3})
+    sm = segm.segm_thresh.SegmentThresh()
     assert sm.requires_background_correction
 
     for ii in range(len(frame_u)):
@@ -67,7 +63,7 @@ def test_segm_thresh_get_ppid_from_ppkw():
 def test_segm_thresh_segment_batch(worker_type):
     debug = worker_type == "thread"
     path = retrieve_data(
-        data_path / "fmt-hdf5_cytoshot_full-features_legacy_allev_2023.zip")
+        data_path / "fmt-hdf5_cytoshot_full-features_2024.zip")
 
     # Get all the relevant information
     with h5py.File(path) as h5:
@@ -75,11 +71,12 @@ def test_segm_thresh_segment_batch(worker_type):
         image_bg = h5["events/image_bg"][:]
         mask = h5["events/mask"][:]
         frame = h5["events/frame"][:]
+        bg_off = h5["events/bg_off"][:]
 
     # Concatenate the masks
     frame_u, indices = np.unique(frame, return_index=True)
     image_u = image[indices]
-    image_bg_u = image_bg[indices]
+    image_bg_u = image_bg[indices] + bg_off[indices].reshape(-1, 1, 1)
     mask_u = np.zeros_like(image_u, dtype=bool)
     for ii, fr in enumerate(frame):
         idx = np.where(frame_u == fr)[0]
@@ -87,11 +84,9 @@ def test_segm_thresh_segment_batch(worker_type):
 
     image_u_c = np.array(image_u, dtype=int) - image_bg_u
 
-    sm = segm.segm_thresh.SegmentThresh(thresh=-6,
-                                        debug=debug,
-                                        kwargs_mask={"closing_disk": 3})
+    sm = segm.segm_thresh.SegmentThresh(debug=debug)
 
-    labels_seg = sm.segment_batch(image_u_c, start=0, stop=5)
+    labels_seg = sm.segment_batch(image_u_c, start=0, stop=11)
     assert labels_seg is sm.labels_array
     assert np.all(np.array(labels_seg, dtype=bool) == sm.mask_array)
     # tell workers to stop
@@ -115,7 +110,7 @@ def test_segm_thresh_segment_batch_large(worker_type):
     image = -10 * mask
 
     sm = segm.segm_thresh.SegmentThresh(thresh=-6,
-                                        kwargs_mask={"closing_disk": 3},
+                                        kwargs_mask={"closing_disk": 0},
                                         debug=debug)
 
     labels_seg_1 = np.copy(
