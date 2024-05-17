@@ -119,7 +119,7 @@ class BackgroundRollMed(Background):
         """Check user-defined properties of this class
 
         This method primarily exists so that the CLI knows which
-        keyword arguements can be passed to this class.
+        keyword arguments can be passed to this class.
 
         Parameters
         ----------
@@ -132,7 +132,8 @@ class BackgroundRollMed(Background):
             `kernel_size` will not increase computation speed. Larger
             values lead to a higher memory consumption.
         """
-        assert kernel_size > 0
+        assert kernel_size > 0, "kernel size must be positive number"
+        assert kernel_size % 2 == 0, "kernel size must be even number"
         assert batch_size > kernel_size
 
     def get_slices_for_batch(self, batch_index=0):
