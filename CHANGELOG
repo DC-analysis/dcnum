@@ -1,4 +1,6 @@
-0.18.1
+0.19.0
+ - enh: elevate `HDF5Data`s `index_mapping` to pipeline identifier status
+   (this changes the pipeline identifier)
  - enh: improve sanity checks for `BackgroundRollMed`
 0.18.0
  - BREAKING CHANGE: mask postprocessing did a morphological opening instead

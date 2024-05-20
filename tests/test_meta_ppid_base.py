@@ -32,13 +32,13 @@ class ExampleClass:
 def test_compute_pipeline_hash():
     pp_hash = ppid.compute_pipeline_hash(
         gen_id="7",
-        dat_id="hdf:p=0.34",
+        dat_id="hdf:p=0.34^i=0",
         bg_id="sparsemed:k=200^s=1^t=0^f=0.8^o=1",
         seg_id="thresh:t=-3:cle=1^f=1^clo=2",
         feat_id="legacy:b=1^h=0^v=1",
         gate_id="norm:o=0^s=11",
     )
-    assert pp_hash == "2e56aa93fcb264381c90a8fd181b3fbc"
+    assert pp_hash == "4f3a850410b9801393ab5738afe69e9a"
 
 
 @pytest.mark.parametrize("in_list,out_list", [

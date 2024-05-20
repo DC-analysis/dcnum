@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import hashlib
 import io
 import json
+import numbers
 import pathlib
 import tempfile
 from typing import Dict, BinaryIO, List
@@ -293,7 +295,9 @@ class HDF5Data:
         self.h5.close()
 
     def get_ppid(self):
-        return self.get_ppid_from_ppkw({"pixel_size": self.pixel_size})
+        return self.get_ppid_from_ppkw(
+            {"pixel_size": self.pixel_size,
+             "index_mapping": self.index_mapping})
 
     @classmethod
     def get_ppid_code(cls):
@@ -304,9 +308,33 @@ class HDF5Data:
         # Data does not really fit into the PPID scheme we use for the rest
         # of the pipeline. This implementation here is custom.
         code = cls.get_ppid_code()
+        # pixel size
         ppid_ps = f"{kwargs['pixel_size']:.8f}".rstrip("0")
-        kwid = "^".join([f"p={ppid_ps}"])
+        # index mapping
+        ppid_im = cls.get_ppid_index_mapping(kwargs.get("index_mapping", None))
+        kwid = "^".join([f"p={ppid_ps}", f"i={ppid_im}"])
         return ":".join([code, kwid])
+
+    @staticmethod
+    def get_ppid_index_mapping(index_mapping):
+        """Return the pipeline identifier part for index mapping"""
+        im = index_mapping
+        if im is None:
+            dim = "0"
+        elif isinstance(im, numbers.Integral):
+            dim = f"{im}"
+        elif isinstance(im, slice):
+            dim = (f"{im.start if im.start is not None else 'n'}"
+                   + f"-{im.stop if im.stop is not None else 'n'}"
+                   + f"-{im.step if im.step is not None else 'n'}"
+                   )
+        elif isinstance(im, (list, np.ndarray)):
+            idhash = hashlib.md5(
+                np.array(im, dtype=np.uint32).tobytes()).hexdigest()
+            dim = f"h-{idhash[:8]}"
+        else:
+            dim = "unknown"
+        return dim
 
     @staticmethod
     def get_ppkw_from_ppid(dat_ppid):
@@ -321,6 +349,16 @@ class HDF5Data:
             var, val = item.split("=")
             if var == "p":
                 kwargs["pixel_size"] = float(val)
+            elif var == "i":
+                if val.startswith("h-") or val == "unknown":
+                    raise ValueError(f"Cannot invert index mapping {val}")
+                elif val == "0":
+                    kwargs["index_mapping"] = None
+                elif val.count("-"):
+                    start, stop = [int(v) for v in val.split("-")]
+                    kwargs["index_mapping"] = slice(start, stop)
+                else:
+                    kwargs["index_mapping"] = int(val)
             else:
                 raise ValueError(f"Invalid parameter '{var}'!")
         return kwargs

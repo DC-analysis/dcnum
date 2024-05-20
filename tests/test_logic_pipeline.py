@@ -59,13 +59,256 @@ def test_chained_pipeline():
                == "sparsemed:k=250^s=1^t=0^f=0.8^o=1"
 
 
+def test_duplicate_pipeline():
+    """Test running the same pipeline twice
+
+    When the pipeline is run on a file that has been run with the same
+    pipeline identifier, then we do not run the pipeline. Instead, we
+    copy the data from the first file.
+    """
+    path_orig = retrieve_data("fmt-hdf5_cytoshot_full-features_2023.zip")
+    path = path_orig.with_name("input.rtdc")
+    path2 = path.with_name("path_intermediate.rtdc")
+    with read.concatenated_hdf5_data(5 * [path_orig], path_out=path):
+        pass
+    job = logic.DCNumPipelineJob(
+        path_in=path,
+        path_out=path2,
+        background_code="copy",
+        segmenter_code="thresh",
+        segmenter_kwargs={"thresh": -6,
+                          "kwargs_mask": {"closing_disk": 0}},
+        debug=True)
+    assert job.kwargs["data_kwargs"].get("index_mapping") is None
+
+    # perform the initial pipeline
+    with logic.DCNumJobRunner(job=job) as runner:
+        runner.run()
+    # Sanity checks for initial job
+    with read.HDF5Data(job["path_out"]) as hd:
+        # Check the logs
+        logdat = " ".join(get_log(hd, time.strftime("dcnum-log-%Y")))
+        assert "Starting background computation" in logdat
+        assert "Finished background computation" in logdat
+        assert "Starting segmentation and feature extraction" in logdat
+        assert "Flushing data to disk" in logdat
+        assert "Finished segmentation and feature extraction" in logdat
+
+    # get the first image for reference
+    with h5py.File(path) as h5:
+        im0 = h5["/events/image"][0]
+
+    # remove all logs just to be sure nothing interferes
+    with h5py.File(path2, "a") as h5:
+        assert h5.attrs["pipeline:dcnum mapping"] == "0"
+        assert len(h5["events/deform"]) == 395
+        del h5["logs"]
+
+    # now when we do everything again, not a thing should be done
+    job2 = logic.DCNumPipelineJob(
+        path_in=path2,
+        path_out=path2.with_name("final_out.rtdc"),
+        no_basins_in_output=True,
+        background_code="copy",
+        segmenter_code="thresh",
+        segmenter_kwargs={"thresh": -6,
+                          "kwargs_mask": {"closing_disk": 0}},
+        debug=True)
+    with logic.DCNumJobRunner(job=job2) as runner2:
+        runner2.run()
+    # Real check for second run (not the `not`s [sic]!)
+    with read.HDF5Data(job2["path_out"]) as hd:
+        # Check the logs
+        logdat = " ".join(get_log(hd, time.strftime("dcnum-log-%Y")))
+        assert "Starting background computation" not in logdat
+        assert "Finished background computation" not in logdat
+        assert "Starting segmentation and feature extraction" not in logdat
+        assert "Flushing data to disk" not in logdat
+        assert "Finished segmentation and feature extraction" not in logdat
+
+    with h5py.File(job2["path_out"]) as h5:
+        assert "deform" in h5["events"]
+        assert "image" in h5["events"]
+        assert "image_bg" in h5["events"]
+        assert len(h5["events/deform"]) == 395
+        assert h5.attrs["pipeline:dcnum mapping"] == "0"
+        assert np.all(h5["events/image"][0] == im0)
+
+
+def test_duplicate_pipeline_redo_index_mapping():
+    """Test running the same pipeline twice
+
+    When the pipeline is run on a file that has been run with the same
+    pipeline identifier, then we do not run the pipeline. Instead, we
+    copy the data from the first file.
+
+    However, if something is odd, such as index mapping defined in the
+    pipeline then redo the computations.
+    This is the purpose of this test.
+    """
+    path_orig = retrieve_data("fmt-hdf5_cytoshot_full-features_2023.zip")
+    path = path_orig.with_name("input.rtdc")
+    path2 = path.with_name("path_intermediate.rtdc")
+    with read.concatenated_hdf5_data(5 * [path_orig], path_out=path):
+        pass
+    job = logic.DCNumPipelineJob(
+        path_in=path,
+        path_out=path2,
+        data_kwargs={"index_mapping": 10},
+        background_code="copy",
+        segmenter_code="thresh",
+        segmenter_kwargs={"thresh": -6,
+                          "kwargs_mask": {"closing_disk": 0}},
+        debug=True)
+    assert job.kwargs["data_kwargs"].get("index_mapping") == 10
+
+    # perform the initial pipeline
+    with logic.DCNumJobRunner(job=job) as runner:
+        runner.run()
+    # Sanity checks for initial job
+    with read.HDF5Data(job["path_out"]) as hd:
+        # Check the logs
+        logdat = " ".join(get_log(hd, time.strftime("dcnum-log-%Y")))
+        assert "Starting background computation" in logdat
+        assert "Finished background computation" in logdat
+        assert "Starting segmentation and feature extraction" in logdat
+        assert "Flushing data to disk" in logdat
+        assert "Finished segmentation and feature extraction" in logdat
+
+    with h5py.File(path2, "a") as h5:
+        # sanity checks
+        assert h5.attrs["pipeline:dcnum mapping"] == "10"
+        assert len(h5["events/deform"]) == 24
+        assert h5.attrs["pipeline:dcnum yield"] == 24
+        # remove all logs just to be sure nothing interferes
+        del h5["logs"]
+        # Modify the yield, triggering a new pipeline run
+        h5.attrs["pipeline:dcnum yield"] = 111111
+
+    # now when we do everything again, not a thing should be done
+    job2 = logic.DCNumPipelineJob(
+        path_in=path2,
+        path_out=path2.with_name("final_out.rtdc"),
+        no_basins_in_output=True,
+        data_kwargs={"index_mapping": 10},
+        background_code="copy",
+        segmenter_code="thresh",
+        segmenter_kwargs={"thresh": -6,
+                          "kwargs_mask": {"closing_disk": 0}},
+        debug=True)
+    with logic.DCNumJobRunner(job=job2) as runner2:
+        runner2.run()
+    # Real check for second run (not the `not`s [sic]!)
+    with read.HDF5Data(job2["path_out"]) as hd:
+        # Check the logs
+        logdat = " ".join(get_log(hd, time.strftime("dcnum-log-%Y")))
+        # Background computation is not repeated
+        assert "Starting background computation" not in logdat
+        assert "Finished background computation" not in logdat
+        # Segmentation is repeated
+        assert "Starting segmentation and feature extraction" in logdat
+        assert "Flushing data to disk" in logdat
+        assert "Finished segmentation and feature extraction" in logdat
+
+    with h5py.File(job2["path_out"]) as h5:
+        assert "deform" in h5["events"]
+        assert "image" in h5["events"]
+        assert "image_bg" in h5["events"]
+        # We have not 24 here, because the index mapping enumerates events,
+        # not frames.
+        assert len(h5["events/deform"]) == 11
+        assert h5.attrs["pipeline:dcnum mapping"] == "10"
+        assert h5.attrs["pipeline:dcnum yield"] == 11
+
+
+def test_duplicate_pipeline_redo_yield():
+    """Test running the same pipeline twice
+
+    When the pipeline is run on a file that has been run with the same
+    pipeline identifier, then we do not run the pipeline. Instead, we
+    copy the data from the first file.
+
+    However, if something is odd, such as the yield of the pipeline not
+    matching the data in the output file, then redo the computations.
+    This is the purpose of this test.
+    """
+    path_orig = retrieve_data("fmt-hdf5_cytoshot_full-features_2023.zip")
+    path = path_orig.with_name("input.rtdc")
+    path2 = path.with_name("path_intermediate.rtdc")
+    with read.concatenated_hdf5_data(5 * [path_orig], path_out=path):
+        pass
+    job = logic.DCNumPipelineJob(
+        path_in=path,
+        path_out=path2,
+        background_code="copy",
+        segmenter_code="thresh",
+        segmenter_kwargs={"thresh": -6,
+                          "kwargs_mask": {"closing_disk": 0}},
+        debug=True)
+    assert job.kwargs["data_kwargs"].get("index_mapping") is None
+
+    # perform the initial pipeline
+    with logic.DCNumJobRunner(job=job) as runner:
+        runner.run()
+    # Sanity checks for initial job
+    with read.HDF5Data(job["path_out"]) as hd:
+        # Check the logs
+        logdat = " ".join(get_log(hd, time.strftime("dcnum-log-%Y")))
+        assert "Starting background computation" in logdat
+        assert "Finished background computation" in logdat
+        assert "Starting segmentation and feature extraction" in logdat
+        assert "Flushing data to disk" in logdat
+        assert "Finished segmentation and feature extraction" in logdat
+
+    with h5py.File(path2, "a") as h5:
+        # sanity checks
+        assert h5.attrs["pipeline:dcnum mapping"] == "0"
+        assert len(h5["events/deform"]) == 395
+        assert h5.attrs["pipeline:dcnum yield"] == 395
+        # remove all logs just to be sure nothing interferes
+        del h5["logs"]
+        # Modify the yield, triggering a new pipeline run
+        h5.attrs["pipeline:dcnum yield"] = 111111
+
+    # now when we do everything again, not a thing should be done
+    job2 = logic.DCNumPipelineJob(
+        path_in=path2,
+        path_out=path2.with_name("final_out.rtdc"),
+        no_basins_in_output=True,
+        background_code="copy",
+        segmenter_code="thresh",
+        segmenter_kwargs={"thresh": -6,
+                          "kwargs_mask": {"closing_disk": 0}},
+        debug=True)
+    with logic.DCNumJobRunner(job=job2) as runner2:
+        runner2.run()
+    # Real check for second run (not the `not`s [sic]!)
+    with read.HDF5Data(job2["path_out"]) as hd:
+        # Check the logs
+        logdat = " ".join(get_log(hd, time.strftime("dcnum-log-%Y")))
+        # Background computation is not repeated
+        assert "Starting background computation" not in logdat
+        assert "Finished background computation" not in logdat
+        # Segmentation is repeated
+        assert "Starting segmentation and feature extraction" in logdat
+        assert "Flushing data to disk" in logdat
+        assert "Finished segmentation and feature extraction" in logdat
+
+    with h5py.File(job2["path_out"]) as h5:
+        assert "deform" in h5["events"]
+        assert "image" in h5["events"]
+        assert "image_bg" in h5["events"]
+        assert len(h5["events/deform"]) == 395
+        assert h5.attrs["pipeline:dcnum mapping"] == "0"
+        assert h5.attrs["pipeline:dcnum yield"] == 395
+
+
 @pytest.mark.parametrize("index_mapping,size,mapping_out", [
-    (None, 395, "0"),
     (5, 11, "5"),
     (slice(3, 5, None), 6, "3-5-n"),
     ([3, 5, 6, 7], 7, "h-6e582938"),
 ])
-def test_duplicate_pipeline(index_mapping, size, mapping_out):
+def test_index_mapping_pipeline(index_mapping, size, mapping_out):
     """Test running the same pipeline twice
 
     When the pipeline is run on a file with the same pipeline
@@ -100,49 +343,12 @@ def test_duplicate_pipeline(index_mapping, size, mapping_out):
         assert "Flushing data to disk" in logdat
         assert "Finished segmentation and feature extraction" in logdat
 
-    # get the first image for reference
-    with h5py.File(path) as h5:
-        if index_mapping is None:
-            idx0 = 0
-        else:
-            idx0 = read.get_mapping_indices(index_mapping)[0]
-        im0 = h5["/events/image"][idx0]
-
-    # remove all logs just to be sure nothing interferes
-    with h5py.File(path2, "a") as h5:
-        assert h5.attrs["pipeline:dcnum mapping"] == mapping_out
-        assert len(h5["events/deform"]) == size
-        del h5["logs"]
-
-    # now when we do everything again, not a thing should be done
-    job2 = logic.DCNumPipelineJob(
-        path_in=path2,
-        path_out=path2.with_name("final_out.rtdc"),
-        no_basins_in_output=True,
-        background_code="copy",
-        segmenter_code="thresh",
-        segmenter_kwargs={"thresh": -6,
-                          "kwargs_mask": {"closing_disk": 0}},
-        debug=True)
-    with logic.DCNumJobRunner(job=job2) as runner2:
-        runner2.run()
-    # Real check for second run (not the `not`s [sic]!)
-    with read.HDF5Data(job2["path_out"]) as hd:
-        # Check the logs
-        logdat = " ".join(get_log(hd, time.strftime("dcnum-log-%Y")))
-        assert "Starting background computation" not in logdat
-        assert "Finished background computation" not in logdat
-        assert "Starting segmentation and feature extraction" not in logdat
-        assert "Flushing data to disk" not in logdat
-        assert "Finished segmentation and feature extraction" not in logdat
-
-    with h5py.File(job2["path_out"]) as h5:
+    with h5py.File(job["path_out"]) as h5:
         assert "deform" in h5["events"]
         assert "image" in h5["events"]
         assert "image_bg" in h5["events"]
         assert len(h5["events/deform"]) == size
-        assert h5.attrs["pipeline:dcnum mapping"] == "0"
-        assert np.all(h5["events/image"][0] == im0)
+        assert h5.attrs["pipeline:dcnum mapping"] == mapping_out
 
 
 def test_duplicate_transfer_basin_data():
@@ -335,7 +541,7 @@ def test_simple_pipeline(debug):
 
     # this is the default pipeline
     gen_id = ppid.DCNUM_PPID_GENERATION
-    dat_id = "hdf:p=0.2645"
+    dat_id = "hdf:p=0.2645^i=0"
     bg_id = "sparsemed:k=200^s=1^t=0^f=0.8^o=1"
     seg_id = "thresh:t=-6:cle=1^f=1^clo=0"
     feat_id = "legacy:b=1^h=1^v=1"
@@ -402,7 +608,7 @@ def test_simple_pipeline_no_offset_correction(debug):
 
     # this is the default pipeline
     gen_id = ppid.DCNUM_PPID_GENERATION
-    dat_id = "hdf:p=0.2645"
+    dat_id = "hdf:p=0.2645^i=0"
     bg_id = "sparsemed:k=200^s=1^t=0^f=0.8^o=0"
     seg_id = "thresh:t=-6:cle=1^f=1^clo=0"
     feat_id = "legacy:b=1^h=1^v=1"
@@ -474,7 +680,7 @@ def test_simple_pipeline_in_thread():
 @pytest.mark.parametrize("attr,oldval,newbg", [
     # Changes that trigger computation of new background
     ["pipeline:dcnum generation", "1", True],
-    ["pipeline:dcnum data", "hdf:p=0.2656", True],
+    ["pipeline:dcnum data", "hdf:p=0.2656^i=0", True],
     ["pipeline:dcnum background", "sparsemed:k=100^s=1^t=0^f=0.8^o=1", True],
     # Changes that don't trigger background computation
     ["pipeline:dcnum segmenter", "thresh:t=-1:cle=1^f=1^clo=2", False],
@@ -505,7 +711,7 @@ def test_recomputation_of_background_metadata_changed(attr, oldval, newbg):
 
         # Set the default values
         h5.attrs["pipeline:dcnum generation"] = ppid.DCNUM_PPID_GENERATION
-        h5.attrs["pipeline:dcnum data"] = "hdf:p=0.2645"
+        h5.attrs["pipeline:dcnum data"] = "hdf:p=0.2645^i=0"
         h5.attrs["pipeline:dcnum background"] = \
             "sparsemed:k=200^s=1^t=0^f=0.8^o=1"
         h5.attrs["pipeline:dcnum segmenter"] = "thresh:t=-6:cle=1^f=1^clo=2"
@@ -553,7 +759,7 @@ def test_task_background():
 
     # this is the default pipeline
     gen_id = ppid.DCNUM_PPID_GENERATION
-    dat_id = "hdf:p=0.2645"
+    dat_id = "hdf:p=0.2645^i=0"
     bg_id = "sparsemed:k=200^s=1^t=0^f=0.8^o=1"
     seg_id = "thresh:t=-6:cle=1^f=1^clo=2"
     feat_id = "legacy:b=1^h=1^v=1"

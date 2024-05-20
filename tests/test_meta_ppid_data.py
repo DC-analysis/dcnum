@@ -1,5 +1,7 @@
 from dcnum.read import HDF5Data
 
+import pytest
+
 
 def test_ppid_decoding_dat_check_kwargs():
     dat_ppid = "hdf:p=0.2658"
@@ -7,17 +9,28 @@ def test_ppid_decoding_dat_check_kwargs():
     assert kwargs["pixel_size"] == 0.2658
 
 
+@pytest.mark.parametrize("imppid,value", [
+    ["0", None],
+    ["10", 10],
+    ["10-20", slice(10, 20)]
+])
+def test_ppid_decoding_dat_check_kwargs_index_mapping(imppid, value):
+    dat_ppid = f"hdf:p=0.2658^i={imppid}"
+    kwargs = HDF5Data.get_ppkw_from_ppid(dat_ppid)
+    assert kwargs["index_mapping"] == value
+
+
 def test_ppid_encoding_dat_check_kwargs():
     kwargs = {"pixel_size": 0.34}
     ppid = HDF5Data.get_ppid_from_ppkw(kwargs)
-    assert ppid == "hdf:p=0.34"
+    assert ppid == "hdf:p=0.34^i=0"
 
 
 def test_ppid_encoding_dat_check_kwargs_acc():
     # accuracy for pixel_size is 8 digits after the decimal point
     kwargs = {"pixel_size": 0.3400000036}
     ppid = HDF5Data.get_ppid_from_ppkw(kwargs)
-    assert ppid == "hdf:p=0.34"
+    assert ppid == "hdf:p=0.34^i=0"
 
 
 def test_ppid_required_method_definitions():

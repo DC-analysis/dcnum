@@ -49,10 +49,10 @@ def test_get_ppid():
         "fmt-hdf5_cytoshot_full-features_legacy_allev_2023.zip")
 
     with read.HDF5Data(path) as hd:
-        assert hd.get_ppid() == "hdf:p=0.2645"
+        assert hd.get_ppid() == "hdf:p=0.2645^i=0"
 
     with read.HDF5Data(path, pixel_size=0.49) as hd:
-        assert hd.get_ppid() == "hdf:p=0.49"
+        assert hd.get_ppid() == "hdf:p=0.49^i=0"
 
 
 def test_get_ppkw_from_ppid_error_bad_code():
@@ -64,7 +64,7 @@ def test_get_ppkw_from_ppid_error_bad_code():
 def test_get_ppkw_from_ppid_error_bad_parameter():
     with pytest.raises(ValueError,
                        match="Invalid parameter 'k'"):
-        read.HDF5Data.get_ppkw_from_ppid("hdf:k=0.44")
+        read.HDF5Data.get_ppkw_from_ppid("hdf:k=0.44^i=0")
 
 
 def test_get_ppkw_from_ppid_pixel_size():

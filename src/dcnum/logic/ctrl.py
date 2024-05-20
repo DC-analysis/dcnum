@@ -1,11 +1,9 @@
 import collections
 import datetime
-import hashlib
 import json
 import logging
 from logging.handlers import QueueListener
 import multiprocessing as mp
-import numbers
 import os
 import pathlib
 import platform
@@ -16,7 +14,6 @@ import traceback
 import uuid
 
 import h5py
-import numpy as np
 
 from ..feat.feat_background.base import get_available_background_methods
 from ..feat.queue_event_extractor import QueueEventExtractor
@@ -313,7 +310,17 @@ class DCNumJobRunner(threading.Thread):
             # Whether pipeline hash is invalid.
             ppid.compute_pipeline_hash(**datdict) != dathash
             # Whether the input file is the original output of the pipeline.
-            or len(self.draw) != evyield)
+            or len(self.draw) != evyield
+            # If index mapping is defined, then we always redo the pipeline.
+            # If the pipeline hashes are identical and index mapping is not
+            # None, then both pipelines were done with index mapping.
+            # But applying the same pipeline with index mapping in series
+            # will lead to a different result in the second run (e.g. 1st
+            # pipeline run: take every 2nd event; 2nd pipeline run: take
+            # every second event -> results in every 4th event in output of
+            # second pipeline run).
+            or self.draw.index_mapping is not None
+        )
         # Do we have to recompute the background data? In addition to the
         # hash sanity check above, check the generation, input data,
         # and background pipeline identifiers.
@@ -387,21 +394,7 @@ class DCNumJobRunner(threading.Thread):
             hw.h5.attrs["pipeline:dcnum yield"] = self.event_count
             # index mapping information
             im = self.job.kwargs["data_kwargs"].get("index_mapping", None)
-            if im is None:
-                dim = "0"
-            elif isinstance(im, numbers.Number):
-                dim = f"{im}"
-            elif isinstance(im, slice):
-                dim = (f"{im.start if im.start is not None else 'n'}"
-                       + f"-{im.stop if im.stop is not None else 'n'}"
-                       + f"-{im.step if im.step is not None else 'n'}"
-                       )
-            elif isinstance(im, (list, np.ndarray)):
-                idhash = hashlib.md5(
-                    np.array(im, dtype=np.uint32).tobytes()).hexdigest()
-                dim = f"h-{idhash[:8]}"
-            else:
-                dim = "unknown"
+            dim = HDF5Data.get_ppid_index_mapping(im)
             hw.h5.attrs["pipeline:dcnum mapping"] = dim
             # regular metadata
             hw.h5.attrs["experiment:event count"] = self.event_count
