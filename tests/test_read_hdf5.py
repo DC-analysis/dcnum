@@ -158,6 +158,25 @@ def test_image_cache_iter_chunks(size, chunks, tmp_path):
         assert list(hic.iter_chunks()) == list(range(chunks))
 
 
+@pytest.mark.parametrize("index_mapping,result_data", [
+    [2, [0, 1]],
+    [slice(1, 10, 2), [1, 3, 5, 7, 9]],
+    [slice(1, 11, 3), [1, 4, 7, 10]],
+    [slice(10, 11), [10]],
+    [slice(1, 3, None), [1, 2]],
+])
+def test_index_mapping(index_mapping, result_data):
+    path = retrieve_data(
+        "fmt-hdf5_cytoshot_full-features_legacy_allev_2023.zip")
+    with h5py.File(path, "a") as h5:
+        size = len(h5["events/image"])
+        assert size == 11
+        h5["events/temp"] = np.arange(size, dtype=np.float64)
+
+    with read.HDF5Data(path, index_mapping=index_mapping) as hd:
+        assert np.allclose(hd["temp"], result_data)
+
+
 def test_keyerror_when_image_is_none(tmp_path):
     path = tmp_path / "test.hdf5"
     with h5py.File(path, "w") as hw:

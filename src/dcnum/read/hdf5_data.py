@@ -355,8 +355,12 @@ class HDF5Data:
                 elif val == "0":
                     kwargs["index_mapping"] = None
                 elif val.count("-"):
-                    start, stop = [int(v) for v in val.split("-")]
-                    kwargs["index_mapping"] = slice(start, stop)
+                    start, stop, step = val.split("-")
+                    kwargs["index_mapping"] = slice(
+                        None if start == "n" else int(start),
+                        None if stop == "n" else int(stop),
+                        None if step == "n" else int(step)
+                    )
                 else:
                     kwargs["index_mapping"] = int(val)
             else:

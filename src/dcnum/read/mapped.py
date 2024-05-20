@@ -54,12 +54,10 @@ def _get_mapping_indices_cached(
         return np.arange(index_mapping)
     elif isinstance(index_mapping, tuple):
         im_slice = slice(*index_mapping)
-        if im_slice.step is not None:
-            raise NotImplementedError("Slices with step not implemented yet")
         if im_slice.stop is None or im_slice.start is None:
             raise NotImplementedError(
                 "Slices must have start and stop defined")
-        return np.arange(im_slice.start, im_slice.stop)
+        return np.arange(im_slice.start, im_slice.stop, im_slice.step)
     elif isinstance(index_mapping, list):
         return np.array(index_mapping, dtype=np.uint32)
     else:

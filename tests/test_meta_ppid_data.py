@@ -12,7 +12,9 @@ def test_ppid_decoding_dat_check_kwargs():
 @pytest.mark.parametrize("imppid,value", [
     ["0", None],
     ["10", 10],
-    ["10-20", slice(10, 20)]
+    ["10-20-n", slice(10, 20)],
+    ["10-20-2", slice(10, 20, 2)],
+    ["n-n-2", slice(None, None, 2)],
 ])
 def test_ppid_decoding_dat_check_kwargs_index_mapping(imppid, value):
     dat_ppid = f"hdf:p=0.2658^i={imppid}"
