@@ -186,25 +186,27 @@ class HDF5Data:
                     if isinstance(self.meta[key], bytes):
                         self.meta[key] = self.meta[key].decode("utf-8")
                 # logs
-                for key in h5.get("logs", []):
+                for key in sorted(h5.get("logs", {}).keys()):
                     alog = list(h5["logs"][key])
                     if alog:
                         if isinstance(alog[0], bytes):
                             alog = [ll.decode("utf") for ll in alog]
                         self.logs[key] = alog
                 # tables
-                for tab in h5.get("tables", []):
+                for tab in sorted(h5.get("tables", {}).keys()):
                     tabdict = {}
                     for tkey in h5["tables"][tab].dtype.fields.keys():
                         tabdict[tkey] = \
                             np.array(h5["tables"][tab][tkey]).reshape(-1)
                     self.tables[tab] = tabdict
                 # basins
-                for bnkey in h5.get("basins", []):
+                basins = []
+                for bnkey in h5.get("basins", {}).keys():
                     bn_data = "\n".join(
                         [s.decode() for s in h5["basins"][bnkey][:].tolist()])
                     bn_dict = json.loads(bn_data)
-                    self.basins.append(bn_dict)
+                    basins.append(bn_dict)
+                self.basins = sorted(basins, key=lambda x: x["name"])
 
         if state["pixel_size"] is not None:
             self.pixel_size = state["pixel_size"]

@@ -182,9 +182,9 @@ def test_basin_multiple(mapping, numevents):
         assert np.all(hd["aspect"] == hd0["aspect"][mapping])
         # We did not explicitly define features above.
         assert "features" not in hd.basins[0]
-        feats = hd.get_basin_data(0)[1] + hd.get_basin_data(1)[1]
-        assert "deform" in feats
-        assert "aspect" in feats
+        # basins are sorted according to name
+        assert "deform" in hd.get_basin_data(0)[1]
+        assert "aspect" in hd.get_basin_data(1)[1]
         # The "aspect" feature is in level1, so we can access it.
         assert "aspect" in hd
         # The "image" and "area_um" features are not in level1, theay are
