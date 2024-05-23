@@ -34,6 +34,16 @@ class MappedHDF5Dataset:
 def get_mapping_indices(
         index_mapping: numbers.Integral | slice | list | np.ndarray
         ):
+    """Return integer numpy array with mapping indices for a range
+
+    Parameters
+    ----------
+    index_mapping: numbers.Integral | slice | list | np.ndarray
+        Several options you have here:
+        - integer: results in np.arrange(integer)
+        - slice: results in np.arrange(slice.start, slice.stop, slice.step)
+        - list or np.ndarray: returns the input as  unit32 array
+    """
     if isinstance(index_mapping, numbers.Integral):
         return _get_mapping_indices_cached(index_mapping)
     elif isinstance(index_mapping, slice):

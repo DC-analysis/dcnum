@@ -115,6 +115,7 @@ class HDF5Writer:
                     paths: List[str | pathlib.Path],
                     features: List[str] = None,
                     description: str | None = None,
+                    mapping: np.ndarray = None
                     ):
         """Write an HDF5-based file basin
 
@@ -128,6 +129,9 @@ class HDF5Writer:
             list of features provided by `paths`
         description: str
             optional string describing the basin
+        mapping: 1D array
+            integer array with indices that map the basin dataset
+            to this dataset
         """
         bdat = {
             "description": description,
@@ -136,8 +140,38 @@ class HDF5Writer:
             "paths": [str(pp) for pp in paths],
             "type": "file",
         }
+        # Explicit features stored in basin file
         if features is not None and len(features):
             bdat["features"] = features
+        # Mapped basin information
+        if mapping is not None:
+            events = self.h5.require_group("events")
+            # Reserve a mapping feature for this dataset
+            for ii in range(10):  # basinmap0 to basinmap9
+                bm_cand = f"basinmap{ii}"
+                if bm_cand in events:
+                    # There is a basin mapping defined in the file. Check
+                    # whether it is identical to ours.
+                    if np.all(events[bm_cand] == mapping):
+                        # Great, we are done here.
+                        feat_basinmap = bm_cand
+                        break
+                    else:
+                        # This mapping belongs to a different basin,
+                        # try the next mapping.
+                        continue
+                else:
+                    # The mapping is not defined in the dataset, and we may
+                    # write it to a new feature.
+                    feat_basinmap = bm_cand
+                    self.store_feature_chunk(feat=feat_basinmap, data=mapping)
+                    break
+            else:
+                raise ValueError(
+                    "You have exhausted the usage of mapped basins for "
+                    "the current dataset. Please revise your analysis "
+                    "pipeline.")
+            bdat["mapping"] = feat_basinmap
         bstring = json.dumps(bdat, indent=2)
         # basin key is its hash
         key = hashlib.md5(bstring.encode("utf-8",

@@ -433,7 +433,8 @@ class DCNumJobRunner(threading.Thread):
             with h5py.File(self.job["path_in"]) as h5_src:
                 copy_metadata(h5_src=h5_src,
                               h5_dst=hw.h5,
-                              # don't copy basins
+                              # Don't copy basins, we would have to index-map
+                              # them first.
                               copy_basins=False)
             if redo_seg:
                 # Store the correct measurement identifier. This is used to

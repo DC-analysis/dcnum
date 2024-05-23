@@ -1,3 +1,6 @@
+0.20.0
+ - feat: support reading mapped basins
+ - enh: allow to slice BaseImageChunkCache
 0.19.1
  - enh: support steps when specifying data slices in `index_mapping`
 0.19.0

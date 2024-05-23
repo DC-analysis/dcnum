@@ -22,6 +22,7 @@ class BaseImageChunkCache(abc.ABC):
                  cache_size: int = 2,
                  ):
         self.shape = shape
+        self._dtype = None
         chunk_size = min(shape[0], chunk_size)
         self._len = self.shape[0]
         #: This is a FILO cache for the chunks
@@ -33,11 +34,31 @@ class BaseImageChunkCache(abc.ABC):
         self.num_chunks = int(np.ceil(self._len / (self.chunk_size or 1)))
 
     def __getitem__(self, index):
-        chunk_index, sub_index = self._get_chunk_index_for_index(index)
-        return self.get_chunk(chunk_index)[sub_index]
+        if isinstance(index, (slice, list, np.ndarray)):
+            if isinstance(index, slice):
+                indices = np.arange(index.start or 0,
+                                    index.stop or len(self),
+                                    index.step)
+            else:
+                indices = index
+            array_out = np.empty((len(indices),) + self.image_shape,
+                                 dtype=self.dtype)
+            for ii, idx in enumerate(indices):
+                array_out[ii] = self[idx]
+            return array_out
+        else:
+            chunk_index, sub_index = self._get_chunk_index_for_index(index)
+            return self.get_chunk(chunk_index)[sub_index]
 
     def __len__(self):
         return self._len
+
+    @property
+    def dtype(self):
+        """data type of the image data"""
+        if self._dtype is None:
+            self._dtype = self[0].dtype
+        return self._dtype
 
     @abc.abstractmethod
     def _get_chunk_data(self, chunk_slice):
@@ -50,6 +71,7 @@ class BaseImageChunkCache(abc.ABC):
             raise IndexError(
                 f"Index {index} out of bounds for HDF5ImageCache "
                 f"of size {self._len}")
+        index = int(index)  # convert np.uint64 to int, so we get ints below
         chunk_index = index // self.chunk_size
         sub_index = index % self.chunk_size
         return chunk_index, sub_index

@@ -395,7 +395,22 @@ class HDF5Data:
             if path is None:
                 self._basin_data[index] = (None, None)
             else:
-                h5dat = HDF5Data(path, index_mapping=self.index_mapping)
+                feat_basinmap = bn_dict.get("mapping", None)
+                if feat_basinmap is None:
+                    # This is NOT a mapped basin.
+                    index_mapping = self.index_mapping
+                else:
+                    # This is a mapped basin. Create an indexing list.
+                    if self.index_mapping is None:
+                        # The current dataset is not mapped.
+                        basinmap_idx = slice(None)
+                    else:
+                        # The current dataset is also mapped.
+                        basinmap_idx = get_mapping_indices(self.index_mapping)
+                    basinmap = self.h5[f"events/{feat_basinmap}"]
+                    index_mapping = basinmap[basinmap_idx]
+
+                h5dat = HDF5Data(path, index_mapping=index_mapping)
                 features = bn_dict.get("features")
                 if features is None:
                     # Only get the features from the actual HDF5 file.
@@ -420,21 +435,27 @@ class HDF5Data:
         if feat not in self._image_cache:
             if f"events/{feat}" in self.h5:
                 ds = self.h5[f"events/{feat}"]
+                idx_map = self.index_mapping
             else:
+                idx_map = None
                 # search all basins
                 for idx in range(len(self.basins)):
-                    bndat, features = self.get_basin_data(idx)
+                    bn_dat, features = self.get_basin_data(idx)
                     if features is not None:
                         if feat in features:
-                            ds = bndat.h5[f"events/{feat}"]
+                            # HDF5 dataset
+                            ds = bn_dat.h5[f"events/{feat}"]
+                            # Index mapping (taken from the basins which
+                            # already includes the mapping from the current
+                            # instance).
+                            idx_map = bn_dat.index_mapping
                             break
                 else:
                     ds = None
 
             if ds is not None:
                 image = HDF5ImageCache(
-                    h5ds=get_mapped_object(obj=ds,
-                                           index_mapping=self.index_mapping),
+                    h5ds=get_mapped_object(obj=ds, index_mapping=idx_map),
                     cache_size=self.image_cache_size,
                     boolean=feat == "mask")
             else:
