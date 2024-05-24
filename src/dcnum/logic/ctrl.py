@@ -510,6 +510,7 @@ class DCNumJobRunner(threading.Thread):
         information from the input file to the output file. If it
         is set to "tap", then only create basins in the output file.
         """
+        t0 = time.perf_counter()
         # We need to make sure that the features are correctly attributed
         # from the input files. E.g. if the input file already has
         # background images, but we recompute the background images, then
@@ -575,6 +576,8 @@ class DCNumJobRunner(threading.Thread):
                                    paths=paths,
                                    description=f"Created with dcnum {version}",
                                    )
+        t_tot = time.perf_counter() - t0
+        self.logger.info(f"Enforcing basin strategy time: {t_tot:.1f}s")
 
     def task_segment_extract(self):
         self.logger.info("Starting segmentation and feature extraction")

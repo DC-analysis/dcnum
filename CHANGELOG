@@ -3,6 +3,7 @@
  - feat: support writing mapped-basin-based output files
  - enh: allow to slice BaseImageChunkCache
  - enh: sort logs, tables and basins for reproducible access
+ - enh: add more timing information in logs
 0.19.1
  - enh: support steps when specifying data slices in `index_mapping`
 0.19.0

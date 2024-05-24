@@ -1,4 +1,5 @@
 import collections
+import logging
 import pathlib
 import threading
 import time
@@ -24,6 +25,7 @@ class DequeWriterThread(threading.Thread):
             using `popleft()`.
         """
         super(DequeWriterThread, self).__init__(*args, **kwargs)
+        self.logger = logging.getLogger("dcnum.write.DequeWriterThread")
         if mode == "w":
             path_out.unlink(missing_ok=True)
         self.writer = HDF5Writer(path_out, mode=mode, ds_kwds=ds_kwds)
@@ -40,17 +42,21 @@ class DequeWriterThread(threading.Thread):
         self.may_stop_loop = True
 
     def run(self):
+        time_tot = 0
         while True:
             ldq = len(self.dq)
             if self.must_stop_loop:
                 break
             elif ldq:
+                t0 = time.perf_counter()
                 for _ in range(ldq):
                     feat, data = self.dq.popleft()
                     self.writer.store_feature_chunk(feat=feat, data=data)
+                time_tot += time.perf_counter() - t0
             elif self.may_stop_loop:
                 break
             else:
                 # wait for the next item to arrive
                 time.sleep(.1)
+        self.logger.info(f"Disk time: {time_tot:.1f}s")
         self.writer.close()
