@@ -245,20 +245,10 @@ class QueueCollectorThread(threading.Thread):
             # the events that we just saved.
             indices = stash.indices_for_data
 
-            # Write all the scalar features.
-            for feat in self.data.features_scalar_frame:
-                self.writer_dq.append((feat, self.data[feat][indices]))
-
-            # Write the image and background data.
-            imdat = np.zeros((stash.size,) + self.data.image.image_shape,
-                             dtype=np.uint8)
-            bgdat = np.zeros((stash.size,) + self.data.image.image_shape,
-                             dtype=np.uint8)
-            for ii, idx in enumerate(indices):
-                imdat[ii] = self.data.image[idx]
-                bgdat[ii] = self.data.image_bg[idx]
-            self.writer_dq.append(("image", imdat))
-            self.writer_dq.append(("image_bg", bgdat))
+            # This is the basin mapping feature we will use later on to
+            # either store the basin information or to copy the data from
+            # the input file to the output file.
+            self.writer_dq.append(("basinmap0", indices))
 
             # Write the number of events.
             self.writer_dq.append(("nevents",

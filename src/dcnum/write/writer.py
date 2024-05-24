@@ -300,6 +300,63 @@ def create_with_basins(
                            )
 
 
+def copy_features(h5_src: h5py.File,
+                  h5_dst: h5py.File,
+                  features: List[str],
+                  mapping: np.ndarray = None
+                  ):
+    """Copy feature data from one HDF5 file to another
+
+    The feature must not exist in the destination file.
+
+    Parameters
+    ----------
+    h5_src: h5py.File
+        Input HDF5File containing `features` in the "events" group
+    h5_dst: h5py.File
+        Output HDF5File opened in write mode not containing `features`
+    features: List[str]
+        List of features to copy from source to destination
+    mapping: 1D array
+        If given, contains indices in the input file that should be
+        written to the output file. If set to None, all features are written.
+    """
+    ei = h5_src["events"]
+    eo = h5_dst.require_group("events")
+    # This is the size of the output dataset
+    size = h5_dst.attrs["experiment:event count"]
+    hw = HDF5Writer(h5_dst)
+    for feat in features:
+        if feat in eo:
+            raise ValueError(f"Output file {h5_dst.filename} already contains "
+                             f"the feature {feat}.")
+        if not isinstance(ei[feat], h5py.Dataset):
+            raise NotImplementedError(
+                f"Only dataset-based features are supported here, not {feat}")
+        if mapping is None:
+            # Just copy the data as-is.
+            h5py.h5o.copy(src_loc=ei.id,
+                          src_name=feat.encode(),
+                          dst_loc=eo.id,
+                          dst_name=feat.encode(),
+                          )
+        else:
+            # Perform mapping and store the features in chunks to keep
+            # memory usage down.
+            dsi = ei[feat]
+            chunk_size = hw.get_best_nd_chunks(dsi[0].shape, dsi.dtype)[0]
+            start = 0
+            while start < size:
+                chunk_idx = mapping[start:start + chunk_size]
+                # h5py only supports indexing in increasing order
+                chunk_unique, order = np.unique(chunk_idx, return_inverse=True)
+                data_unique = dsi[chunk_unique]
+                data = data_unique[order]
+                hw.store_feature_chunk(feat, data)
+                # increment start
+                start += chunk_size
+
+
 def copy_metadata(h5_src: h5py.File,
                   h5_dst: h5py.File,
                   copy_basins=True):

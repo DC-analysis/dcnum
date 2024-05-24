@@ -3,7 +3,8 @@ import copy
 import inspect
 import multiprocessing as mp
 import pathlib
-from typing import Dict
+from typing import Dict, Literal
+import warnings
 
 from ..feat import QueueEventExtractor
 from ..feat.feat_background.base import get_available_background_methods
@@ -27,10 +28,62 @@ class DCNumPipelineJob:
                  feature_kwargs: Dict = None,
                  gate_code: str = "norm",
                  gate_kwargs: Dict = None,
-                 no_basins_in_output: bool = True,
+                 basin_strategy: Literal["drain", "tap"] = "drain",
+                 no_basins_in_output: bool = None,
                  num_procs: int = None,
                  debug: bool = False,
                  ):
+        """Pipeline job recipe
+
+        Parameters
+        ----------
+        path_in: pathlib.Path | str
+            input data path
+        path_out: pathlib.Path | str
+            output data path
+        data_code: str
+            code of input data reader to use
+        data_kwargs: dict
+            keyword arguments for data reader
+        background_code: str
+            code of background data computer to use
+        background_kwargs: dict
+            keyword arguments for background data computer
+        segmenter_code: str
+            code of segmenter to use
+        segmenter_kwargs: dict
+            keyword arguments for segmenter
+        feature_code: str
+            code of feature extractor
+        feature_kwargs: dict
+            keyword arguments for feature extractor
+        gate_code: str
+            code for gating/event filtering class
+        gate_kwargs: dict
+            keyword arguments for gating/event filtering class
+        basin_strategy: str
+            strategy on how to handle event data; In principle, not all
+            events have to be stored in the output file if basins are
+            defined, linking back to the original file.
+            - You can "drain" all basins which means that the output file
+              will contain all features, but will also be very big.
+            - You can "tap" the basins, including the input file, which means
+              that the output file will be comparatively small.
+        no_basins_in_output: bool
+            Deprecated
+        num_procs: int
+            Number of processes to use
+        debug: bool
+            Whether to be verbose and use threads instead of processes
+        """
+        if no_basins_in_output is not None:
+            warnings.warn("The `no_basins_in_output` keyword argument is "
+                          "deprecated. Please use `basin_strategy` instead.")
+            if no_basins_in_output:
+                basin_strategy = "drain"
+            else:
+                basin_strategy = "tap"
+
         #: initialize keyword arguments for this job
         self.kwargs = {}
         spec = inspect.getfullargspec(DCNumPipelineJob.__init__)

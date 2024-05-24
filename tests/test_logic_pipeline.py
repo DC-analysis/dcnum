@@ -21,6 +21,38 @@ def get_log(hd: read.HDF5Data,
         raise KeyError(f"Log starting with {startswith} not found!")
 
 
+def test_basin_strategy_tap():
+    """When basin strategy is "tap", features are mapped from the input"""
+    path_orig = retrieve_data("fmt-hdf5_cytoshot_full-features_2023.zip")
+    path = path_orig.with_name("input.rtdc")
+    path_out = path_orig.with_name("out.rtdc")
+    with read.concatenated_hdf5_data(5 * [path_orig], path_out=path):
+        pass
+
+    job = logic.DCNumPipelineJob(path_in=path,
+                                 path_out=path_out,
+                                 background_kwargs={"kernel_size": 150},
+                                 basin_strategy="tap",
+                                 debug=True)
+    with logic.DCNumJobRunner(job=job) as runner:
+        runner.run()
+
+    with h5py.File(path_out) as h5:
+        assert h5.attrs["pipeline:dcnum background"] \
+               == "sparsemed:k=150^s=1^t=0^f=0.8^o=1"
+        assert "image_bg" in h5["events"]
+        assert "bg_off" in h5["events"]
+        assert "deform" in h5["events"]
+        # the rest of the original features are basins!
+        assert "time" not in h5["events"]
+        assert "image" not in h5["events"]
+        for feat in h5["events"]:
+            assert len(h5["events"][feat]) == 275
+        # The other features are accessed via basins
+        hd = read.HDF5Data(h5)
+        assert "image" in hd
+
+
 def test_chained_pipeline():
     """Test running two pipelines consecutively"""
     path_orig = retrieve_data("fmt-hdf5_cytoshot_full-features_2023.zip")
@@ -41,12 +73,17 @@ def test_chained_pipeline():
     with h5py.File(path2) as h5:
         assert h5.attrs["pipeline:dcnum background"] \
                == "sparsemed:k=150^s=1^t=0^f=0.8^o=1"
+        assert "image" in h5["events"]
+        assert "image_bg" in h5["events"]
+        for feat in h5["events"]:
+            assert len(h5["events"][feat]) == 275
 
-    # now when we do everything again, not a things should be done
+    # now when we do everything again, the pipeline changes
     job2 = logic.DCNumPipelineJob(path_in=path2,
                                   path_out=path2.with_name("final_out.rtdc"),
                                   background_kwargs={"kernel_size": 250},
                                   debug=True)
+
     with logic.DCNumJobRunner(job=job2) as runner2:
         runner2.run()
 
@@ -57,6 +94,8 @@ def test_chained_pipeline():
         assert len(h5["events/deform"]) == 285
         assert h5.attrs["pipeline:dcnum background"] \
                == "sparsemed:k=250^s=1^t=0^f=0.8^o=1"
+        for feat in h5["events"]:
+            assert len(h5["events"][feat]) == 285
 
 
 def test_duplicate_pipeline():
@@ -108,7 +147,6 @@ def test_duplicate_pipeline():
     job2 = logic.DCNumPipelineJob(
         path_in=path2,
         path_out=path2.with_name("final_out.rtdc"),
-        no_basins_in_output=True,
         background_code="copy",
         segmenter_code="thresh",
         segmenter_kwargs={"thresh": -6,
@@ -189,7 +227,7 @@ def test_duplicate_pipeline_redo_index_mapping():
     job2 = logic.DCNumPipelineJob(
         path_in=path2,
         path_out=path2.with_name("final_out.rtdc"),
-        no_basins_in_output=True,
+
         data_kwargs={"index_mapping": 10},
         background_code="copy",
         segmenter_code="thresh",
@@ -274,7 +312,6 @@ def test_duplicate_pipeline_redo_yield():
     job2 = logic.DCNumPipelineJob(
         path_in=path2,
         path_out=path2.with_name("final_out.rtdc"),
-        no_basins_in_output=True,
         background_code="copy",
         segmenter_code="thresh",
         segmenter_kwargs={"thresh": -6,
@@ -375,31 +412,10 @@ def test_duplicate_transfer_basin_data():
 
     with h5py.File(path2) as h5:
         # The feature comes from the input file and will *not* be copied.
+        # The "peter" feature is also not part of the PROTECTED_FEATURES,
+        # so there should never be a "peter" feature from any input file
+        # in any output file.
         assert "peter" not in h5["events"]
-
-    # Now we change things. The input file now contains basins that should
-    # also be present in the output file. Using the `no_basins_in_output`
-    # option, the feature data from the input should actually be stored
-    # in the output file.
-    with write.HDF5Writer(path2) as hw2:
-        del hw2.h5["logs"]  # remove logs
-        path_basin2 = path2.with_name("data_basin_2.rtdc")
-        # store the basin in the original file
-        hw2.store_basin(name="test", paths=[path_basin2], features=["peter2"])
-        # store the peter data in the basin
-        with h5py.File(path_basin2, "a") as hb2:
-            hb2["events/peter2"] = 3.15 * hw2.h5["events/deform"][:]
-
-    job2 = logic.DCNumPipelineJob(path_in=path2,
-                                  path_out=path2.with_name("final_out.rtdc"),
-                                  no_basins_in_output=True,
-                                  debug=True)
-    with logic.DCNumJobRunner(job=job2) as runner2:
-        runner2.run()
-
-    with h5py.File(job2["path_out"]) as h52:
-        # The feature comes from the input file and *will* be copied.
-        assert "peter2" in h52["events"]
 
 
 def test_error_file_exists():

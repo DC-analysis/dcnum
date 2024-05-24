@@ -11,6 +11,79 @@ from dcnum import __version__ as version
 from helper_methods import retrieve_data
 
 
+@pytest.mark.parametrize("mapping,mslice", [
+    [None, slice(None)],
+    [np.arange(3), slice(0, 3)],
+    [np.arange(2, 4), slice(2, 4)],
+])
+def test_copy_features(mapping, mslice):
+    path = retrieve_data(
+        "fmt-hdf5_cytoshot_full-features_legacy_allev_2023.zip")
+    path_wrt = path.with_name("written.hdf5")
+
+    with h5py.File(path, "r") as h5_src, h5py.File(path_wrt, "w") as h5_dst:
+        write.copy_metadata(h5_src=h5_src, h5_dst=h5_dst, copy_basins=False)
+        write.copy_features(h5_src=h5_src,
+                            h5_dst=h5_dst,
+                            features=["deform", "image", "aspect"],
+                            mapping=mapping,
+                            )
+        assert np.all(h5_src["events/deform"][mslice]
+                      == h5_dst["events/deform"][:])
+        assert np.all(h5_src["events/image"][mslice]
+                      == h5_dst["events/image"][:])
+        assert np.all(h5_src["events/aspect"][mslice]
+                      == h5_dst["events/aspect"][:])
+
+
+def test_copy_features_error_exists():
+    path = retrieve_data(
+        "fmt-hdf5_cytoshot_full-features_legacy_allev_2023.zip")
+    path_wrt = path.with_name("written.hdf5")
+
+    with h5py.File(path, "r") as h5_src, h5py.File(path_wrt, "w") as h5_dst:
+        write.copy_metadata(h5_src=h5_src, h5_dst=h5_dst, copy_basins=False)
+        write.copy_features(h5_src=h5_src,
+                            h5_dst=h5_dst,
+                            features=["deform"],
+                            )
+        with pytest.raises(ValueError, match="already contains the feature"):
+            write.copy_features(h5_src=h5_src,
+                                h5_dst=h5_dst,
+                                features=["deform"],
+                                )
+
+
+def test_copy_features_error_missing():
+    path = retrieve_data(
+        "fmt-hdf5_cytoshot_full-features_legacy_allev_2023.zip")
+    path_wrt = path.with_name("written.hdf5")
+
+    with h5py.File(path, "r") as h5_src, h5py.File(path_wrt, "w") as h5_dst:
+        write.copy_metadata(h5_src=h5_src, h5_dst=h5_dst, copy_basins=False)
+        with pytest.raises(KeyError, match="object 'peter' doesn't exist"):
+            write.copy_features(h5_src=h5_src,
+                                h5_dst=h5_dst,
+                                features=["peter"],
+                                )
+
+
+def test_copy_features_error_type_group():
+    path = retrieve_data(
+        "fmt-hdf5_cytoshot_full-features_legacy_allev_2023.zip")
+    path_wrt = path.with_name("written.hdf5")
+
+    with h5py.File(path, "a") as h5_src, h5py.File(path_wrt, "w") as h5_dst:
+        write.copy_metadata(h5_src=h5_src, h5_dst=h5_dst, copy_basins=False)
+        h5_src["events"].require_group("peter")
+        with pytest.raises(NotImplementedError,
+                           match="dataset-based features are supported"):
+            write.copy_features(h5_src=h5_src,
+                                h5_dst=h5_dst,
+                                features=["peter"],
+                                )
+
+
 def test_copy_metadata_empty_log_variable_length_string():
     path = retrieve_data(
         "fmt-hdf5_cytoshot_full-features_legacy_allev_2023.zip")

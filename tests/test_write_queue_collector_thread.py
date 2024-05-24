@@ -80,7 +80,7 @@ def test_queue_collector_thread():
     assert np.all(deform1 == [.1, .1, .2, .3])
     feat, _ = writer_dq.popleft()
     assert feat == "area_um"
-    for fexp in data.features_scalar_frame + ["image", "image_bg", "nevents"]:
+    for fexp in ["basinmap0", "nevents"]:
         fact, _ = writer_dq.popleft()
         assert fexp == fact
 
@@ -90,7 +90,7 @@ def test_queue_collector_thread():
     assert np.all(deform1 == [.1, .1, .2, .3, .4, .5])
     feat, _ = writer_dq.popleft()
     assert feat == "area_um"
-    for fexp in data.features_scalar_frame + ["image", "image_bg", "nevents"]:
+    for fexp in ["basinmap0", "nevents"]:
         fact, _ = writer_dq.popleft()
         assert fexp == fact
 
@@ -147,7 +147,7 @@ def test_queue_collector_thread_with_full_stash():
     assert np.all(deform1 == [.1, .1, .2, .3])
     feat, _ = writer_dq.popleft()
     assert feat == "area_um"
-    for fexp in data.features_scalar_frame + ["image", "image_bg", "nevents"]:
+    for fexp in ["basinmap0", "nevents"]:
         fact, _ = writer_dq.popleft()
         assert fexp == fact
 
@@ -157,7 +157,7 @@ def test_queue_collector_thread_with_full_stash():
     assert np.all(deform1 == [.1, .1, .2, .3, .4, .5])
     feat, _ = writer_dq.popleft()
     assert feat == "area_um"
-    for fexp in data.features_scalar_frame + ["image", "image_bg", "nevents"]:
+    for fexp in ["basinmap0", "nevents"]:
         fact, _ = writer_dq.popleft()
         assert fexp == fact
 

@@ -14,6 +14,7 @@ import traceback
 import uuid
 
 import h5py
+import numpy as np
 
 from ..feat.feat_background.base import get_available_background_methods
 from ..feat.queue_event_extractor import QueueEventExtractor
@@ -22,9 +23,9 @@ from ..feat import EventExtractorManagerThread
 from ..segm import SegmenterManagerThread, get_available_segmenters
 from ..meta import ppid
 from ..read import HDF5Data
-from .._version import version_tuple
+from .._version import version, version_tuple
 from ..write import (
-    DequeWriterThread, HDF5Writer, QueueCollectorThread,
+    DequeWriterThread, HDF5Writer, QueueCollectorThread, copy_features,
     copy_metadata, create_with_basins, set_default_filter_kwargs
 )
 
@@ -371,16 +372,22 @@ class DCNumJobRunner(threading.Thread):
             # Note any new actions that work on `self.path_temp_in` are not
             # reflected in `self.path_temp_out`.
             self.path_temp_in.rename(self.path_temp_out)
+            # Since no segmentation was done, the output file now does not
+            # contain any events. This is not really what we wanted, but we
+            # can still store all features in the output file if required.
+            if self.job["basin_strategy"] == "drain":
+                orig_feats = []
+                for feat in self.draw.h5["events"].keys():
+                    if isinstance(self.draw.h5["events"][feat], h5py.Dataset):
+                        # copy_features does not support Groups
+                        orig_feats.append(feat)
+                with h5py.File(self.path_temp_out, "a") as h5_dst:
+                    copy_features(h5_src=self.draw.h5,
+                                  h5_dst=h5_dst,
+                                  features=orig_feats,
+                                  mapping=None)
 
         self.state = "cleanup"
-
-        # The user would normally expect the output file to be something
-        # that is self-contained (copying the file wildly across file
-        # systems and network shares should not impair feature availability).
-        # Therefore, we copy any remaining basin-based features to the
-        # temporary output file.
-        if self.job["no_basins_in_output"]:
-            self.task_transfer_basin_data()
 
         with HDF5Writer(self.path_temp_out) as hw:
             # pipeline metadata
@@ -451,6 +458,9 @@ class DCNumJobRunner(threading.Thread):
                 mid_new = f"{mid_cur}_{mid_ap}" if mid_cur else mid_ap
                 hw.h5.attrs["experiment:run identifier"] = mid_new
 
+        # Handle basin data according to the user's request
+        self.task_enforce_basin_strategy()
+
         trun = datetime.timedelta(seconds=round(time.monotonic() - time_start))
         self.logger.info(f"Run duration: {str(trun)}")
         self.logger.info(time.strftime("Run stop: %Y-%m-%d-%H.%M.%S",
@@ -491,6 +501,80 @@ class DCNumJobRunner(threading.Thread):
             self._progress_bg = bic.image_proc
             bic.process()
         self.logger.info("Finished background computation")
+
+    def task_enforce_basin_strategy(self):
+        """Transfer basin data from input files to output if requested
+
+        The user specified the "basin_strategy" keyword argument in
+        `self.job`. If this is set to "drain", then copy all basin
+        information from the input file to the output file. If it
+        is set to "tap", then only create basins in the output file.
+        """
+        # We need to make sure that the features are correctly attributed
+        # from the input files. E.g. if the input file already has
+        # background images, but we recompute the background images, then
+        # we have to use the data from the recomputed background file.
+        # We achieve this by keeping a specific order and only copying those
+        # features that we don't already have in the output file.
+        feats_raw = [
+            # 1. background data from the temporary input image
+            # (this must come before draw [sic!])
+            [self.dtin.h5, ["image_bg", "bg_off"], "critical"],
+            # 2. frame-based scalar features from the raw input file
+            # (e.g. "temp" or "frame")
+            [self.draw.h5, self.draw.features_scalar_frame, "optional"],
+            # 3. image features from the input file
+            [self.draw.h5, ["image", "image_bg", "bg_off"], "optional"],
+        ]
+        with h5py.File(self.path_temp_out, "a") as hout:
+            # First, we have to determine the basin mapping from input to
+            # output. This information is stored by the QueueCollectorThread
+            # in the "basinmap0" feature, ready to be used by us.
+            if "basinmap0" in hout["events"]:
+                basinmap = hout["events/basinmap0"][:]
+                if (len(basinmap) == len(self.draw)
+                        and np.all(basinmap == np.arange(len(self.draw)))):
+                    # This means that the images in the input overlap perfectly
+                    # with the images in the output, i.e. a "copy" segmenter
+                    # was used or something is very reproducible.
+                    # We set basinmap to None to be more efficient.
+                    basinmap = None
+            else:
+                # The input is identical to the output, because we are using
+                # the same pipeline identifier.
+                basinmap = None
+
+            for hin, feats, importance in feats_raw:
+                # Only consider features that are available in the input
+                # and that are not already in the output.
+                feats = [f for f in feats
+                         if (f in hin["events"] and f not in hout["events"])]
+                if not feats:
+                    continue
+                elif (self.job["basin_strategy"] == "drain"
+                      or importance == "critical"):
+                    # Copy all features over to the output file.
+                    self.logger.debug(f"Transferring {feats} to output file")
+                    copy_features(h5_src=hin,
+                                  h5_dst=hout,
+                                  features=feats,
+                                  mapping=basinmap)
+                else:
+                    # Create basins for the "optional" features in the output
+                    # file. Note that the "critical" features never reach this
+                    # case.
+                    self.logger.debug(f"Creating basin for {feats}")
+                    # Relative and absolute paths.
+                    pin = pathlib.Path(hin.filename).resolve()
+                    pout = pathlib.Path(hout.filename).resolve()
+                    paths = [pin, os.path.relpath(pin, pout)]
+                    hw = HDF5Writer(hout)
+                    hw.store_basin(name="dcnum basin",
+                                   features=feats,
+                                   mapping=basinmap,
+                                   paths=paths,
+                                   description=f"Created with dcnum {version}",
+                                   )
 
     def task_segment_extract(self):
         self.logger.info("Starting segmentation and feature extraction")
@@ -629,21 +713,6 @@ class DCNumJobRunner(threading.Thread):
                 f"input file or revise your pipeline")
 
         self.logger.info("Finished segmentation and feature extraction")
-
-    def task_transfer_basin_data(self):
-        with h5py.File(self.path_temp_out, "a") as hout:
-            hd = HDF5Data(hout)
-            for ii, _ in enumerate(hd.basins):
-                hindat, features = hd.get_basin_data(ii)
-                for feat in features:
-                    if feat not in hout["events"]:
-                        self.logger.debug(
-                            f"Transferring {feat} to output file")
-                        h5py.h5o.copy(src_loc=hindat.h5["events"].id,
-                                      src_name=feat.encode(),
-                                      dst_loc=hout["events"].id,
-                                      dst_name=feat.encode(),
-                                      )
 
 
 def join_thread_helper(thr, timeout, retries, logger, name):
