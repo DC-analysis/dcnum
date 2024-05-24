@@ -4,12 +4,14 @@ import pathlib
 import threading
 import time
 
+import h5py
+
 from .writer import HDF5Writer
 
 
 class DequeWriterThread(threading.Thread):
     def __init__(self,
-                 path_out: pathlib.Path,
+                 path_out: pathlib.Path | h5py.File,
                  dq: collections.deque,
                  ds_kwds: dict = None,
                  mode: str = "a",
