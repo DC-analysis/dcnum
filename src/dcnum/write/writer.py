@@ -303,7 +303,7 @@ def create_with_basins(
 def copy_features(h5_src: h5py.File,
                   h5_dst: h5py.File,
                   features: List[str],
-                  mapping: np.ndarray = None
+                  mapping: np.ndarray = None,
                   ):
     """Copy feature data from one HDF5 file to another
 

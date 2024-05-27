@@ -44,6 +44,7 @@ valid_states = [
     "setup",
     "background",
     "segmentation",
+    "plumbing",
     "cleanup",
     "done",
     "error",
@@ -80,8 +81,9 @@ class DCNumJobRunner(threading.Thread):
         # current job state
         self._state = "init"
         # overall progress [0, 1]
-        self._progress_bg = None
-        self._progress_ex = None
+        self._progress_bg = None  # background
+        self._progress_ex = None  # segmentation
+        self._progress_bn = None  # creating basins
         # segmentation frame rate
         self._segm_rate = 0
 
@@ -238,13 +240,12 @@ class DCNumJobRunner(threading.Thread):
         # how much fractional time each processing step takes.
         bgw = 4  # fraction of background
         exw = 27  # fraction of segmentation and feature extraction
-        # fraction of cleanup operations
         if self.job["basin_strategy"] == "drain":
-            # because data need to be copied
-            clw = 15
+            drw = 15  # because data need to be copied
         else:
-            clw = 1
-        tot = bgw + exw + clw
+            drw = 1  # just creating the basins in output file
+        clw = 1  # fraction of cleanup operations
+        tot = bgw + exw + drw + clw
         progress = 0
         st = self.state
 
@@ -262,6 +263,13 @@ class DCNumJobRunner(threading.Thread):
             progress += exw / tot
         elif self._progress_ex is not None:
             progress += self._progress_ex * exw / tot
+
+        # draining basins
+        if valid_states.index(st) > valid_states.index("plumbing"):
+            # plumbing already done
+            progress += drw / tot
+        if self._progress_bn is not None:
+            progress += self._progress_bn * drw / tot
 
         if self.state == "done":
             progress = 1
@@ -392,7 +400,6 @@ class DCNumJobRunner(threading.Thread):
                                   features=orig_feats,
                                   mapping=None)
 
-        self.state = "cleanup"
 
         with HDF5Writer(self.path_temp_out) as hw:
             # pipeline metadata
@@ -464,7 +471,10 @@ class DCNumJobRunner(threading.Thread):
                 hw.h5.attrs["experiment:run identifier"] = mid_new
 
         # Handle basin data according to the user's request
+        self.state = "plumbing"
         self.task_enforce_basin_strategy()
+
+        self.state = "cleanup"
 
         trun = datetime.timedelta(seconds=round(time.monotonic() - time_start))
         self.logger.info(f"Run duration: {str(trun)}")
@@ -515,6 +525,7 @@ class DCNumJobRunner(threading.Thread):
         information from the input file to the output file. If it
         is set to "tap", then only create basins in the output file.
         """
+        self._progress_bn = 0
         t0 = time.perf_counter()
         # We need to make sure that the features are correctly attributed
         # from the input files. E.g. if the input file already has
@@ -611,6 +622,7 @@ class DCNumJobRunner(threading.Thread):
                                    paths=paths,
                                    description=f"Created with dcnum {version}",
                                    )
+                self._progress_bn += 1 / len(feats_raw)
         t_tot = time.perf_counter() - t0
         self.logger.info(f"Enforcing basin strategy time: {t_tot:.1f}s")
 
