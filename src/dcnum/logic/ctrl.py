@@ -22,7 +22,7 @@ from ..feat import gate
 from ..feat import EventExtractorManagerThread
 from ..segm import SegmenterManagerThread, get_available_segmenters
 from ..meta import ppid
-from ..read import HDF5Data
+from ..read import HDF5Data, get_mapping_indices
 from .._version import version, version_tuple
 from ..write import (
     DequeWriterThread, HDF5Writer, QueueCollectorThread, copy_features,
@@ -528,18 +528,49 @@ class DCNumJobRunner(threading.Thread):
             [self.draw.h5, ["image", "image_bg", "bg_off"], "optional"],
         ]
         with h5py.File(self.path_temp_out, "a") as hout:
+            hw = HDF5Writer(hout)
             # First, we have to determine the basin mapping from input to
             # output. This information is stored by the QueueCollectorThread
             # in the "basinmap0" feature, ready to be used by us.
-            if "basinmap0" in hout["events"]:
-                basinmap = hout["events/basinmap0"][:]
-                if (len(basinmap) == len(self.draw)
-                        and np.all(basinmap == np.arange(len(self.draw)))):
+            if "index_unmapped" in hout["events"]:
+                # The unmapped indices enumerate the events in the output file
+                # with indices from the mapped input file. E.g. if for the
+                # first image in the input file, two events are found and for
+                # the second image in the input file, three events are found,
+                # then this would contain [0, 0, 1, 1, 1, ...]. If the index
+                # mapping of the input file was set to slice(1, 100), then the
+                # first image would not be there, and we would have
+                # [1, 1, 1, ...].
+                idx_um = hout["events/index_unmapped"]
+
+                # If we want to convert this to an actual basinmap feature,
+                # then we have to convert those indices to indices that map
+                # to the original input HDF5 file.
+                raw_im = self.draw.index_mapping
+                if raw_im is None:
+                    self.logger.info("Input file mapped with basinmap0")
+                    # Create a hard link to save time and space
+                    hout["events/basinmap0"] = hout["events/index_unmapped"]
+                    basinmap = idx_um
+                else:
+                    basinmap = get_mapping_indices(raw_im)[idx_um]
+                    # Store the mapped basin data in the output file.
+                    hw.store_feature_chunk("basinmap0", basinmap)
+                # We don't need them anymore.
+                del hout["events/index_unmapped"]
+
+                # Note that `size_raw != (len(self.draw))` [sic!]. The former
+                # is the size of the raw dataset and the latter is its mapped
+                # size!
+                size_raw = self.draw.h5.attrs["experiment:event count"]
+                if (len(basinmap) == size_raw
+                        and np.all(basinmap == np.arange(size_raw))):
                     # This means that the images in the input overlap perfectly
                     # with the images in the output, i.e. a "copy" segmenter
                     # was used or something is very reproducible.
                     # We set basinmap to None to be more efficient.
                     basinmap = None
+
             else:
                 # The input is identical to the output, because we are using
                 # the same pipeline identifier.
@@ -554,22 +585,21 @@ class DCNumJobRunner(threading.Thread):
                     continue
                 elif (self.job["basin_strategy"] == "drain"
                       or importance == "critical"):
-                    # Copy all features over to the output file.
+                    # DRAIN: Copy all features over to the output file.
                     self.logger.debug(f"Transferring {feats} to output file")
                     copy_features(h5_src=hin,
                                   h5_dst=hout,
                                   features=feats,
                                   mapping=basinmap)
                 else:
-                    # Create basins for the "optional" features in the output
-                    # file. Note that the "critical" features never reach this
-                    # case.
+                    # TAP: Create basins for the "optional" features in the
+                    # output file. Note that the "critical" features never
+                    # reach this case.
                     self.logger.debug(f"Creating basin for {feats}")
                     # Relative and absolute paths.
                     pin = pathlib.Path(hin.filename).resolve()
                     pout = pathlib.Path(hout.filename).resolve()
                     paths = [pin, os.path.relpath(pin, pout)]
-                    hw = HDF5Writer(hout)
                     hw.store_basin(name="dcnum basin",
                                    features=feats,
                                    mapping=basinmap,

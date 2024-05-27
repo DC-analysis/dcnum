@@ -21,6 +21,41 @@ def get_log(hd: read.HDF5Data,
         raise KeyError(f"Log starting with {startswith} not found!")
 
 
+def test_basin_strategy_drain_mapped_input():
+    """When basin strategy is "drain", features are mapped from the input
+
+    This test also makes sure that basin index mapping works for input files
+    that are opened with the "index_mapping" keyword argument ot HDF5Data.
+    """
+    path_orig = retrieve_data("fmt-hdf5_cytoshot_full-features_2023.zip")
+    path = path_orig.with_name("input.rtdc")
+    path_out = path_orig.with_name("out.rtdc")
+    with read.concatenated_hdf5_data(5 * [path_orig], path_out=path):
+        pass
+
+    job = logic.DCNumPipelineJob(path_in=path,
+                                 path_out=path_out,
+                                 data_kwargs={"index_mapping": slice(2, 5)},
+                                 basin_strategy="drain",
+                                 debug=True)
+    with logic.DCNumJobRunner(job=job) as runner:
+        runner.run()
+
+    with h5py.File(path_out) as ho, h5py.File(path) as hi:
+        assert "image_bg" in ho["events"]
+        assert "image" in ho["events"]
+        assert "bg_off" in ho["events"]
+        assert "deform" in ho["events"]
+        assert "basinmap0" in ho["events"]
+        basinmap0 = np.array([2, 2, 3, 3, 4, 4, 4])
+        assert np.all(ho["events/basinmap0"][:] == basinmap0)
+        assert np.all(hi["events/frame"][:][basinmap0]
+                      == ho["events/frame"][:])
+
+        for feat in ho["events"]:
+            assert len(ho["events"][feat]) == 7
+
+
 def test_basin_strategy_tap():
     """When basin strategy is "tap", features are mapped from the input"""
     path_orig = retrieve_data("fmt-hdf5_cytoshot_full-features_2023.zip")

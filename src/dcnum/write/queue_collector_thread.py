@@ -245,10 +245,14 @@ class QueueCollectorThread(threading.Thread):
             # the events that we just saved.
             indices = stash.indices_for_data
 
-            # This is the basin mapping feature we will use later on to
-            # either store the basin information or to copy the data from
-            # the input file to the output file.
-            self.writer_dq.append(("basinmap0", indices))
+            # This is the unmapped index from the input HDF5Data instance.
+            # Unmapped means that this only enumerates HDF5Data, but since
+            # HDF5Data can be mapped, the index does not necessarily enumerate
+            # the underlying HDF5 file. Later on, we will have to convert this
+            # to the correct "basinmap0" feature
+            # (see `DCNumJobRunner.task_enforce_basin_strategy`)
+            self.writer_dq.append(("index_unmapped",
+                                   np.array(indices, dtype=np.uint32)))
 
             # Write the number of events.
             self.writer_dq.append(("nevents",
