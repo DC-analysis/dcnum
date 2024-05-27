@@ -400,7 +400,6 @@ class DCNumJobRunner(threading.Thread):
                                   features=orig_feats,
                                   mapping=None)
 
-
         with HDF5Writer(self.path_temp_out) as hw:
             # pipeline metadata
             hw.h5.attrs["pipeline:dcnum generation"] = self.ppdict["gen_id"]
