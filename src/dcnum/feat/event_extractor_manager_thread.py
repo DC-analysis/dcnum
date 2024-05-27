@@ -96,8 +96,8 @@ class EventExtractorManagerThread(threading.Thread):
             # If the writer_dq starts filling up, then this could lead to
             # an oom-kill signal. Stall for the writer to prevent this.
             ldq = len(self.writer_dq)
-            if ldq > 100:
-                stallsec = ldq / 100
+            if ldq > 1000:
+                stallsec = ldq / 1000
                 self.logger.warning(
                     f"Stalling {stallsec:.1f}s for slow writer")
                 time.sleep(stallsec)
