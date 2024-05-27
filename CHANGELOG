@@ -1,6 +1,7 @@
 0.20.0
  - feat: support reading mapped basins
  - feat: support writing mapped-basin-based output files
+ - fix: copy "bg_off" data to output file when copying background data
  - enh: allow to slice BaseImageChunkCache
  - enh: sort logs, tables and basins for reproducible access
  - enh: add more timing information in logs

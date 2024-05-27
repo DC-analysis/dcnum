@@ -577,6 +577,7 @@ class DCNumJobRunner(threading.Thread):
                 basinmap = None
 
             for hin, feats, importance in feats_raw:
+
                 # Only consider features that are available in the input
                 # and that are not already in the output.
                 feats = [f for f in feats

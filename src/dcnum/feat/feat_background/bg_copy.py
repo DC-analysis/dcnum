@@ -9,14 +9,16 @@ class BackgroundCopy(Background):
         pass
 
     def process(self):
-        """Perform median computation on entire input data"""
+        """Copy input data to output dataset"""
         if self.h5in != self.h5out:
-            hin = self.hdin.image_bg.h5ds
-            h5py.h5o.copy(src_loc=hin.parent.id,
-                          src_name=b"image_bg",
-                          dst_loc=self.h5out["events"].id,
-                          dst_name=b"image_bg",
-                          )
+            hin = self.hdin.h5
+            for feat in ["image_bg", "bg_off"]:
+                if feat in hin["events"]:
+                    h5py.h5o.copy(src_loc=hin["events"].id,
+                                  src_name=feat.encode("utf-8"),
+                                  dst_loc=self.h5out["events"].id,
+                                  dst_name=feat.encode("utf-8"),
+                                  )
 
         # set progress to 100%
         self.image_proc.value = self.image_count
