@@ -88,6 +88,45 @@ def test_basin_strategy_tap():
         assert "image" in hd
 
 
+def test_basin_relative_path():
+    path_orig = retrieve_data("fmt-hdf5_cytoshot_full-features_2023.zip")
+    path = path_orig.with_name("input.rtdc")
+    path_out = path_orig.with_name("out.rtdc")
+    with read.concatenated_hdf5_data(5 * [path_orig], path_out=path):
+        pass
+
+    job = logic.DCNumPipelineJob(path_in=path,
+                                 path_out=path_out,
+                                 background_kwargs={"kernel_size": 150},
+                                 basin_strategy="tap",
+                                 debug=True)
+    with logic.DCNumJobRunner(job=job) as runner:
+        runner.run()
+
+    dir_new = path_orig.parent / "another_directory"
+    dir_new.mkdir()
+    path_new = dir_new / path.name
+    path_out_new = dir_new / path_out.name
+    path.rename(path_new)
+    path_out.rename(path_out_new)
+
+    # Everything should just work, because we have relative paths in the basin.
+    with h5py.File(path_out_new) as h5:
+        assert h5.attrs["pipeline:dcnum background"] \
+               == "sparsemed:k=150^s=1^t=0^f=0.8^o=1"
+        assert "image_bg" in h5["events"]
+        assert "bg_off" in h5["events"]
+        assert "deform" in h5["events"]
+        # the rest of the original features are basins!
+        assert "time" not in h5["events"]
+        assert "image" not in h5["events"]
+        for feat in h5["events"]:
+            assert len(h5["events"][feat]) == 275
+        # The other features are accessed via basins
+        hd = read.HDF5Data(h5)
+        assert "image" in hd
+
+
 def test_chained_pipeline():
     """Test running two pipelines consecutively"""
     path_orig = retrieve_data("fmt-hdf5_cytoshot_full-features_2023.zip")

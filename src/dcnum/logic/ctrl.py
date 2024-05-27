@@ -613,7 +613,7 @@ class DCNumJobRunner(threading.Thread):
                     self.logger.debug(f"Creating basin for {feats}")
                     # Relative and absolute paths.
                     pin = pathlib.Path(hin.filename).resolve()
-                    pout = pathlib.Path(hout.filename).resolve()
+                    pout = pathlib.Path(hout.filename).resolve().parent
                     paths = [pin, os.path.relpath(pin, pout)]
                     hw.store_basin(name="dcnum basin",
                                    features=feats,

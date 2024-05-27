@@ -1,4 +1,5 @@
 0.20.1
+ - fix: relative basin locations not written correctly
  - enh: increase deque size threshold for waiting for writer
 0.20.0
  - feat: support reading mapped basins
