@@ -21,7 +21,7 @@ class BackgroundCopy(Background):
                                   )
 
         # set progress to 100%
-        self.image_proc.value = self.image_count
+        self.image_proc.value = 1
 
     def process_approach(self):
         # We do the copying in `process`, because we do not want to modify

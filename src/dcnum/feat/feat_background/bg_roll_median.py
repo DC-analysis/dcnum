@@ -184,7 +184,7 @@ class BackgroundRollMed(Background):
                 num_remaining,
                 axis=0)
             self.writer.store_feature_chunk("image_bg", last_chunk)
-            self.image_proc.value += num_remaining
+        self.image_proc.value = 1
 
     def process_next_batch(self):
         """Process one batch of input data"""
@@ -223,7 +223,7 @@ class BackgroundRollMed(Background):
             )
 
         self.current_batch += 1
-        self.image_proc.value += self.batch_size
+        self.image_proc.value += self.batch_size / self.image_count
 
 
 class WorkerRollMed(mp_spawn.Process):

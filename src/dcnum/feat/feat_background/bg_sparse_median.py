@@ -329,7 +329,7 @@ class BackgroundSparseMed(Background):
             # Fill up remainder of index array with last entry
             bg_idx[idx1:] = ii
 
-        self.image_proc.value = self.image_count
+        self.image_proc.value = 1
 
         # Write background data
         pos = 0
@@ -393,7 +393,7 @@ class BackgroundSparseMed(Background):
 
         self.bg_images[ii] = self.shared_output.reshape(self.image_shape)
 
-        self.image_proc.value = idx_stop
+        self.image_proc.value = idx_stop / self.image_count
 
 
 class WorkerSparseMed(mp_spawn.Process):

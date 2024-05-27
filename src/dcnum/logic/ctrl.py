@@ -238,7 +238,12 @@ class DCNumJobRunner(threading.Thread):
         # how much fractional time each processing step takes.
         bgw = 4  # fraction of background
         exw = 27  # fraction of segmentation and feature extraction
-        clw = 1  # fraction of cleanup operations
+        # fraction of cleanup operations
+        if self.job["basin_strategy"] == "drain":
+            # because data need to be copied
+            clw = 15
+        else:
+            clw = 1
         tot = bgw + exw + clw
         progress = 0
         st = self.state
@@ -248,15 +253,15 @@ class DCNumJobRunner(threading.Thread):
             # background already computed
             progress += bgw / tot
         elif self._progress_bg is not None:
-            # This is the image count of the input dataset
-            progress += bgw / tot * (self._progress_bg.value / len(self.draw))
+            # This is the image count of the input dataset.
+            progress += self._progress_bg.value * bgw / tot
 
         # segmentation
         if valid_states.index(st) > valid_states.index("segmentation"):
             # segmentation already done
             progress += exw / tot
         elif self._progress_ex is not None:
-            progress += exw / tot * self._progress_ex
+            progress += self._progress_ex * exw / tot
 
         if self.state == "done":
             progress = 1
@@ -577,7 +582,6 @@ class DCNumJobRunner(threading.Thread):
                 basinmap = None
 
             for hin, feats, importance in feats_raw:
-
                 # Only consider features that are available in the input
                 # and that are not already in the output.
                 feats = [f for f in feats

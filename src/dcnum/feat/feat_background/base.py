@@ -62,8 +62,8 @@ class Background(abc.ABC):
 
         #: number of images in the input data
         self.image_count = None
-        #: number of images that have been processed
-        self.image_proc = mp_spawn.Value("L", 0)
+        #: fraction images that have been processed
+        self.image_proc = mp_spawn.Value("d", 0)
 
         #: HDF5Data instance for input data
         self.hdin = None
@@ -185,7 +185,7 @@ class Background(abc.ABC):
         if self.image_count == 0:
             return 0.
         else:
-            return self.image_proc.value / self.image_count
+            return self.image_proc.value
 
     def process(self):
         # Delete any old background data
