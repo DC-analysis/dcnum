@@ -8,7 +8,7 @@ PROTECTED_FEATURES = [
     "pressure",
     "temp",
     "temp_amb",
-    "time"
+    "time",
 ]
 
 # User-defined features may be anything, but if the user needs something
