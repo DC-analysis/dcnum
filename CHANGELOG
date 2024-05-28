@@ -1,3 +1,5 @@
+0.20.2
+ - ref: remove __init__ from SegmentThresh
 0.20.1
  - fix: relative basin locations not written correctly
  - enh: increase deque size threshold for waiting for writer

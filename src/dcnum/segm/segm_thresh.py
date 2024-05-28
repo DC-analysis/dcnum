@@ -10,18 +10,6 @@ class SegmentThresh(CPUSegmenter):
     }
     requires_background_correction = True
 
-    def __init__(self, thresh=-6, *args, **kwargs):
-        """Simple image thresholding segmentation
-
-        Parameters
-        ----------
-        thresh: int
-            grayscale threshold value for creating the mask image;
-            For a background-corrected image, pixels with values below
-            this value are considered to be part of the mask.
-        """
-        super(SegmentThresh, self).__init__(thresh=thresh, *args, **kwargs)
-
     @staticmethod
     def segment_approach(image, *,
                          thresh: float = -6):
