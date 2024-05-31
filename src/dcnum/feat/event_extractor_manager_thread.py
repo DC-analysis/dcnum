@@ -104,25 +104,32 @@ class EventExtractorManagerThread(threading.Thread):
                     f"Stalled {stall_time + 1:.1f}s for slow writer "
                     f"({ldq} chunks queued)")
 
-            cur_slot = 0
             unavailable_slots = 0
+            found_free_slot = False
             # Check all slots for segmented labels
-            while True:
-                # - "e" there is data from the segmenter (the extractor
-                #   can take it and process it)
-                # - "s" the extractor processed the data and is waiting
-                #   for the segmenter
-                if self.slot_states[cur_slot] == "e":
-                    # The segmenter has something for us in this slot.
-                    break
-                else:
-                    # Try another slot.
-                    unavailable_slots += 1
-                    cur_slot = (cur_slot + 1) % num_slots
-                if unavailable_slots >= num_slots:
-                    # There is nothing to do, try to avoid 100% CPU
-                    unavailable_slots = 0
-                    time.sleep(.1)
+            while not found_free_slot:
+                # We sort the slots according to the slot chunks so that we
+                # always process the slot with the smallest slot chunk number
+                # first. Initially, the slot_chunks array is filled with
+                # zeros, but the segmenter fills up the slots with the lowest
+                # number first.
+                for cur_slot in np.argsort(self.slot_chunks):
+                    # - "e" there is data from the segmenter (the extractor
+                    #   can take it and process it)
+                    # - "s" the extractor processed the data and is waiting
+                    #   for the segmenter
+                    if self.slot_states[cur_slot] == "e":
+                        # The segmenter has something for us in this slot.
+                        found_free_slot = True
+                        break
+                    else:
+                        # Try another slot.
+                        unavailable_slots += 1
+                        cur_slot = (cur_slot + 1) % num_slots
+                    if unavailable_slots >= num_slots:
+                        # There is nothing to do, try to avoid 100% CPU
+                        unavailable_slots = 0
+                        time.sleep(.1)
 
             t1 = time.monotonic()
 

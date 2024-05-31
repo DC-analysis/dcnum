@@ -80,26 +80,31 @@ class SegmenterManagerThread(threading.Thread):
         num_slots = len(self.slot_states)
         # We iterate over all the chunks of the image data.
         for chunk in self.image_data.iter_chunks():
-            cur_slot = 0
             unavailable_slots = 0
+            found_free_slot = False
             # Wait for a free slot to perform segmentation (compute labels)
-            while True:
-                # - "e" there is data from the segmenter (the extractor
-                #   can take it and process it)
-                # - "s" the extractor processed the data and is waiting
-                #   for the segmenter
-                if self.slot_states[cur_slot] != "e":
-                    # It's the segmenter's turn. Note that we use '!= "e"',
-                    # because the initial value is "\x00".
-                    break
-                else:
-                    # Try another slot.
-                    unavailable_slots += 1
-                    cur_slot = (cur_slot + 1) % num_slots
-                if unavailable_slots >= num_slots:
-                    # There is nothing to do, try to avoid 100% CPU
-                    unavailable_slots = 0
-                    time.sleep(.1)
+            while not found_free_slot:
+                # We sort the slots according to the slot chunks so that we
+                # always process the slot with the smallest slot chunk number
+                # first. Initially, the slot_chunks array is filled with
+                # zeros, but we populate it here.
+                for cur_slot in np.argsort(self.slot_chunks):
+                    # - "e" there is data from the segmenter (the extractor
+                    #   can take it and process it)
+                    # - "s" the extractor processed the data and is waiting
+                    #   for the segmenter
+                    if self.slot_states[cur_slot] != "e":
+                        # It's the segmenter's turn. Note that we use '!= "e"',
+                        # because the initial value is "\x00".
+                        found_free_slot = True
+                        break
+                    else:
+                        # Try another slot.
+                        unavailable_slots += 1
+                    if unavailable_slots >= num_slots:
+                        # There is nothing to do, try to avoid 100% CPU
+                        unavailable_slots = 0
+                        time.sleep(.1)
 
             t1 = time.monotonic()
 

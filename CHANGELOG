@@ -1,4 +1,6 @@
 0.20.4
+ - fix: slot_chunks were not performed in increasing order, making it
+   impossible for writer to continue writing and consequent OOM
  - enh: reserve one CPU for writer thread and control logic
  - enh: disentangle logging and debugging keyword arguments
  - enh: do not initialize slot_chunks and slot_states with lock
