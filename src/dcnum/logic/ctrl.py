@@ -670,8 +670,8 @@ class DCNumJobRunner(threading.Thread):
         num_segmenters = max(1, num_segmenters)
         self.job.kwargs["segmenter_kwargs"]["num_workers"] = num_segmenters
         self.job.kwargs["segmenter_kwargs"]["debug"] = self.job["debug"]
-        slot_chunks = mp_spawn.Array("i", num_slots)
-        slot_states = mp_spawn.Array("u", num_slots)
+        slot_chunks = mp_spawn.Array("i", num_slots, lock=False)
+        slot_states = mp_spawn.Array("u", num_slots, lock=False)
 
         self.logger.debug(f"Number of slots: {num_slots}")
         self.logger.debug(f"Number of segmenters: {num_segmenters}")

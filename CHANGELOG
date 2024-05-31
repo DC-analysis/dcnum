@@ -1,6 +1,7 @@
 0.20.4
  - enh: reserve one CPU for writer thread and control logic
  - enh: disentangle logging and debugging keyword arguments
+ - enh: do not initialize slot_chunks and slot_states with lock
 0.20.3
  - enh: improve strategy for stalling for slow writer
 0.20.2
