@@ -28,7 +28,7 @@
    postprocessing
  - feat: allow to specify ranges when creating an HDF5Data instance to
    enable e.g. processing only a portion of an input file
- - feat: volume computation via contour revolve algorithm
+ - feat: volume computation via contour revolve algorithm (#23)
  - feat: background offset (flickering) correction via the
    "offset_correction" keyword for the "sparsemed" background computer
    and "bg_off" everywhere else
