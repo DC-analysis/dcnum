@@ -38,7 +38,7 @@ class Segmenter(abc.ABC):
         kwargs_mask: dict
             Keyword arguments for mask post-processing (see `process_mask`)
         debug: bool
-            Debugging parameters
+            Enable debugging mode (e.g. CPU segmenter runs in one thread)
         kwargs:
             Additional, optional keyword arguments for `segment_batch`.
         """

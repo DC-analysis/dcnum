@@ -18,7 +18,6 @@ class SegmenterManagerThread(threading.Thread):
                  slot_states: mp.Array,
                  slot_chunks: mp.Array,
                  bg_off: np.ndarray = None,
-                 debug: bool = False,
                  *args, **kwargs):
         """Manage the segmentation of image data
 
@@ -43,10 +42,6 @@ class SegmenterManagerThread(threading.Thread):
             1d array containing additional background image offset values
             that are added to each background image before subtraction
             from the input image
-        debug:
-            Whether to run in debugging mode (more verbose messages and
-            CPU-based segmentation is done in one single thread instead
-            of in multiple subprocesses).
 
         Notes
         -----
@@ -80,15 +75,13 @@ class SegmenterManagerThread(threading.Thread):
         self.labels_list = [None] * len(self.slot_states)
         #: Time counter for segmentation
         self.t_count = 0
-        #: Whether running in debugging mode
-        self.debug = debug
 
     def run(self):
         num_slots = len(self.slot_states)
         # We iterate over all the chunks of the image data.
         for chunk in self.image_data.iter_chunks():
             cur_slot = 0
-            empty_slots = 0
+            unavailable_slots = 0
             # Wait for a free slot to perform segmentation (compute labels)
             while True:
                 # - "e" there is data from the segmenter (the extractor
@@ -101,12 +94,12 @@ class SegmenterManagerThread(threading.Thread):
                     break
                 else:
                     # Try another slot.
-                    empty_slots += 1
+                    unavailable_slots += 1
                     cur_slot = (cur_slot + 1) % num_slots
-                if empty_slots >= num_slots:
+                if unavailable_slots >= num_slots:
                     # There is nothing to do, try to avoid 100% CPU
-                    empty_slots = 0
-                    time.sleep(.01)
+                    unavailable_slots = 0
+                    time.sleep(.1)
 
             t1 = time.monotonic()
 
@@ -125,7 +118,7 @@ class SegmenterManagerThread(threading.Thread):
             # This must be done last: Let the extractor know that this
             # slot is ready for processing.
             self.slot_states[cur_slot] = "e"
-            self.logger.debug(f"Segmented one chunk: {chunk}")
+            self.logger.debug(f"Segmented chunk {chunk} in slot {cur_slot}")
 
             self.t_count += time.monotonic() - t1
 

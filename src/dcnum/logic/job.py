@@ -1,6 +1,7 @@
 import collections
 import copy
 import inspect
+import logging
 import multiprocessing as mp
 import pathlib
 from typing import Dict, Literal
@@ -31,6 +32,7 @@ class DCNumPipelineJob:
                  basin_strategy: Literal["drain", "tap"] = "drain",
                  no_basins_in_output: bool = None,
                  num_procs: int = None,
+                 log_level: int = logging.INFO,
                  debug: bool = False,
                  ):
         """Pipeline job recipe
@@ -73,8 +75,11 @@ class DCNumPipelineJob:
             Deprecated
         num_procs: int
             Number of processes to use
+        log_level: int
+            Logging level to use.
         debug: bool
-            Whether to be verbose and use threads instead of processes
+            Whether to set logging level to "DEBUG" and
+            use threads instead of processes
         """
         if no_basins_in_output is not None:
             warnings.warn("The `no_basins_in_output` keyword argument is "
@@ -104,6 +109,9 @@ class DCNumPipelineJob:
         if path_out is None:
             pin = pathlib.Path(path_in)
             path_out = pin.with_name(pin.stem + "_dcn.rtdc")
+        # Set logging level to DEBUG in debugging mode
+        if self.kwargs["debug"]:
+            self.kwargs["log_level"] = logging.DEBUG
         self.kwargs["path_out"] = pathlib.Path(path_out)
         # Set default mask kwargs for segmenter
         self.kwargs["segmenter_kwargs"].setdefault("kwargs_mask", {})

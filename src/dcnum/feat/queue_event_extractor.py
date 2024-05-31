@@ -36,7 +36,7 @@ class QueueEventExtractor:
                  finalize_extraction: mp.Value,
                  invalid_mask_counter: mp.Value,
                  worker_monitor: mp.RawArray,
-                 log_level: int = logging.INFO,
+                 log_level: int = None,
                  extract_kwargs: dict = None,
                  worker_index: int = None,
                  *args, **kwargs):
@@ -103,7 +103,7 @@ class QueueEventExtractor:
         # it looks like we have the same PID as the parent process. We
         # are setting up logging in `run`.
         self.logger = None
-        self.log_level = log_level
+        self.log_level = log_level or logging.getLogger("dcnum").level
         #: Shared array of length `len(data)` into which the number of
         #: events per frame is written.
         self.feat_nevents = feat_nevents
@@ -124,7 +124,7 @@ class QueueEventExtractor:
                         gate: Gate,
                         num_extractors: int,
                         log_queue: mp.Queue,
-                        log_level: int = logging.INFO,
+                        log_level: int = None,
                         ):
         """Get initialization arguments for :cass:`.QueueEventExtractor`
 
@@ -172,7 +172,7 @@ class QueueEventExtractor:
         args["finalize_extraction"] = mp_spawn.Value("b", False)
         args["invalid_mask_counter"] = mp_spawn.Value("L", 0)
         args["worker_monitor"] = mp_spawn.RawArray("L", num_extractors)
-        args["log_level"] = log_level
+        args["log_level"] = log_level or logging.getLogger("dcnum").level
         return args
 
     def get_events_from_masks(self, masks, data_index, *,

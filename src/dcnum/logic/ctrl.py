@@ -90,8 +90,7 @@ class DCNumJobRunner(threading.Thread):
         # Set up logging
         # General logger for this job
         self.main_logger = logging.getLogger("dcnum")
-        self.main_logger.setLevel(
-            logging.DEBUG if job["debug"] else logging.INFO)
+        self.main_logger.setLevel(job["log_level"])
         # Log file output in target directory
         self.path_log = job["path_out"].with_suffix(".log")
         self.path_log.parent.mkdir(exist_ok=True, parents=True)
@@ -666,8 +665,13 @@ class DCNumJobRunner(threading.Thread):
         num_extractors = max(1, num_extractors)
         num_segmenters = max(1, num_segmenters)
         self.job.kwargs["segmenter_kwargs"]["num_workers"] = num_segmenters
+        self.job.kwargs["segmenter_kwargs"]["debug"] = self.job["debug"]
         slot_chunks = mp_spawn.Array("i", num_slots)
         slot_states = mp_spawn.Array("u", num_slots)
+
+        self.logger.debug(f"Number of slots: {num_slots}")
+        self.logger.debug(f"Number of segmenters: {num_segmenters}")
+        self.logger.debug(f"Number of extractors: {num_extractors}")
 
         # Initialize segmenter manager thread
         thr_segm = SegmenterManagerThread(
@@ -676,7 +680,6 @@ class DCNumJobRunner(threading.Thread):
             bg_off=self.dtin["bg_off"] if "bg_off" in self.dtin else None,
             slot_states=slot_states,
             slot_chunks=slot_chunks,
-            debug=self.job["debug"],
         )
         thr_segm.start()
 
@@ -686,7 +689,7 @@ class DCNumJobRunner(threading.Thread):
             gate=gate.Gate(self.dtin, **self.job["gate_kwargs"]),
             num_extractors=num_extractors,
             log_queue=self.log_queue,
-            log_level=logging.DEBUG if self.job["debug"] else logging.INFO,
+            log_level=self.logger.level,
             )
         fe_kwargs["extract_kwargs"] = self.job["feature_kwargs"]
 

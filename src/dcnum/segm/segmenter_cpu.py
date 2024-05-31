@@ -1,4 +1,5 @@
 import abc
+import logging
 import multiprocessing as mp
 import time
 import threading
@@ -189,9 +190,11 @@ class CPUSegmenter(Segmenter, abc.ABC):
         if self.debug:
             worker_cls = CPUSegmenterWorkerThread
             num_workers = 1
+            self.logger.debug("Running with one worker in main thread")
         else:
             worker_cls = CPUSegmenterWorkerProcess
             num_workers = min(self.num_workers, image_data.shape[0])
+            self.logger.debug(f"Running with {num_workers} workers")
 
         if not self._mp_workers:
             step_size = batch_size // num_workers

@@ -33,7 +33,6 @@ def test_event_extractor_manager_thread():
         image_data=hd.image_corr,
         slot_states=slot_states,
         slot_chunks=slot_chunks,
-        debug=True,
     )
     thr_segm.start()
 

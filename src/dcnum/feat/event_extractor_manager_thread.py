@@ -46,8 +46,8 @@ class EventExtractorManagerThread(threading.Thread):
             The queue the writer uses. We monitor this queue. If it
             fills up, we take a break.
         debug:
-            Whether to run in debugging mode which means more log
-            messages and only one thread (`num_workers` has no effect).
+            Whether to run in debugging mode which means only one
+            event extraction thread (`num_workers` has no effect).
         """
         super(EventExtractorManagerThread, self).__init__(
               name="EventExtractorManager", *args, **kwargs)
@@ -149,7 +149,7 @@ class EventExtractorManagerThread(threading.Thread):
             # We are done here. The segmenter may continue its deed.
             self.slot_states[cur_slot] = "w"
 
-            self.logger.debug(f"Extracted one chunk: {chunk}")
+            self.logger.debug(f"Extracted chunk {chunk} in slot {cur_slot}")
             self.t_count += time.monotonic() - t1
 
             chunks_processed += 1
