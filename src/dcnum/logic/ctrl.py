@@ -658,9 +658,13 @@ class DCNumJobRunner(threading.Thread):
             # Split segmentation and feature extraction workers evenly.
             num_extractors = self.job["num_procs"] // 2
             num_segmenters = self.job["num_procs"] - num_extractors
+            # leave one CPU for the writer and the remaining Threads
+            num_segmenters -= 1
         else:  # GPU segmenter
             num_slots = 3
             num_extractors = self.job["num_procs"]
+            # leave one CPU for the writer and the remaining Threads
+            num_extractors -= 1
             num_segmenters = 1
         num_extractors = max(1, num_extractors)
         num_segmenters = max(1, num_segmenters)
