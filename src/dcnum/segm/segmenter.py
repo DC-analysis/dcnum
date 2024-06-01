@@ -19,7 +19,7 @@ class Segmenter(abc.ABC):
     #: Whether to enable mask post-processing. If disabled, you should
     #: make sure that your mask is properly defined and cleaned or you
     #: have to call `process_mask` in your `segment_approach` implementation.
-    mask_postprocessing = False
+    mask_postprocessing = True
     #: Default keyword arguments for mask post-processing. See `process_mask`
     #: for available options.
     mask_default_kwargs = {}

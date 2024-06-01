@@ -37,6 +37,12 @@ class MockImageData:
         return chunk
 
 
+def test_segmenter_properties():
+    assert segm.CPUSegmenter.mask_postprocessing  # sanity check
+    assert segm.GPUSegmenter.mask_postprocessing  # fixed in 0.21.0
+    assert segm.Segmenter.mask_postprocessing  # new default in 0.21.0
+
+
 def test_segmenter_labeled_mask():
     mask = np.array([
         [0, 0, 0, 0, 0, 0, 0, 0],

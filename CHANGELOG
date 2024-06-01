@@ -1,3 +1,7 @@
+0.21.0
+ - fix: GPUSegmenter did not perform mask postprocessing
+ - ref: enable mask postprocessing by default for all segmenters
+ - ref: increment DCNUM_PPID_GENERATION to 9
 0.20.4
  - fix: slot_chunks were not performed in increasing order, making it
    impossible for writer to continue writing and consequent OOM
