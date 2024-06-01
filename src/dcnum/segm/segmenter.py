@@ -184,8 +184,8 @@ class Segmenter(abc.ABC):
 
         Parameters
         ----------
-        labels: 2d integer ndarray
-            Labeled input (contains blobs with same number)
+        labels: 2d integer or boolean ndarray
+            Labeled input (contains blobs consisting of unique numbers)
         clear_border: bool
             clear the image boarder using
             :func:`skimage.segmentation.clear_border`
@@ -196,6 +196,12 @@ class Segmenter(abc.ABC):
             if > 0, perform a binary closing with a disk
             of that radius in pixels
         """
+        if labels.dtype == np.bool_:
+            # Convert mask image to labels
+            labels, _ = ndi.label(
+                input=labels,
+                structure=ndi.generate_binary_structure(2, 2))
+
         if clear_border:
             #
             # from skimage import segmentation
