@@ -98,8 +98,8 @@ class EventExtractorManagerThread(threading.Thread):
             if (ldq := len(self.writer_dq)) > 1000:
                 time.sleep(1)
                 ldq2 = len(self.writer_dq)
-                stall_time = (ldq2 - 200) / (ldq - ldq2) if ldq2 > 200 else 0
-                time.sleep(stall_time)
+                stall_time = (ldq2 - 200) / (ldq - ldq2)
+                time.sleep(stall_time if stall_time > 0 else 0)
                 self.logger.warning(
                     f"Stalled {stall_time + 1:.1f}s for slow writer "
                     f"({ldq} chunks queued)")
