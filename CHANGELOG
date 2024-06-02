@@ -1,3 +1,5 @@
+0.21.3
+ - fix: negative stall time in log messages
 0.21.2
  - fix: negative argument for time.sleep
 0.21.1
