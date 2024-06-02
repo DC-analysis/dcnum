@@ -1,3 +1,5 @@
+0.21.4
+ - fix: division by zero error when computing stall time
 0.21.3
  - fix: negative stall time in log messages
 0.21.2

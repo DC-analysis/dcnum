@@ -98,7 +98,7 @@ class EventExtractorManagerThread(threading.Thread):
             if (ldq := len(self.writer_dq)) > 1000:
                 time.sleep(1)
                 ldq2 = len(self.writer_dq)
-                stall_time = max(0., (ldq2 - 200) / (ldq - ldq2))
+                stall_time = max(0., (ldq2 - 200) / ((ldq - ldq2) or 1))
                 time.sleep(stall_time)
                 self.logger.warning(
                     f"Stalled {stall_time + 1:.1f}s for slow writer "
