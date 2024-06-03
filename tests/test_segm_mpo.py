@@ -1,6 +1,8 @@
 from dcnum import segm
 import numpy as np
 
+import pytest
+
 from helper_methods import MockImageData
 
 
@@ -19,14 +21,14 @@ def test_segm_mpo_bg_off_batch():
         [0, 0,  0,  0,  0,  0, 0, 0],
         ], dtype=int)
 
-    sm = segm.segm_thresh.SegmentThresh(thresh=-6,
+    with segm.segm_thresh.SegmentThresh(thresh=-6,
                                         kwargs_mask={"clear_border": True,
                                                      "fill_holes": True,
                                                      "closing_disk": 0,
-                                                     })
-    labels = sm.segment_batch(images=np.array([img, img]),
-                              bg_off=np.array([1.5, 0.9])
-                              )
+                                                     }) as sm:
+        labels = sm.segment_batch(images=np.array([img, img]),
+                                  bg_off=np.array([1.5, 0.9])
+                                  )
     label1_exp = np.array([
         [0, 0, 0, 0, 0, 0, 0, 0],
         [0, 0, 0, 1, 1, 1, 0, 0],
@@ -56,6 +58,23 @@ def test_segm_mpo_bg_off_batch():
 
     assert np.all(labels[0] == label1_exp)
     assert np.all(labels[1] == label2_exp)
+
+
+def test_segm_sto_bg_off_no_background_correction():
+    """
+    When a segmenter does not employ background correction, a ValueError
+    is raised when calling `segment_chunk` with bg_off."""
+    sm = segm.segm_thresh.SegmentThresh(thresh=-6,
+                                        kwargs_mask={"clear_border": True,
+                                                     "fill_holes": True,
+                                                     "closing_disk": 0,
+                                                     })
+    # This will raise the value error below
+    sm.requires_background_correction = False
+
+    im = MockImageData()
+    with pytest.raises(ValueError, match="does not employ background"):
+        sm.segment_chunk(im, chunk=1, bg_off=np.ones(100, dtype=float))
 
 
 def test_segm_mpo_bg_off_single():
