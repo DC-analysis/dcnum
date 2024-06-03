@@ -18,7 +18,7 @@ class Segmenter(abc.ABC):
     hardware_processor = "none"
     #: Whether to enable mask post-processing. If disabled, you should
     #: make sure that your mask is properly defined and cleaned or you
-    #: have to call `process_mask` in your `segment_approach` implementation.
+    #: have to call `process_mask` in your `segment_algorithm` implementation.
     mask_postprocessing = True
     #: Default keyword arguments for mask post-processing. See `process_mask`
     #: for available options.
@@ -31,7 +31,13 @@ class Segmenter(abc.ABC):
                  kwargs_mask: Dict = None,
                  debug: bool = False,
                  **kwargs):
-        """Base segmenter
+        """Base segmenter class
+
+        This is the base segmenter class for the multiprocessing operation
+        segmenter :class:`.MPOSegmenter` (multiple subprocesses are spawned
+        and each of them works on a queue of images) and the single-threaded
+        operation segmenter :class:`.STOSegmenter` (e.g. for batch
+        segmentation on a GPU).
 
         Parameters
         ----------
@@ -45,7 +51,7 @@ class Segmenter(abc.ABC):
         self.debug = debug
         self.logger = logging.getLogger(__name__).getChild(
             self.__class__.__name__)
-        spec = inspect.getfullargspec(self.segment_approach)
+        spec = inspect.getfullargspec(self.segment_algorithm)
         #: custom keyword arguments for the subclassing segmenter
         self.kwargs = spec.kwonlydefaults or {}
         self.kwargs.update(kwargs)
@@ -90,7 +96,7 @@ class Segmenter(abc.ABC):
             KEY:KW_APPROACH:KW_MASK
 
         Where KEY is e.g. "legacy" or "watershed", and KW_APPROACH is a
-        list of keyword arguments for `segment_approach`, e.g.::
+        list of keyword arguments for `segment_algorithm`, e.g.::
 
             thresh=-6^blur=0
 
@@ -137,7 +143,7 @@ class Segmenter(abc.ABC):
 
         ppid_parts = [
             cls.get_ppid_code(),
-            kwargs_to_ppid(cls, "segment_approach", kwargs),
+            kwargs_to_ppid(cls, "segment_algorithm", kwargs),
             ]
 
         if cls.mask_postprocessing:
@@ -161,7 +167,7 @@ class Segmenter(abc.ABC):
             raise ValueError(
                 f"Could not find segmenter '{code}'!")
         kwargs = ppid_to_kwargs(cls=cls,
-                                method="segment_approach",
+                                method="segment_algorithm",
                                 ppid=pp_kwargs)
         if cls.mask_postprocessing:
             pp_kwargs_mask = ppid_parts[2]
@@ -196,7 +202,7 @@ class Segmenter(abc.ABC):
             if > 0, perform a binary closing with a disk
             of that radius in pixels
         """
-        if labels.dtype == np.bool_:
+        if labels.dtype == bool:
             # Convert mask image to labels
             labels, _ = ndi.label(
                 input=labels,
@@ -268,53 +274,57 @@ class Segmenter(abc.ABC):
 
         return labels
 
-    def segment_chunk(self, image_data, chunk, bg_off=None):
-        """Return the integer labels for one `image_data` chunk"""
-        data = image_data.get_chunk(chunk)
-        if bg_off is not None:
-            bg_off_chunk = bg_off[image_data.get_chunk_slice(chunk)]
-            data = data - bg_off_chunk.reshape(-1, 1, 1)
-        return self.segment_batch(data)
+    @staticmethod
+    @abc.abstractmethod
+    def segment_algorithm(image):
+        """The segmentation algorithm implemented in the subclass
 
-    def segment_frame(self, image):
-        """Return the integer label image for `index`"""
-        segm_wrap = self.segment_frame_wrapper()
-        # obtain mask or label
-        mol = segm_wrap(image)
-        if mol.dtype == bool:
-            # convert mask to label
-            labels, _ = ndi.label(
-                input=mol,
-                structure=ndi.generate_binary_structure(2, 2))
-        else:
-            labels = mol
-        # optional postprocessing
-        if self.mask_postprocessing:
-            labels = self.process_mask(labels, **self.kwargs_mask)
-        return labels
+        Perform segmentation and return integer label or binary mask image
+        """
 
     @functools.cache
-    def segment_frame_wrapper(self):
+    def segment_algorithm_wrapper(self):
+        """Wraps `self.segment_algorithm` to only accept an image
+
+        The static method `self.segment_algorithm` may optionally accept
+        keyword arguments `self.kwargs`. This wrapper returns the
+        wrapped method that only accepts the image as an argument. This
+        makes sense if you want to unify
+        """
         if self.kwargs:
             # For segmenters that accept keyword arguments.
-            segm_wrap = functools.partial(self.segment_approach,
+            segm_wrap = functools.partial(self.segment_algorithm,
                                           **self.kwargs)
         else:
             # For segmenters that don't accept keyword arguments.
-            segm_wrap = self.segment_approach
+            segm_wrap = self.segment_algorithm
         return segm_wrap
 
-    @staticmethod
     @abc.abstractmethod
-    def segment_approach(image):
-        """Perform segmentation and return integer label or binary mask image
+    def segment_batch(self, image_data, start=None, stop=None, bg_off=None):
+        """Return the integer labels for an entire batch
 
-        This is the approach the subclasses implement.
+        This is implemented in the MPO and STO segmenters.
         """
 
+    def segment_chunk(self, image_data, chunk, bg_off=None):
+        """Return the integer labels for one `image_data` chunk
+
+        This is a wrapper for `segment_batch`.
+        """
+        data = image_data.get_chunk(chunk)
+        if bg_off is not None:
+            bg_off_chunk = bg_off[image_data.get_chunk_slice(chunk)]
+        else:
+            bg_off_chunk = None
+        return self.segment_batch(data, bg_off=bg_off_chunk)
+
     @abc.abstractmethod
-    def segment_batch(self, data, start=None, stop=None):
-        """Return the integer labels for an entire batch"""
+    def segment_single(self, image):
+        """Return the integer label for one image
+
+        This is implemented in the MPO and STO segmenters.
+        """
 
 
 @functools.cache

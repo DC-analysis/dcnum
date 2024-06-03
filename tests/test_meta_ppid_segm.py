@@ -37,7 +37,7 @@ def test_ppid_kwargs_to_ppid():
         kwargs["num_workers"] = 2
         ppid.kwargs_to_ppid(
             cls=segm_cls,
-            method="segment_approach",
+            method="segment_algorithm",
             kwargs=kwargs,
             allow_invalid_keys=False,
         )

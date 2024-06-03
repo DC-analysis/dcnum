@@ -1,3 +1,9 @@
+0.22.0
+ - fix: GPUSegmenter did not perform mask postprocessing
+   (this was not actually fixed in 0.21.0)
+ - ref: increment DCNUM_PPID_GENERATION to 10
+ - ref: renamed CPUSegmenter to MPOSegmenter
+ - ref: renamed GPUSegmenter to STOSegmenter
 0.21.4
  - fix: division by zero error when computing stall time
 0.21.3
@@ -7,7 +13,6 @@
 0.21.1
  - enh: support boolean images in mask postprocessing
 0.21.0
- - fix: GPUSegmenter did not perform mask postprocessing
  - ref: enable mask postprocessing by default for all segmenters
  - ref: increment DCNUM_PPID_GENERATION to 9
 0.20.4

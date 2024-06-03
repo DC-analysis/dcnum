@@ -45,7 +45,7 @@ def test_segm_thresh_basic():
     assert sm.requires_background_correction
 
     for ii in range(len(frame_u)):
-        labels_seg = sm.segment_frame(image_u_c[ii])
+        labels_seg = sm.segment_single(image_u_c[ii])
         mask_seg = np.array(labels_seg, dtype=bool)
         # Remove small objects, because this is not implemented in the
         # segmenter class as it would be part of gating.

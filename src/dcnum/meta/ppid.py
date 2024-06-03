@@ -10,7 +10,7 @@ import warnings
 
 #: Increment this string if there are breaking changes that make
 #: previous pipelines unreproducible.
-DCNUM_PPID_GENERATION = "9"
+DCNUM_PPID_GENERATION = "10"
 
 
 class ClassWithPPIDCapabilities(Protocol):

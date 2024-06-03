@@ -11,7 +11,7 @@ SEGM_KEYS = sorted(SEGM_METH.keys())
 
 
 def test_ppid_nomask_segmenter():
-    class SegmentNoMask(segm.CPUSegmenter):
+    class SegmentNoMask(segm.MPOSegmenter):
         mask_postprocessing = False
 
         def __init__(self, thresh=-6, *args, **kwargs):
@@ -19,7 +19,7 @@ def test_ppid_nomask_segmenter():
             super(SegmentNoMask, self).__init__(thresh=thresh, *args, **kwargs)
 
         @staticmethod
-        def segment_approach(image, *,
+        def segment_algorithm(image, *,
                              thresh: float = -6):
             return image < thresh
 

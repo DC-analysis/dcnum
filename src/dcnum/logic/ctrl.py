@@ -648,7 +648,7 @@ class DCNumJobRunner(threading.Thread):
             num_slots = 1
             num_extractors = 1
             num_segmenters = 1
-        elif seg_cls.hardware_processor == "cpu":  # CPU segmenter
+        elif seg_cls.hardware_processor == "cpu":  # MPO segmenter
             # We could in principle set the number of slots to one and
             # have both number of extractors and number of segmenters set
             # to the total number of CPUs. However, we would need more RAM

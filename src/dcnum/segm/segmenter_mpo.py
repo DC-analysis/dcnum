@@ -5,6 +5,7 @@ import threading
 from typing import Dict
 
 import numpy as np
+import scipy.ndimage as ndi
 
 from .segmenter import Segmenter
 
@@ -14,7 +15,7 @@ from .segmenter import Segmenter
 mp_spawn = mp.get_context('spawn')
 
 
-class CPUSegmenter(Segmenter, abc.ABC):
+class MPOSegmenter(Segmenter, abc.ABC):
     hardware_processor = "cpu"
 
     def __init__(self,
@@ -23,7 +24,7 @@ class CPUSegmenter(Segmenter, abc.ABC):
                  kwargs_mask: Dict = None,
                  debug: bool = False,
                  **kwargs):
-        """CPU base segmenter
+        """Segmenter with multiprocessing operation
 
         Parameters
         ----------
@@ -32,17 +33,23 @@ class CPUSegmenter(Segmenter, abc.ABC):
         debug: bool
             Debugging parameters
         kwargs:
-            Additional, optional keyword arguments for `segment_approach`
+            Additional, optional keyword arguments for `segment_algorithm`
             defined in the subclass.
         """
-        super(CPUSegmenter, self).__init__(kwargs_mask=kwargs_mask,
+        super(MPOSegmenter, self).__init__(kwargs_mask=kwargs_mask,
                                            debug=debug,
                                            **kwargs)
         self.num_workers = num_workers or mp.cpu_count()
+        # batch input image data
         self.mp_image_raw = None
         self._mp_image_np = None
+        # batch output image data
         self.mp_labels_raw = None
         self._mp_labels_np = None
+        # batch image background offset
+        self.mp_bg_off_raw = None
+        self._mp_bg_off_np = None
+        # workers
         self._mp_workers = []
         # Image shape of the input array
         self.image_shape = None
@@ -78,6 +85,7 @@ class CPUSegmenter(Segmenter, abc.ABC):
         del state["logger"]
         del state["_mp_image_np"]
         del state["_mp_labels_np"]
+        del state["_mp_bg_off_np"]
         del state["_mp_workers"]
         return state
 
@@ -86,26 +94,26 @@ class CPUSegmenter(Segmenter, abc.ABC):
         self.__dict__.update(state)
 
     @staticmethod
-    def _create_shared_array(image_shape, batch_size, dtype):
+    def _create_shared_array(array_shape, batch_size, dtype):
         """Return raw and numpy-view on shared array
 
         Parameters
         ----------
-        image_shape: tuple of int
+        array_shape: tuple of int
             Shape of one single image in the array
         batch_size: int
             Number of images in the array
         dtype:
             numpy dtype
         """
-        sx, sy = image_shape
         ctype = np.ctypeslib.as_ctypes_type(dtype)
-        sa_raw = mp_spawn.RawArray(ctype, int(sx * sy * batch_size))
+        sa_raw = mp_spawn.RawArray(ctype,
+                                   int(np.prod(array_shape) * batch_size))
         # Convert the RawArray to something we can write to fast
         # (similar to memory view, but without having to cast) using
         # np.ctypeslib.as_array. See discussion in
         # https://stackoverflow.com/questions/37705974
-        sa_np = np.ctypeslib.as_array(sa_raw).reshape(batch_size, sx, sy)
+        sa_np = np.ctypeslib.as_array(sa_raw).reshape(batch_size, *array_shape)
         return sa_raw, sa_np
 
     @property
@@ -129,8 +137,14 @@ class CPUSegmenter(Segmenter, abc.ABC):
     def segment_batch(self,
                       image_data: np.ndarray,
                       start: int = None,
-                      stop: int = None):
+                      stop: int = None,
+                      bg_off: np.ndarray = None,
+                      ):
         """Perform batch segmentation of `image_data`
+
+        Before segmentation, an optional background offset correction with
+        `bg_off` is performed. After segmentation, mask postprocessing is
+        performed according to the class definition.
 
         Parameters
         ----------
@@ -140,11 +154,14 @@ class CPUSegmenter(Segmenter, abc.ABC):
             First index to analyze in `image_data`
         stop: int
             Index after the last index to analyze in `image_data`
+        bg_off: 1D np.ndarray
+            Optional 1D numpy array with background offset
 
         Notes
         -----
         - If the segmentation algorithm only accepts background-corrected
-          images, then `image_data` must already be background-corrected.
+          images, then `image_data` must already be background-corrected,
+          except for the optional `bg_off`.
         """
         if stop is None or start is None:
             start = 0
@@ -160,6 +177,7 @@ class CPUSegmenter(Segmenter, abc.ABC):
             # reset image data
             self._mp_image_np = None
             self._mp_labels_np = None
+            self._mp_bg_off_np = None
             # TODO: If only the batch_size changes, don't
             #  reinitialize the workers. Otherwise, the final rest of
             #  analyzing a dataset would always take a little longer.
@@ -168,30 +186,39 @@ class CPUSegmenter(Segmenter, abc.ABC):
             self.mp_batch_index.value = -1
             self.mp_shutdown.value = 0
 
+        # background offset
+        if self._mp_bg_off_np is None:
+            self.mp_bg_off_raw, self._mp_bg_off_np = self._create_shared_array(
+                array_shape=(stop-start,),
+                batch_size=batch_size,
+                dtype=np.float64)
+        if bg_off is not None:
+            self._mp_bg_off_np[:] = bg_off[start:stop]
+
+        # input images
         if self._mp_image_np is None:
             self.mp_image_raw, self._mp_image_np = self._create_shared_array(
-                image_shape=self.image_shape,
+                array_shape=self.image_shape,
                 batch_size=batch_size,
                 dtype=image_data.dtype,
             )
+        self._mp_image_np[:] = image_data[start:stop]
 
+        # output labels
         if self._mp_labels_np is None:
             self.mp_labels_raw, self._mp_labels_np = self._create_shared_array(
-                image_shape=self.image_shape,
+                array_shape=self.image_shape,
                 batch_size=batch_size,
                 dtype=np.uint16,
             )
 
-        # populate image data
-        self._mp_image_np[:] = image_data[start:stop]
-
         # Create the workers
         if self.debug:
-            worker_cls = CPUSegmenterWorkerThread
+            worker_cls = MPOSegmenterWorkerThread
             num_workers = 1
             self.logger.debug("Running with one worker in main thread")
         else:
-            worker_cls = CPUSegmenterWorkerProcess
+            worker_cls = MPOSegmenterWorkerProcess
             num_workers = min(self.num_workers, image_data.shape[0])
             self.logger.debug(f"Running with {num_workers} workers")
 
@@ -224,8 +251,33 @@ class CPUSegmenter(Segmenter, abc.ABC):
 
         return self._mp_labels_np
 
+    def segment_single(self, image, bg_off: np.floating = None):
+        """Return the integer label image for an input image
 
-class CPUSegmenterWorker:
+        Before segmentation, an optional background offset correction with
+        `bg_off` is performed. After segmentation, mask postprocessing is
+        performed according to the class definition.
+        """
+        segm_wrap = self.segment_algorithm_wrapper()
+        # optional subtraction of background offset
+        if bg_off is not None:
+            image = image - bg_off
+        # obtain mask or label
+        mol = segm_wrap(image)
+        if mol.dtype == bool:
+            # convert mask to labels
+            labels, _ = ndi.label(
+                input=mol,
+                structure=ndi.generate_binary_structure(2, 2))
+        else:
+            labels = mol
+        # optional mask/label postprocessing
+        if self.mask_postprocessing:
+            labels = self.process_mask(labels, **self.kwargs_mask)
+        return labels
+
+
+class MPOSegmenterWorker:
     def __init__(self,
                  segmenter,
                  sl_start: int,
@@ -235,7 +287,7 @@ class CPUSegmenterWorker:
 
         Parameters
         ----------
-        segmenter: CPUSegmenter
+        segmenter: MPOSegmenter
             The segmentation instance
         sl_start: int
             Start of slice of input array to process
@@ -243,7 +295,7 @@ class CPUSegmenterWorker:
             Stop of slice of input array to process
         """
         # Must call super init, otherwise Thread or Process are not initialized
-        super(CPUSegmenterWorker, self).__init__()
+        super(MPOSegmenterWorker, self).__init__()
         self.segmenter = segmenter
         # Value incrementing the batch index. Starts with 0 and is
         # incremented every time :func:`Segmenter.segment_batch` is
@@ -256,7 +308,9 @@ class CPUSegmenterWorker:
         self.shutdown = segmenter.mp_shutdown
         # The image data for segmentation
         self.image_data_raw = segmenter.mp_image_raw
-        # Boolean mask array
+        # Background data offset
+        self.bg_off = segmenter.mp_bg_off_raw
+        # Integer output label array
         self.labels_data_raw = segmenter.mp_labels_raw
         # The shape of one image
         self.image_shape = segmenter.image_shape
@@ -272,6 +326,10 @@ class CPUSegmenterWorker:
             -1, self.image_shape[0], self.image_shape[1])
         image_data = np.ctypeslib.as_array(self.image_data_raw).reshape(
             -1, self.image_shape[0], self.image_shape[1])
+        if self.bg_off is not None:
+            bg_off_data = np.ctypeslib.as_array(self.bg_off)
+        else:
+            bg_off_data = None
 
         idx = self.sl_start
         itr = 0  # current iteration (incremented when we reach self.sl_stop)
@@ -285,8 +343,13 @@ class CPUSegmenterWorker:
                     with self.batch_worker:
                         self.batch_worker.value += 1
                 else:
-                    labels_data[idx, :, :] = self.segmenter.segment_frame(
-                        image_data[idx])
+                    if bg_off_data is None:
+                        bg_off = None
+                    else:
+                        bg_off = bg_off_data[idx]
+
+                    labels_data[idx, :, :] = self.segmenter.segment_single(
+                        image=image_data[idx], bg_off=bg_off)
                     idx += 1
             elif self.shutdown.value:
                 break
@@ -295,11 +358,11 @@ class CPUSegmenterWorker:
                 time.sleep(.01)
 
 
-class CPUSegmenterWorkerProcess(CPUSegmenterWorker, mp_spawn.Process):
+class MPOSegmenterWorkerProcess(MPOSegmenterWorker, mp_spawn.Process):
     def __init__(self, *args, **kwargs):
-        super(CPUSegmenterWorkerProcess, self).__init__(*args, **kwargs)
+        super(MPOSegmenterWorkerProcess, self).__init__(*args, **kwargs)
 
 
-class CPUSegmenterWorkerThread(CPUSegmenterWorker, threading.Thread):
+class MPOSegmenterWorkerThread(MPOSegmenterWorker, threading.Thread):
     def __init__(self, *args, **kwargs):
-        super(CPUSegmenterWorkerThread, self).__init__(*args, **kwargs)
+        super(MPOSegmenterWorkerThread, self).__init__(*args, **kwargs)

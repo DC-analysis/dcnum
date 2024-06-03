@@ -8,7 +8,7 @@ import numpy as np
 from ..read.cache import HDF5ImageCache, ImageCorrCache
 
 from .segmenter import Segmenter
-from .segmenter_cpu import CPUSegmenter
+from .segmenter_mpo import MPOSegmenter
 
 
 class SegmenterManagerThread(threading.Thread):
@@ -66,7 +66,8 @@ class SegmenterManagerThread(threading.Thread):
         #: Image data which is being segmented
         self.image_data = image_data
         #: Additional, optional background offset
-        self.bg_off = bg_off
+        self.bg_off = (
+            bg_off if self.segmenter.requires_background_correction else None)
         #: Slot states
         self.slot_states = slot_states
         #: Current slot chunk index for the slot states
@@ -128,7 +129,7 @@ class SegmenterManagerThread(threading.Thread):
             self.t_count += time.monotonic() - t1
 
         # Cleanup
-        if isinstance(self.segmenter, CPUSegmenter):
+        if isinstance(self.segmenter, MPOSegmenter):
             # Join the segmentation workers.
             self.segmenter.join_workers()
 

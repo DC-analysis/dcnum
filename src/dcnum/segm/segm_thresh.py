@@ -1,7 +1,7 @@
-from .segmenter_cpu import CPUSegmenter
+from .segmenter_mpo import MPOSegmenter
 
 
-class SegmentThresh(CPUSegmenter):
+class SegmentThresh(MPOSegmenter):
     mask_postprocessing = True
     mask_default_kwargs = {
         "clear_border": True,
@@ -11,8 +11,8 @@ class SegmentThresh(CPUSegmenter):
     requires_background_correction = True
 
     @staticmethod
-    def segment_approach(image, *,
-                         thresh: float = -6):
+    def segment_algorithm(image, *,
+                          thresh: float = -6):
         """Mask retrieval using basic thresholding
 
         Parameters
