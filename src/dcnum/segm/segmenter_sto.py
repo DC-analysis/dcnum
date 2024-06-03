@@ -101,4 +101,4 @@ class STOSegmenter(Segmenter, abc.ABC):
         else:
             bg_off_batch = np.atleast_1d(bg_off)
         image_data = image[np.newaxis]
-        return self.segment_batch(image_data, bg_off=bg_off_batch)
+        return self.segment_batch(image_data, bg_off=bg_off_batch)[0]

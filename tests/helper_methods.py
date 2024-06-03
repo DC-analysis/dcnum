@@ -2,6 +2,32 @@ import pathlib
 import tempfile
 import zipfile
 
+import numpy as np
+
+
+class MockImageData:
+    mask = np.array([
+        [0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 1, 1, 1, 0, 0, 0],
+        [0, 0, 1, 0, 1, 0, 0, 0],  # filled, 1
+        [0, 0, 1, 1, 1, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 1, 1, 1, 1],
+        [0, 0, 0, 0, 0, 1, 1, 1],  # border, 2
+        [0, 0, 0, 0, 0, 1, 1, 1],
+        [0, 1, 1, 1, 0, 0, 0, 0],
+        [0, 0, 1, 1, 1, 0, 0, 0],  # other, 3
+        [0, 0, 1, 1, 1, 0, 0, 0],
+        [0, 0, 1, 1, 1, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0],
+        ], dtype=bool)
+
+    def get_chunk(self, chunk_index):
+        image = np.array(-(10 + chunk_index) * self.mask, dtype=np.int16)
+        chunk = np.stack([image] * 100, dtype=np.int16)
+        return chunk
+
 
 def calltracker(func):
     """Decorator to track how many times a function is called"""
