@@ -4,7 +4,116 @@ import numpy as np
 from helper_methods import MockImageData
 
 
-def test_segmenter_labeled_mask():
+def test_segm_mpo_bg_off_batch():
+    img = np.array([
+        [0, 0,  0,  0,  0,  0, 0, 0],
+        [0, 0,  0, -5, -5, -5, 0, 0],
+        [0, 0,  0, -5, -5, -5, 0, 0],  # above threshold
+        [0, 0,  0, -5, -5, -5, 0, 0],
+        [0, 0,  0,  0,  0,  0, 0, 0],
+        [0, 0, -9, -9, -9,  0, 0, 0],
+        [0, 0, -9,  0, -9,  0, 0, 0],  # filled, below threshold
+        [0, 0, -9, -9, -9,  0, 0, 0],
+        [0, 0,  0,  0,  0,  0, 0, 0],
+        [0, 0,  0,  0,  0,  0, 0, 0],
+        [0, 0,  0,  0,  0,  0, 0, 0],
+        ], dtype=int)
+
+    sm = segm.segm_thresh.SegmentThresh(thresh=-6,
+                                        kwargs_mask={"clear_border": True,
+                                                     "fill_holes": True,
+                                                     "closing_disk": 0,
+                                                     })
+    labels = sm.segment_batch(images=np.array([img, img]),
+                              bg_off=np.array([1.5, 0.9])
+                              )
+    label1_exp = np.array([
+        [0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 1, 1, 1, 0, 0],
+        [0, 0, 0, 1, 1, 1, 0, 0],  # above threshold
+        [0, 0, 0, 1, 1, 1, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 2, 2, 2, 0, 0, 0],
+        [0, 0, 2, 2, 2, 0, 0, 0],  # filled, below threshold
+        [0, 0, 2, 2, 2, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0],
+        ], dtype=int)
+    label2_exp = np.array([
+        [0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0],  # not enough offset
+        [0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 1, 1, 1, 0, 0, 0],
+        [0, 0, 1, 1, 1, 0, 0, 0],  # filled, below threshold
+        [0, 0, 1, 1, 1, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0],
+        ], dtype=int)
+
+    assert np.all(labels[0] == label1_exp)
+    assert np.all(labels[1] == label2_exp)
+
+
+def test_segm_mpo_bg_off_single():
+    img = np.array([
+        [0, 0,  0,  0,  0,  0, 0, 0],
+        [0, 0,  0, -5, -5, -5, 0, 0],
+        [0, 0,  0, -5, -5, -5, 0, 0],  # above threshold
+        [0, 0,  0, -5, -5, -5, 0, 0],
+        [0, 0,  0,  0,  0,  0, 0, 0],
+        [0, 0, -9, -9, -9,  0, 0, 0],
+        [0, 0, -9,  0, -9,  0, 0, 0],  # filled, below threshold
+        [0, 0, -9, -9, -9,  0, 0, 0],
+        [0, 0,  0,  0,  0,  0, 0, 0],
+        [0, 0,  0,  0,  0,  0, 0, 0],
+        [0, 0,  0,  0,  0,  0, 0, 0],
+        ], dtype=int)
+
+    sm = segm.segm_thresh.SegmentThresh(thresh=-6,
+                                        kwargs_mask={"clear_border": True,
+                                                     "fill_holes": True,
+                                                     "closing_disk": 0,
+                                                     })
+    label1 = sm.segment_single(image=img, bg_off=1.5)
+    label1_exp = np.array([
+        [0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 1, 1, 1, 0, 0],
+        [0, 0, 0, 1, 1, 1, 0, 0],  # above threshold
+        [0, 0, 0, 1, 1, 1, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 2, 2, 2, 0, 0, 0],
+        [0, 0, 2, 2, 2, 0, 0, 0],  # filled, below threshold
+        [0, 0, 2, 2, 2, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0],
+        ], dtype=int)
+
+    assert np.all(label1 == label1_exp)
+
+    label2 = sm.segment_single(image=img, bg_off=0.9)
+    label2_exp = np.array([
+        [0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0],  # not enough offset
+        [0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 1, 1, 1, 0, 0, 0],
+        [0, 0, 1, 1, 1, 0, 0, 0],  # filled, below threshold
+        [0, 0, 1, 1, 1, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0],
+        ], dtype=int)
+
+    assert np.all(label2 == label2_exp)
+
+
+def test_segm_mpo_labeled_mask():
     mask = np.array([
         [0, 0, 0, 0, 0, 0, 0, 0],
         [0, 0, 1, 1, 1, 0, 0, 0],
@@ -71,7 +180,7 @@ def test_segmenter_labeled_mask():
     assert np.sum(labels4 == 3) == 12
 
 
-def test_segmenter_labeled_mask_fill_holes():
+def test_segm_mpo_labeled_mask_fill_holes():
     mask = np.array([
         [0, 0, 0, 0, 0, 0, 0, 0, 0],
         [0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -142,7 +251,7 @@ def test_segmenter_labeled_mask_fill_holes():
     assert np.sum(labels4 == 3) == 23
 
 
-def test_segmenter_labeled_mask_fill_holes_int32():
+def test_segm_mpo_labeled_mask_fill_holes_int32():
     mask = np.array([
         [0, 0, 0, 0, 0, 0, 0, 0],
         [0, 0, 1, 1, 1, 0, 0, 0],
@@ -173,7 +282,7 @@ def test_segmenter_labeled_mask_fill_holes_int32():
     assert labels_2.dtype == np.int32
 
 
-def test_segmenter_segment_chunk():
+def test_segm_mpo_segment_chunk():
     with segm.segm_thresh.SegmentThresh(
             thresh=-12,
             kwargs_mask={"closing_disk": 0},
@@ -203,7 +312,7 @@ def test_cpu_segmenter_getsetstate():
         assert np.all(sm1.mp_image_raw == sm2.mp_image_raw)
 
 
-def test_segmenter_labeled_mask_clear_border():
+def test_segm_mpo_labeled_mask_clear_border():
     lab0 = np.array([
         [2, 0, 0, 0, 0, 0, 0, 0],  # bad seed position for floodfill
         [0, 2, 0, 0, 0, 0, 0, 0],

@@ -1,12 +1,14 @@
 from dcnum import segm
 import numpy as np
 
+import pytest
+
 from helper_methods import MockImageData
 
 
 class MockSTOSegmenter(segm.STOSegmenter):
     """Mock threshold-based segmenter"""
-    requires_background_correction = False
+    requires_background_correction = True
     mask_postprocessing = True
     mask_default_kwargs = {
         "clear_border": True,
@@ -16,7 +18,127 @@ class MockSTOSegmenter(segm.STOSegmenter):
 
     @staticmethod
     def segment_algorithm(images):
-        return images < -5
+        return images < -6
+
+
+def test_segm_sto_bg_off_batch():
+    img = np.array([
+        [0, 0,  0,  0,  0,  0, 0, 0],
+        [0, 0,  0, -5, -5, -5, 0, 0],
+        [0, 0,  0, -5, -5, -5, 0, 0],  # above threshold
+        [0, 0,  0, -5, -5, -5, 0, 0],
+        [0, 0,  0,  0,  0,  0, 0, 0],
+        [0, 0, -9, -9, -9,  0, 0, 0],
+        [0, 0, -9,  0, -9,  0, 0, 0],  # filled, below threshold
+        [0, 0, -9, -9, -9,  0, 0, 0],
+        [0, 0,  0,  0,  0,  0, 0, 0],
+        [0, 0,  0,  0,  0,  0, 0, 0],
+        [0, 0,  0,  0,  0,  0, 0, 0],
+        ], dtype=int)
+
+    sm = MockSTOSegmenter(kwargs_mask={"clear_border": True,
+                                       "fill_holes": True,
+                                       "closing_disk": 0,
+                                       })
+    labels = sm.segment_batch(images=np.array([img, img]),
+                              bg_off=np.array([1.5, 0.9])
+                              )
+    label1_exp = np.array([
+        [0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 1, 1, 1, 0, 0],
+        [0, 0, 0, 1, 1, 1, 0, 0],  # above threshold
+        [0, 0, 0, 1, 1, 1, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 2, 2, 2, 0, 0, 0],
+        [0, 0, 2, 2, 2, 0, 0, 0],  # filled, below threshold
+        [0, 0, 2, 2, 2, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0],
+        ], dtype=int)
+    label2_exp = np.array([
+        [0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0],  # not enough offset
+        [0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 1, 1, 1, 0, 0, 0],
+        [0, 0, 1, 1, 1, 0, 0, 0],  # filled, below threshold
+        [0, 0, 1, 1, 1, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0],
+        ], dtype=int)
+
+    assert np.all(labels[0] == label1_exp)
+    assert np.all(labels[1] == label2_exp)
+
+
+def test_segm_sto_bg_off_no_background_correction():
+    """
+    When a segmenter does not employ background correction, a ValueError
+    is raised when calling `segment_chunk` with bg_off."""
+    sg = MockSTOSegmenter()
+    # This will raise the value error below
+    sg.requires_background_correction = False
+
+    im = MockImageData()
+    with pytest.raises(ValueError, match="does not employ background"):
+        sg.segment_chunk(im, chunk=1, bg_off=np.ones(100, dtype=float))
+
+
+def test_segm_sto_bg_off_single():
+    img = np.array([
+        [0, 0,  0,  0,  0,  0, 0, 0],
+        [0, 0,  0, -5, -5, -5, 0, 0],
+        [0, 0,  0, -5, -5, -5, 0, 0],  # above threshold
+        [0, 0,  0, -5, -5, -5, 0, 0],
+        [0, 0,  0,  0,  0,  0, 0, 0],
+        [0, 0, -9, -9, -9,  0, 0, 0],
+        [0, 0, -9,  0, -9,  0, 0, 0],  # filled, below threshold
+        [0, 0, -9, -9, -9,  0, 0, 0],
+        [0, 0,  0,  0,  0,  0, 0, 0],
+        [0, 0,  0,  0,  0,  0, 0, 0],
+        [0, 0,  0,  0,  0,  0, 0, 0],
+        ], dtype=int)
+
+    sm = MockSTOSegmenter(kwargs_mask={"clear_border": True,
+                                       "fill_holes": True,
+                                       "closing_disk": 0,
+                                       })
+    label1 = sm.segment_single(image=img, bg_off=1.5)
+    label1_exp = np.array([
+        [0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 1, 1, 1, 0, 0],
+        [0, 0, 0, 1, 1, 1, 0, 0],  # above threshold
+        [0, 0, 0, 1, 1, 1, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 2, 2, 2, 0, 0, 0],
+        [0, 0, 2, 2, 2, 0, 0, 0],  # filled, below threshold
+        [0, 0, 2, 2, 2, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0],
+        ], dtype=int)
+
+    assert np.all(label1 == label1_exp)
+
+    label2 = sm.segment_single(image=img, bg_off=0.9)
+    label2_exp = np.array([
+        [0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0],  # not enough offset
+        [0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 1, 1, 1, 0, 0, 0],
+        [0, 0, 1, 1, 1, 0, 0, 0],  # filled, below threshold
+        [0, 0, 1, 1, 1, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 0, 0, 0, 0],
+        ], dtype=int)
+
+    assert np.all(label2 == label2_exp)
 
 
 def test_segmenter_sto_labeled_mask_fill_holes():

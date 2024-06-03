@@ -2,6 +2,7 @@
  - fix: GPUSegmenter did not perform mask postprocessing
    (this was not actually fixed in 0.21.0)
  - tests: implement mock STO segmenter for testing (#3)
+ - tests: add tests for bg_off in segmentation
  - ref: increment DCNUM_PPID_GENERATION to 10
  - ref: renamed CPUSegmenter to MPOSegmenter
  - ref: renamed GPUSegmenter to STOSegmenter

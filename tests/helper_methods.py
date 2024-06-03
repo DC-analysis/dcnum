@@ -28,6 +28,9 @@ class MockImageData:
         chunk = np.stack([image] * 100, dtype=np.int16)
         return chunk
 
+    def get_chunk_slice(self, chunk_index):
+        return slice(0, 100)
+
 
 def calltracker(func):
     """Decorator to track how many times a function is called"""

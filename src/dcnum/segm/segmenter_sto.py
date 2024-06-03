@@ -38,12 +38,12 @@ class STOSegmenter(Segmenter, abc.ABC):
                                            **kwargs)
 
     def segment_batch(self,
-                      image_data: np.ndarray,
+                      images: np.ndarray,
                       start: int = None,
                       stop: int = None,
                       bg_off: np.ndarray = None,
                       ):
-        """Perform batch segmentation of `image_data`
+        """Perform batch segmentation of `images`
 
         Before segmentation, an optional background offset correction with
         `bg_off` is performed. After segmentation, mask postprocessing is
@@ -51,30 +51,36 @@ class STOSegmenter(Segmenter, abc.ABC):
 
         Parameters
         ----------
-        image_data: 3d np.ndarray
+        images: 3d np.ndarray
             The time-series image data. First axis is time.
         start: int
-            First index to analyze in `image_data`
+            First index to analyze in `images`
         stop: int
-            Index after the last index to analyze in `image_data`
+            Index after the last index to analyze in `images`
         bg_off: 1D np.ndarray
             Optional 1D numpy array with background offset
 
         Notes
         -----
         - If the segmentation algorithm only accepts background-corrected
-          images, then `image_data` must already be background-corrected,
+          images, then `images` must already be background-corrected,
           except for the optional `bg_off`.
         """
         if stop is None or start is None:
             start = 0
-            stop = len(image_data)
+            stop = len(images)
 
-        image_slice = image_data[start:stop]
+        image_slice = images[start:stop]
         segm = self.segment_algorithm_wrapper()
 
         if bg_off is not None:
-            image_slice = image_slice - bg_off
+            if not self.requires_background_correction:
+                raise ValueError(f"The segmenter {self.__class__.__name__} "
+                                 f"does not employ background correction, "
+                                 f"but the `bg_off` keyword argument was "
+                                 f"passed to `segment_chunk`. Please check "
+                                 f"your analysis pipeline.")
+            image_slice = image_slice - bg_off.reshape(-1, 1, 1)
         labels = segm(image_slice)
 
         # Make sure we have integer labels and perform mask postprocessing
@@ -94,11 +100,11 @@ class STOSegmenter(Segmenter, abc.ABC):
 
         return labels
 
-    def segment_single(self, image, bg_off: np.floating = None):
+    def segment_single(self, image, bg_off: float = None):
         """This is a convenience-wrapper around `segment_batch`"""
         if bg_off is None:
             bg_off_batch = None
         else:
             bg_off_batch = np.atleast_1d(bg_off)
-        image_data = image[np.newaxis]
-        return self.segment_batch(image_data, bg_off=bg_off_batch)[0]
+        images = image[np.newaxis]
+        return self.segment_batch(images, bg_off=bg_off_batch)[0]

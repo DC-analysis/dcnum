@@ -301,7 +301,7 @@ class Segmenter(abc.ABC):
         return segm_wrap
 
     @abc.abstractmethod
-    def segment_batch(self, image_data, start=None, stop=None, bg_off=None):
+    def segment_batch(self, images, start=None, stop=None, bg_off=None):
         """Return the integer labels for an entire batch
 
         This is implemented in the MPO and STO segmenters.
@@ -311,13 +311,27 @@ class Segmenter(abc.ABC):
         """Return the integer labels for one `image_data` chunk
 
         This is a wrapper for `segment_batch`.
+
+        Parameters
+        ----------
+        image_data:
+            Instance of dcnum's :class:`.BaseImageChunkCache` with
+            the methods `get_chunk` and `get_chunk_slice`.
+        chunk: int
+            Integer identifying the chunk in `image_data` to segment
+        bg_off: ndarray
+            Optional 1D array with same length as `image_data` that holds
+            additional background offset values that should be subtracted
+            from the image data before segmentation. Should only be
+            used in combination with segmenters that have
+            `requires_background_correction` set to True.
         """
-        data = image_data.get_chunk(chunk)
+        images = image_data.get_chunk(chunk)
         if bg_off is not None:
             bg_off_chunk = bg_off[image_data.get_chunk_slice(chunk)]
         else:
             bg_off_chunk = None
-        return self.segment_batch(data, bg_off=bg_off_chunk)
+        return self.segment_batch(images, bg_off=bg_off_chunk)
 
     @abc.abstractmethod
     def segment_single(self, image):

@@ -135,12 +135,12 @@ class MPOSegmenter(Segmenter, abc.ABC):
             [w.join() for w in self._mp_workers]
 
     def segment_batch(self,
-                      image_data: np.ndarray,
+                      images: np.ndarray,
                       start: int = None,
                       stop: int = None,
                       bg_off: np.ndarray = None,
                       ):
-        """Perform batch segmentation of `image_data`
+        """Perform batch segmentation of `images`
 
         Before segmentation, an optional background offset correction with
         `bg_off` is performed. After segmentation, mask postprocessing is
@@ -148,30 +148,30 @@ class MPOSegmenter(Segmenter, abc.ABC):
 
         Parameters
         ----------
-        image_data: 3d np.ndarray
+        images: 3d np.ndarray
             The time-series image data. First axis is time.
         start: int
-            First index to analyze in `image_data`
+            First index to analyze in `images`
         stop: int
-            Index after the last index to analyze in `image_data`
+            Index after the last index to analyze in `images`
         bg_off: 1D np.ndarray
             Optional 1D numpy array with background offset
 
         Notes
         -----
         - If the segmentation algorithm only accepts background-corrected
-          images, then `image_data` must already be background-corrected,
+          images, then `images` must already be background-corrected,
           except for the optional `bg_off`.
         """
         if stop is None or start is None:
             start = 0
-            stop = len(image_data)
+            stop = len(images)
 
         batch_size = stop - start
-        size = np.prod(image_data.shape[1:]) * batch_size
+        size = np.prod(images.shape[1:]) * batch_size
 
         if self.image_shape is None:
-            self.image_shape = image_data[0].shape
+            self.image_shape = images[0].shape
 
         if self._mp_image_np is not None and self._mp_image_np.size != size:
             # reset image data
@@ -186,13 +186,20 @@ class MPOSegmenter(Segmenter, abc.ABC):
             self.mp_batch_index.value = -1
             self.mp_shutdown.value = 0
 
-        # background offset
-        if self._mp_bg_off_np is None:
-            self.mp_bg_off_raw, self._mp_bg_off_np = self._create_shared_array(
-                array_shape=(stop-start,),
-                batch_size=batch_size,
-                dtype=np.float64)
         if bg_off is not None:
+            if not self.requires_background_correction:
+                raise ValueError(f"The segmenter {self.__class__.__name__} "
+                                 f"does not employ background correction, "
+                                 f"but the `bg_off` keyword argument was "
+                                 f"passed to `segment_chunk`. Please check "
+                                 f"your analysis pipeline.")
+            # background offset
+            if self._mp_bg_off_np is None:
+                self.mp_bg_off_raw, self._mp_bg_off_np = \
+                    self._create_shared_array(
+                        array_shape=(stop - start,),
+                        batch_size=batch_size,
+                        dtype=np.float64)
             self._mp_bg_off_np[:] = bg_off[start:stop]
 
         # input images
@@ -200,9 +207,9 @@ class MPOSegmenter(Segmenter, abc.ABC):
             self.mp_image_raw, self._mp_image_np = self._create_shared_array(
                 array_shape=self.image_shape,
                 batch_size=batch_size,
-                dtype=image_data.dtype,
+                dtype=images.dtype,
             )
-        self._mp_image_np[:] = image_data[start:stop]
+        self._mp_image_np[:] = images[start:stop]
 
         # output labels
         if self._mp_labels_np is None:
@@ -219,7 +226,7 @@ class MPOSegmenter(Segmenter, abc.ABC):
             self.logger.debug("Running with one worker in main thread")
         else:
             worker_cls = MPOSegmenterWorkerProcess
-            num_workers = min(self.num_workers, image_data.shape[0])
+            num_workers = min(self.num_workers, images.shape[0])
             self.logger.debug(f"Running with {num_workers} workers")
 
         if not self._mp_workers:
@@ -251,7 +258,7 @@ class MPOSegmenter(Segmenter, abc.ABC):
 
         return self._mp_labels_np
 
-    def segment_single(self, image, bg_off: np.floating = None):
+    def segment_single(self, image, bg_off: float = None):
         """Return the integer label image for an input image
 
         Before segmentation, an optional background offset correction with
@@ -307,7 +314,7 @@ class MPOSegmenterWorker:
         # Shutdown bit tells workers to stop when set to != 0
         self.shutdown = segmenter.mp_shutdown
         # The image data for segmentation
-        self.image_data_raw = segmenter.mp_image_raw
+        self.image_arr_raw = segmenter.mp_image_raw
         # Background data offset
         self.bg_off = segmenter.mp_bg_off_raw
         # Integer output label array
@@ -322,9 +329,9 @@ class MPOSegmenterWorker:
         # We have to create the numpy-versions of the mp.RawArrays here,
         # otherwise we only get some kind of copy in the new process
         # when we use "spawn" instead of "fork".
-        labels_data = np.ctypeslib.as_array(self.labels_data_raw).reshape(
+        labels_arr = np.ctypeslib.as_array(self.labels_data_raw).reshape(
             -1, self.image_shape[0], self.image_shape[1])
-        image_data = np.ctypeslib.as_array(self.image_data_raw).reshape(
+        image_arr = np.ctypeslib.as_array(self.image_arr_raw).reshape(
             -1, self.image_shape[0], self.image_shape[1])
         if self.bg_off is not None:
             bg_off_data = np.ctypeslib.as_array(self.bg_off)
@@ -348,8 +355,8 @@ class MPOSegmenterWorker:
                     else:
                         bg_off = bg_off_data[idx]
 
-                    labels_data[idx, :, :] = self.segmenter.segment_single(
-                        image=image_data[idx], bg_off=bg_off)
+                    labels_arr[idx, :, :] = self.segmenter.segment_single(
+                        image=image_arr[idx], bg_off=bg_off)
                     idx += 1
             elif self.shutdown.value:
                 break

@@ -107,14 +107,14 @@ def test_segm_thresh_segment_batch_large(worker_type):
     # Create fake data
     mask = np.zeros((121, 80, 200), dtype=bool)
     mask[:, 10:71, 100:161] = morphology.disk(30).reshape(-1, 61, 61)
-    image = -10 * mask
+    images = -10 * mask
 
     sm = segm.segm_thresh.SegmentThresh(thresh=-6,
                                         kwargs_mask={"closing_disk": 0},
                                         debug=debug)
 
     labels_seg_1 = np.copy(
-        sm.segment_batch(image, start=0, stop=101))
+        sm.segment_batch(images, start=0, stop=101))
 
     assert labels_seg_1.dtype == np.uint16  # uint8 is not enough
     assert sm.mp_batch_index.value == 0
@@ -128,7 +128,7 @@ def test_segm_thresh_segment_batch_large(worker_type):
         assert sm.mp_batch_worker.value == mp.cpu_count()
 
     labels_seg_2 = np.copy(
-        sm.segment_batch(image, start=101, stop=121))
+        sm.segment_batch(images, start=101, stop=121))
 
     # tell workers to stop
     sm.join_workers()
