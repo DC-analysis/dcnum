@@ -744,7 +744,9 @@ def test_simple_pipeline(debug):
         # test for general metadata
         assert h5.attrs["experiment:sample"] == "data"
         assert h5.attrs["experiment:date"] == "2022-04-21"
-        assert h5.attrs["experiment:run identifier"] == f"dcn-{pp_hash[:7]}"
+        assert h5.attrs["experiment:run identifier"] == \
+               (f"d5a40aed-0b6c-0412-e87c-59789fdd28d0_"
+                f"dcn-{pp_hash[:7]}")
 
 
 @pytest.mark.parametrize("debug", [True, False])
@@ -811,7 +813,9 @@ def test_simple_pipeline_no_offset_correction(debug):
         # test for general metadata
         assert h5.attrs["experiment:sample"] == "data"
         assert h5.attrs["experiment:date"] == "2022-04-21"
-        assert h5.attrs["experiment:run identifier"] == f"dcn-{pp_hash[:7]}"
+        assert h5.attrs["experiment:run identifier"] == \
+               (f"d5a40aed-0b6c-0412-e87c-59789fdd28d0_"
+                f"dcn-{pp_hash[:7]}")
 
 
 def test_simple_pipeline_in_thread():
