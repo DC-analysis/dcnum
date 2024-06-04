@@ -21,6 +21,67 @@ def get_log(hd: read.HDF5Data,
         raise KeyError(f"Log starting with {startswith} not found!")
 
 
+@pytest.mark.parametrize("override_attrs,delete_keys,meas_id", [
+    # standard
+    [{"experiment:run identifier": "peter"},
+     [],
+     "peter"],
+    # from metadata (input file)
+    [{"experiment:run identifier": ""},
+     [],
+     "d5a40aed-0b6c-0412-e87c-59789fdd28d0"],
+    # from metadata (input file)
+    [{},
+     ["experiment:run identifier"],
+     "d5a40aed-0b6c-0412-e87c-59789fdd28d0"],
+    # from metadata (manual)
+    [{"experiment:time": "12:01",
+      "experiment:date": "2024-06-23",
+      "setup:identifier": "RC-peter-pan-and-friends",
+      },
+     ["experiment:run identifier"],
+     "f0cfdc6f-93c7-c093-d135-a20f3e5bdbfa"],
+    # delete everything, this is the hash of none-none-none
+    [{},
+     ["setup:identifier", "experiment:time", "experiment:run identifier",
+      "setup:identifier"],
+     "07d18822-3045-4e6b-da0b-f1a16c80132a"],
+])
+def test_basin_experiment_identifier_correct(
+        override_attrs, delete_keys, meas_id):
+    """Make sure the measurement identifier computed by dcnum is correct"""
+    path_orig = retrieve_data("fmt-hdf5_cytoshot_full-features_2023.zip")
+    path_out = path_orig.with_name("out.rtdc")
+
+    # modify input file
+    with h5py.File(path_orig, "a") as h5in:
+        for key in override_attrs:
+            h5in.attrs[key] = override_attrs[key]
+        for key in delete_keys:
+            if key in h5in.attrs:
+                h5in.attrs.pop(key)
+
+    job = logic.DCNumPipelineJob(path_in=path_orig,
+                                 path_out=path_out,
+                                 background_code="copy",
+                                 segmenter_code="thresh",
+                                 segmenter_kwargs={"thresh": -5},
+                                 feature_kwargs={"volume": False,
+                                                 "haralick": False,
+                                                 "brightness": False,
+                                                 },
+                                 basin_strategy="tap",
+                                 debug=True)
+    with logic.DCNumJobRunner(job=job) as runner:
+        runner.run()
+
+    with h5py.File(path_out) as hout:
+        appid = hout.attrs["pipeline:dcnum hash"]
+        eri_exp = f"{meas_id}_dcn-{appid[:7]}"
+        # this is the actual test
+        assert hout.attrs["experiment:run identifier"] == eri_exp
+
+
 def test_basin_strategy_drain_mapped_input():
     """When basin strategy is "drain", features are mapped from the input
 

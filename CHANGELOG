@@ -1,3 +1,5 @@
+0.22.1
+ - fix: compute pipeline identifier of origin dataset for basin mapping
 0.22.0
  - fix: GPUSegmenter did not perform mask postprocessing
    (this was not actually fixed in 0.21.0)

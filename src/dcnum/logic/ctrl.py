@@ -1,5 +1,6 @@
 import collections
 import datetime
+import hashlib
 import json
 import logging
 from logging.handlers import QueueListener
@@ -461,9 +462,17 @@ class DCNumJobRunner(threading.Thread):
                 # This is the identifier appendix that we use to identify this
                 # dataset. Note that we only override the run identifier when
                 # segmentation did actually take place.
-                mid_ap = "dcn-" + self.pphash[:7]
-                # This is the current measurement identifier (may be empty).
-                mid_cur = hw.h5.attrs.get("experiment:run identifier", "")
+                mid_ap = f"dcn-{self.pphash[:7]}"
+                # This is the current measurement identifier
+                mid_cur = hw.h5.attrs.get("experiment:run identifier")
+                if not mid_cur:
+                    # Compute a measurement identifier from the metadata
+                    m_time = hw.h5.attrs.get("experiment:time", "none")
+                    m_date = hw.h5.attrs.get("experiment:date", "none")
+                    m_sid = hw.h5.attrs.get("setup:identifier", "none")
+                    hasher = hashlib.md5(
+                        f"{m_time}_{m_date}_{m_sid}".encode("utf-8"))
+                    mid_cur = str(uuid.UUID(hex=hasher.hexdigest()))
                 # The new measurement identifier is a combination of both.
                 mid_new = f"{mid_cur}_{mid_ap}" if mid_cur else mid_ap
                 hw.h5.attrs["experiment:run identifier"] = mid_new
