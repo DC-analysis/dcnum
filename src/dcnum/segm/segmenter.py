@@ -88,7 +88,7 @@ class Segmenter(abc.ABC):
         """Return a unique segmentation pipeline identifier
 
         The pipeline identifier is universally applicable and must
-        be backwards-compatible (future versions of dcevent will
+        be backwards-compatible (future versions of dcnum will
         correctly acknowledge the ID).
 
         The segmenter pipeline ID is defined as::
