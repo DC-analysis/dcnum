@@ -20,7 +20,7 @@ class Gate:
         Parameters
         ----------
         data: .HDF5Data
-            dcevent data instance
+            dcnum data instance
         online_gates: bool
             set to True to enable gating with "online" gates stored
             in the input file; online gates are applied in real-time
@@ -95,7 +95,7 @@ class Gate:
         """Return a unique gating pipeline identifier
 
         The pipeline identifier is universally applicable and must
-        be backwards-compatible (future versions of dcevent will
+        be backwards-compatible (future versions of dcnum will
         correctly acknowledge the ID).
 
         The gating pipeline ID is defined as::
