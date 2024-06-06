@@ -339,7 +339,7 @@ class DCNumJobRunner(threading.Thread):
         # hash sanity check above, check the generation, input data,
         # and background pipeline identifiers.
         redo_bg = (
-            "iamge_bg" not in self.draw
+            "image_bg" not in self.draw
             or (datdict["gen_id"] != self.ppdict["gen_id"])
             or (datdict["dat_id"] != self.ppdict["dat_id"])
             or (datdict["bg_id"] != self.ppdict["bg_id"]))
