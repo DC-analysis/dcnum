@@ -8,6 +8,7 @@ authors = [
     # In alphabetical order.
     {name = "Maximilian Schlögel"},
     {name = "Paul Müller"},
+    {name = "Raghava Alajangi"},
 ]
 maintainers = [
     {name = "Paul Müller", email="dev@craban.de"},
