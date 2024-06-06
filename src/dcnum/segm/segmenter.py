@@ -13,6 +13,18 @@ from skimage import morphology
 from ..meta.ppid import kwargs_to_ppid, ppid_to_kwargs
 
 
+class SegmenterNotApplicableError(BaseException):
+    """Used to indicate when a dataset cannot be segmented with a segmenter"""
+    def __init__(self, segmenter_class, reasons_list):
+        super(SegmenterNotApplicableError, self).__init__(
+            f"The dataset cannot be segmented with the "
+            f"'{segmenter_class.get_ppid_code()}' segmenter: "
+            f"{', '.join(reasons_list)}"
+        )
+        self.reasons_list = reasons_list
+        self.segmenter_class = segmenter_class
+
+
 class Segmenter(abc.ABC):
     #: Required hardware ("cpu" or "gpu") defined in first-level subclass.
     hardware_processor = "none"
@@ -339,6 +351,34 @@ class Segmenter(abc.ABC):
 
         This is implemented in the MPO and STO segmenters.
         """
+
+    @classmethod
+    def validate_applicability(cls,
+                               segmenter_kwargs: Dict,
+                               meta: Dict = None,
+                               logs: Dict = None):
+        """Validate the applicability of this segmenter for a dataset
+
+        Parameters
+        ----------
+        segmenter_kwargs: dict
+            Keyword arguments for the segmenter
+        meta: dict
+            Dictionary of metadata from an :class:`HDF5Data` instance
+        logs: dict
+            Dictionary of logs from an :class:`HDF5Data` instance
+
+        Returns
+        -------
+        applicable: bool
+            True if the segmenter is applicable to the dataset
+
+        Raises
+        ------
+        SegmenterNotApplicableError
+            If the segmenter is not applicable to the dataset
+        """
+        return True
 
 
 @functools.cache
