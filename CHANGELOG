@@ -1,3 +1,5 @@
+0.22.2
+ - fix: always compute image_bg if it is not in the input file
 0.22.1
  - fix: compute pipeline identifier of origin dataset for basin mapping
 0.22.0
