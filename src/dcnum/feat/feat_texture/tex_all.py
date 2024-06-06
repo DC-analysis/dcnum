@@ -6,6 +6,34 @@ from .common import haralick_names
 
 def haralick_texture_features(
         mask, image=None, image_bg=None, image_corr=None):
+    """Compute Haralick texture features
+
+    The following texture features are excluded
+
+    - feature 6 "Sum Average", which is equivalent to `2 * bright_bc_avg`
+      since dclab 0.44.0
+    - feature 10 "Difference Variance", because it has a functional
+      dependency on the offset value and since we do background correction,
+      we are not interested in it
+    - feature 14, because nobody is using it, it is not understood by
+      everyone what it actually is, and it is computationally expensive.
+
+    This leaves us with the following 11 texture features (22 if you count
+    avg and ptp):
+    https://earlglynn.github.io/RNotes/package/EBImage/Haralick-Textural-Features.html
+
+    - 1. `tex_asm`: (1) Angular Second Moment
+    - 2. `tex_con`: (2) Contrast
+    - 3. `tex_cor`: (3) Correlation
+    - 4. `tex_var`: (4) Variance
+    - 5. `tex_idm`: (5) Inverse Difference Moment
+    - 6. `tex_sva`: (7) Sum Variance
+    - 7. `tex_sen`: (8) Sum Entropy
+    - 8. `tex_ent`: (9) Entropy
+    - 9. `tex_den`: (11) Difference Entropy
+    - 10. `tex_f12`: (12) Information Measure of Correlation 1
+    - 11. `tex_f13`: (13) Information Measure of Correlation 2
+    """
     # make sure we have a boolean array
     mask = np.array(mask, dtype=bool)
     size = mask.shape[0]
@@ -22,7 +50,6 @@ def haralick_texture_features(
 
     for ii in range(size):
         # Haralick texture features
-        # https://gitlab.gwdg.de/blood_data_analysis/dcevent/-/issues/20
         # Preprocessing:
         # - create a copy of the array (don't edit `image_corr`)
         # - add grayscale values (negative values not supported)
