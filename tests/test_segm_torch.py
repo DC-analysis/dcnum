@@ -25,7 +25,6 @@ def test_metadata_loading_from_unet_1316_naiad_g1_abd2a():
     _, metadata = torch_model.load_model(model_file, device)
     assert isinstance(metadata, dict)
     assert "preprocessing" in metadata.keys()
-    print(metadata["preprocessing"])
     assert metadata["preprocessing"]["image_shape"] == [64, 256]
     assert metadata["preprocessing"]["norm_mean"] == 0.487
     assert metadata["preprocessing"]["norm_std"] == 0.084
