@@ -43,6 +43,18 @@ def calltracker(func):
     return wrapped
 
 
+def extract_data(zip_file):
+    """Extract zip file content from data directory, return directory"""
+    zpath = pathlib.Path(__file__).resolve().parent / "data" / zip_file
+    # unpack
+    arc = zipfile.ZipFile(str(zpath))
+
+    # extract all files to a temporary directory
+    edest = tempfile.mkdtemp(prefix=zpath.name)
+    arc.extractall(edest)
+    return pathlib.Path(edest)
+
+
 def find_data(path):
     """Find .avi and .rtdc data files in a directory"""
     path = pathlib.Path(path)
@@ -52,16 +64,19 @@ def find_data(path):
     return files
 
 
+def find_model(path):
+    """Find .ckp files in a directory"""
+    path = pathlib.Path(path)
+    jit_files = [r for r in path.rglob("*.dcnm") if r.is_file()]
+    files = [pathlib.Path(ff) for ff in jit_files]
+    return files
+
+
 def retrieve_data(zip_file):
     """Extract contents of data zip file and return data files
     """
-    zpath = pathlib.Path(__file__).resolve().parent / "data" / zip_file
-    # unpack
-    arc = zipfile.ZipFile(str(zpath))
-
     # extract all files to a temporary directory
-    edest = tempfile.mkdtemp(prefix=zpath.name)
-    arc.extractall(edest)
+    edest = extract_data(zip_file)
 
     # Load RT-DC dataset
     # find tdms files
@@ -73,24 +88,11 @@ def retrieve_data(zip_file):
     return datafiles
 
 
-def find_model(path):
-    """Find .ckp files in a directory"""
-    path = pathlib.Path(path)
-    jit_files = [r for r in path.rglob("*.ckp") if r.is_file()]
-    files = [pathlib.Path(ff) for ff in jit_files]
-    return files
-
-
 def retrieve_model(zip_file):
-    """Extract contents of model zip file and return model ckeckpoint paths
+    """Extract contents of model zip file and return model paths
     """
-    zpath = pathlib.Path(__file__).resolve().parent / "data" / zip_file
-    # unpack
-    arc = zipfile.ZipFile(str(zpath))
-
     # extract all files to a temporary directory
-    edest = tempfile.mkdtemp(prefix=zpath.name)
-    arc.extractall(edest)
+    edest = extract_data(zip_file)
 
     # find model checkpoint paths
     modelpaths = find_model(edest)

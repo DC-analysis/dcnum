@@ -15,4 +15,5 @@ except ImportError:
     pass
 else:
     from .segm_torch_mpo import SegmentTorchMPO  # noqa: F401
-    from .segm_torch_sto import SegmentTorchSTO  # noqa: F401
+    if torch.cuda.is_available():
+        from .segm_torch_sto import SegmentTorchSTO  # noqa: F401

@@ -122,4 +122,4 @@ class TorchSegmenterBase(Segmenter):
             if not valid:
                 reasons_list.append(item.get("reason", "unknown reason"))
         elif not item.get("allow-missing-key", False):
-            reasons_list.append(f"Key {key} missing in {item['type']}")
+            reasons_list.append(f"Key '{key}' missing in {item['type']}")
