@@ -59,7 +59,9 @@ def convert_to_dtype(value, dtype):
 
 
 def get_class_method_info(class_obj: ClassWithPPIDCapabilities,
-                          static_kw_methods: List = None):
+                          static_kw_methods: List = None,
+                          static_kw_defaults: Dict = None,
+                          ):
     """Return dictionary of class info with static keyword methods docs
 
     Parameters
@@ -69,7 +71,16 @@ def get_class_method_info(class_obj: ClassWithPPIDCapabilities,
     static_kw_methods: list of callable
         The methods to inspect; all kwargs-only keyword arguments
         are extracted.
+    static_kw_defaults: dict
+        If a key in this dictionary matches an item in `static_kw_methods`,
+        then these are the default values returned in the "defaults"
+        dictionary. This is used in cases where a base class does
+        implement some annotations, but the subclass does not actually
+        use them, because e.g. they are taken from a property such as is
+        the case for the mask postprocessing of segmenter classes.
     """
+    if static_kw_defaults is None:
+        static_kw_defaults = {}
     doc = class_obj.__doc__ or class_obj.__init__.__doc__
     info = {
         "code": class_obj.get_ppid_code(),
@@ -82,7 +93,10 @@ def get_class_method_info(class_obj: ClassWithPPIDCapabilities,
         for mm in static_kw_methods:
             meth = getattr(class_obj, mm)
             spec = inspect.getfullargspec(meth)
-            defau[mm] = spec.kwonlydefaults or {}
+            if mm_defaults := static_kw_defaults.get(mm):
+                defau[mm] = mm_defaults
+            else:
+                defau[mm] = spec.kwonlydefaults or {}
             annot[mm] = spec.annotations
         info["defaults"] = defau
         info["annotations"] = annot

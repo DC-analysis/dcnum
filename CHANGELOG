@@ -1,3 +1,5 @@
+0.23.1
+ - enh: support passing custom default arguments to get_class_method_info
 0.23.0
  - feat: implement segmentation using PyTorch models
  - fix: always compute image_bg if it is not in the input file
