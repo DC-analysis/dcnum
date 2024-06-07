@@ -15,6 +15,20 @@ data_path = pathlib.Path(__file__).parent / "data"
 torch = pytest.importorskip("torch")
 
 from dcnum.segm.segm_torch import segm_torch_base  # noqa: E402
+from dcnum.segm.segm_torch import torch_model  # noqa: E402
+
+
+def test_metadata_loading_from_unet_1316_naiad_g1_abd2a():
+    model_file = retrieve_model(
+        data_path / "segm-torch-model_unet-dcnum-test_g1_910c2.zip")
+    device = torch.device("cpu")
+    _, metadata = torch_model.load_model(model_file, device)
+    assert isinstance(metadata, dict)
+    assert "preprocessing" in metadata.keys()
+    print(metadata["preprocessing"])
+    assert metadata["preprocessing"]["image_shape"] == [64, 256]
+    assert metadata["preprocessing"]["norm_mean"] == 0.487
+    assert metadata["preprocessing"]["norm_std"] == 0.084
 
 
 def test_segm_torch_validate_model_file_logs():
