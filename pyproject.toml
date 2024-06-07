@@ -33,7 +33,6 @@ dependencies = [
     "opencv-python-headless",  # Apache 2.0
     "scikit-image",  # BSD
     "scipy>=1.8.0",  # BSD
-    "torch",  # BSD-3
 ]
 dynamic = ["version"]
 
