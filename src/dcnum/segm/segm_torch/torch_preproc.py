@@ -4,8 +4,8 @@ import numpy as np
 
 
 def preprocess_images(images: np.ndarray,
-                      norm_mean: float,
-                      norm_std: float,
+                      norm_mean: float | None,
+                      norm_std: float | None,
                       image_shape: Tuple[int, int] = None,
                       ):
     """Transform image data to something torch models expect
@@ -24,10 +24,11 @@ def preprocess_images(images: np.ndarray,
         2D image, it will be reshaped to a 3D image with a batch_size of 1.
     norm_mean:
         Mean value used for standard score data normalization, i.e.
-        `normalized = `(images / 255 - norm_mean) / norm_std`
+        `normalized = `(images / 255 - norm_mean) / norm_std`; Set
+        to None to disable normalization.
     norm_std:
-        Standard deviation used for standard score data normalization
-        (see above)
+        Standard deviation used for standard score data normalization;
+        Set to None to disable normalization (see above).
     image_shape
         Image shape for which the model was created (height, width).
         If the image shape does not match the input image shape, then
@@ -102,8 +103,12 @@ def preprocess_images(images: np.ndarray,
         # Replace img_norm
         img_proc = img_pad
 
-    # normalize images
-    img_norm = (img_proc.astype(np.float32) / 255 - norm_mean) / norm_std
+    if norm_mean is None or norm_std is None:
+        # convert to float32
+        img_norm = img_proc.astype(np.float32)
+    else:
+        # normalize images
+        img_norm = (img_proc.astype(np.float32) / 255 - norm_mean) / norm_std
 
     # Add a "channels" axis for the ML models.
     return img_norm[:, np.newaxis, :, :]

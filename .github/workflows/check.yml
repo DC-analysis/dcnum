@@ -31,7 +31,7 @@ jobs:
       run: |
         # https://github.com/luispedro/mahotas/issues/144
         pip install mahotas==1.4.13
-        pip install -e .
+        pip install .[torch]
     - name: List installed packages
       run: |
         pip freeze
