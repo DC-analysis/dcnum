@@ -37,6 +37,9 @@ dependencies = [
 ]
 dynamic = ["version"]
 
+[project.optional-dependencies]
+torch = ["torch>=2.3"]
+
 [project.urls]
 source = "https://github.com/DC-Analysis/dcnum"
 tracker = "https://github.com/DC-Analysis/dcnum/issues"
