@@ -1,3 +1,18 @@
-# flake8: noqa
-from .segm_torch_mpo import SegmentTorchMPO
-from .segm_torch_sto import SegmentTorchSTO
+import importlib
+
+try:
+    torch = importlib.import_module("torch")
+    req_maj = 2
+    req_min = 3
+    ver_tuple = torch.__version__.split(".")
+    act_maj = int(ver_tuple[0])
+    act_min = int(ver_tuple[1])
+    if act_maj < req_maj or (act_maj == req_maj and act_min < req_min):
+        raise ValueError(f"Your PyTorch version {act_maj}.{act_min} is not "
+                         f"supported, please update to at least "
+                         f"{req_maj}.{req_min}")
+except ImportError:
+    pass
+else:
+    from .segm_torch_mpo import SegmentTorchMPO  # noqa: F401
+    from .segm_torch_sto import SegmentTorchSTO  # noqa: F401
