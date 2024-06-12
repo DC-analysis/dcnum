@@ -1,6 +1,7 @@
 import collections
 import datetime
 import hashlib
+import importlib
 import json
 import logging
 from logging.handlers import QueueListener
@@ -430,6 +431,16 @@ class DCNumJobRunner(threading.Thread):
                                  "build": ", ".join(platform.python_build()),
                                  "implementation":
                                      platform.python_implementation(),
+                                 "libraries": get_library_versions_dict([
+                                     "cv2",
+                                     "h5py",
+                                     "mahotas",
+                                     "numba",
+                                     "numpy",
+                                     "scipy",
+                                     "skimage",
+                                     "torch",
+                                 ]),
                                  "version": platform.python_version(),
                                  },
                              "system": {
@@ -778,6 +789,19 @@ class DCNumJobRunner(threading.Thread):
                 f"input file or revise your pipeline")
 
         self.logger.info("Finished segmentation and feature extraction")
+
+
+def get_library_versions_dict(library_name_list):
+    version_dict = {}
+    for library_name in library_name_list:
+        try:
+            lib = importlib.import_module(library_name)
+        except BaseException:
+            version = None
+        else:
+            version = lib.__version__
+        version_dict[library_name] = version
+    return version_dict
 
 
 def join_thread_helper(thr, timeout, retries, logger, name):
