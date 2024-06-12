@@ -182,3 +182,25 @@ class DCNumPipelineJob:
         if len(ret) == 1:
             ret = ret[0]
         return ret
+
+    def validate(self):
+        """Make sure the pipeline will run given the job kwargs
+
+        Returns
+        -------
+        True:
+            for testing convenience
+
+        Raises
+        ------
+        dcnum.segm.SegmenterNotApplicableError:
+            the segmenter is incompatible with the input path
+        """
+        # Check segmenter applicability applicability
+        seg_cls = get_available_segmenters()[self.kwargs["segmenter_code"]]
+        with HDF5Data(self.kwargs["path_in"]) as hd:
+            seg_cls.validate_applicability(
+                segmenter_kwargs=self.kwargs["segmenter_kwargs"],
+                logs=hd.logs,
+                meta=hd.meta)
+        return True

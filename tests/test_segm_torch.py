@@ -72,7 +72,7 @@ def test_segm_torch_validate_model_file_meta():
         h5.attrs["setup:chip region"] = "reservoir"
 
     with read.HDF5Data(path) as hd:
-        # sanit check
+        # sanity check
         assert hd.meta["setup:chip region"] == "reservoir"
         with pytest.raises(
                 segm_torch_base.SegmenterNotApplicableError,

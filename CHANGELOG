@@ -1,3 +1,5 @@
+0.23.2
+ - enh: add DCNumPipelineJob.validate method
 0.23.1
  - enh: support passing custom default arguments to get_class_method_info
  - tests: fix torch preprocessing tests
