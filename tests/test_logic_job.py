@@ -1,5 +1,4 @@
 import multiprocessing as mp
-import pathlib
 
 from dcnum import logic
 from dcnum.segm.segm_torch import segm_torch_base  # noqa: E402
@@ -9,12 +8,9 @@ import pytest
 
 from helper_methods import retrieve_data, retrieve_model
 
-data_path = pathlib.Path(__file__).parent / "data"
-
 
 def test_basic_job():
-    path = retrieve_data(
-        data_path / "fmt-hdf5_cytoshot_full-features_2023.zip")
+    path = retrieve_data("fmt-hdf5_cytoshot_full-features_2023.zip")
     job = logic.DCNumPipelineJob(path_in=path)
     assert job["path_out"] == path.with_name(path.stem + "_dcn.rtdc")
     assert job["num_procs"] == mp.cpu_count()
@@ -22,8 +18,7 @@ def test_basic_job():
 
 
 def test_copied_data():
-    path = retrieve_data(
-        data_path / "fmt-hdf5_cytoshot_full-features_2023.zip")
+    path = retrieve_data("fmt-hdf5_cytoshot_full-features_2023.zip")
     job = logic.DCNumPipelineJob(path_in=path,
                                  segmenter_code="thresh",
                                  segmenter_kwargs=None,
@@ -37,8 +32,7 @@ def test_copied_data():
 
 
 def test_segmenter_mask():
-    path = retrieve_data(
-        data_path / "fmt-hdf5_cytoshot_full-features_2023.zip")
+    path = retrieve_data("fmt-hdf5_cytoshot_full-features_2023.zip")
     job = logic.DCNumPipelineJob(path_in=path,
                                  segmenter_code="thresh",
                                  segmenter_kwargs={
@@ -50,11 +44,10 @@ def test_segmenter_mask():
 
 def test_validate_invalid_model():
     model_file = retrieve_model(
-        data_path / "segm-torch-model_unet-dcnum-test_g1_910c2.zip")
+        "segm-torch-model_unet-dcnum-test_g1_910c2.zip")
 
     # Create a test dataset with metadata that will make the model invalid
-    path = retrieve_data(
-        data_path / "fmt-hdf5_cytoshot_full-features_2024.zip")
+    path = retrieve_data("fmt-hdf5_cytoshot_full-features_2024.zip")
 
     with h5py.File(path, "a") as h5:
         h5.attrs["setup:chip region"] = "reservoir"

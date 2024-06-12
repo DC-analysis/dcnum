@@ -1,5 +1,4 @@
 import itertools
-import pathlib
 
 import h5py
 import numpy as np
@@ -9,8 +8,6 @@ from dcnum.feat.feat_contour.volume import volume_from_contours, vol_revolve
 from dcnum.feat.feat_contour import moments_based_features
 
 from helper_methods import retrieve_data
-
-data_path = pathlib.Path(__file__).parent / "data"
 
 
 def area_of_polygon(x, y):
@@ -105,8 +102,7 @@ def test_volume_from_file():
         1.09564687e+02, 2.39239370e-01, 1.71917437e-01, 8.98323862e+01,
         4.13412223e+00, 2.91659170e+02, 2.00198054e+02, 1.97545320e+00,
         9.15408837e+01, 1.60965362e-01, 3.48553309e-01, 2.04561447e+02])
-    path = retrieve_data(data_path /
-                         "fmt-hdf5_cytoshot_full-features_2023.zip")
+    path = retrieve_data("fmt-hdf5_cytoshot_full-features_2023.zip")
 
     with h5py.File(path) as h5:
         pixel_size = h5.attrs["imaging:pixel size"]

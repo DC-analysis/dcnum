@@ -19,7 +19,7 @@ def test_segm_mpo_bg_off_batch():
         [0, 0,  0,  0,  0,  0, 0, 0],
         [0, 0,  0,  0,  0,  0, 0, 0],
         [0, 0,  0,  0,  0,  0, 0, 0],
-        ], dtype=int)
+    ], dtype=int)
 
     with segm.segm_thresh.SegmentThresh(thresh=-6,
                                         kwargs_mask={"clear_border": True,
@@ -41,7 +41,7 @@ def test_segm_mpo_bg_off_batch():
         [0, 0, 0, 0, 0, 0, 0, 0],
         [0, 0, 0, 0, 0, 0, 0, 0],
         [0, 0, 0, 0, 0, 0, 0, 0],
-        ], dtype=int)
+    ], dtype=int)
     label2_exp = np.array([
         [0, 0, 0, 0, 0, 0, 0, 0],
         [0, 0, 0, 0, 0, 0, 0, 0],
@@ -54,7 +54,7 @@ def test_segm_mpo_bg_off_batch():
         [0, 0, 0, 0, 0, 0, 0, 0],
         [0, 0, 0, 0, 0, 0, 0, 0],
         [0, 0, 0, 0, 0, 0, 0, 0],
-        ], dtype=int)
+    ], dtype=int)
 
     assert np.all(labels[0] == label1_exp)
     assert np.all(labels[1] == label2_exp)
@@ -90,7 +90,7 @@ def test_segm_mpo_bg_off_single():
         [0, 0,  0,  0,  0,  0, 0, 0],
         [0, 0,  0,  0,  0,  0, 0, 0],
         [0, 0,  0,  0,  0,  0, 0, 0],
-        ], dtype=int)
+    ], dtype=int)
 
     sm = segm.segm_thresh.SegmentThresh(thresh=-6,
                                         kwargs_mask={"clear_border": True,
@@ -110,7 +110,7 @@ def test_segm_mpo_bg_off_single():
         [0, 0, 0, 0, 0, 0, 0, 0],
         [0, 0, 0, 0, 0, 0, 0, 0],
         [0, 0, 0, 0, 0, 0, 0, 0],
-        ], dtype=int)
+    ], dtype=int)
 
     assert np.all(label1 == label1_exp)
 
@@ -127,7 +127,7 @@ def test_segm_mpo_bg_off_single():
         [0, 0, 0, 0, 0, 0, 0, 0],
         [0, 0, 0, 0, 0, 0, 0, 0],
         [0, 0, 0, 0, 0, 0, 0, 0],
-        ], dtype=int)
+    ], dtype=int)
 
     assert np.all(label2 == label2_exp)
 
@@ -148,7 +148,7 @@ def test_segm_mpo_labeled_mask():
         [0, 0, 1, 1, 1, 0, 0, 0],
         [0, 0, 1, 1, 1, 0, 0, 0],
         [0, 0, 0, 0, 0, 0, 0, 0],
-        ], dtype=bool)
+    ], dtype=bool)
 
     sm1 = segm.segm_thresh.SegmentThresh(thresh=-6,
                                          kwargs_mask={"clear_border": True,
@@ -219,7 +219,7 @@ def test_segm_mpo_labeled_mask_fill_holes():
         [0, 0, 1, 1, 1, 1, 1, 0, 0],
         [0, 0, 0, 0, 0, 0, 0, 0, 0],
         [0, 0, 0, 0, 0, 0, 0, 0, 0],
-        ], dtype=bool)
+    ], dtype=bool)
 
     sm1 = segm.segm_thresh.SegmentThresh(thresh=-6,
                                          kwargs_mask={"clear_border": True,
@@ -286,7 +286,7 @@ def test_segm_mpo_labeled_mask_fill_holes_int32():
         [0, 0, 1, 1, 1, 0, 0, 0],
         [0, 0, 1, 1, 1, 0, 0, 0],
         [0, 0, 0, 0, 0, 0, 0, 0],
-        ], dtype=bool)
+    ], dtype=bool)
 
     sm1 = segm.segm_thresh.SegmentThresh(thresh=-6)
     labels = np.array(sm1.segment_single(-10 * mask), dtype=np.int64)
@@ -343,7 +343,7 @@ def test_segm_mpo_labeled_mask_clear_border():
         [0, 0, 0, 0, 0, 0, 0, 0],
         [0, 0, 0, 0, 0, 0, 0, 0],
         [0, 0, 0, 0, 0, 0, 0, 0],
-        ], dtype=int)
+    ], dtype=int)
 
     sm = segm.segm_thresh.SegmentThresh(thresh=-6)
 

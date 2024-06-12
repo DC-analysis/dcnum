@@ -1,5 +1,3 @@
-import pathlib
-
 import h5py
 import numpy as np
 
@@ -7,21 +5,18 @@ from dcnum.feat import feat_contour
 
 from helper_methods import retrieve_data
 
-data_path = pathlib.Path(__file__).parent / "data"
-
 
 def test_moments_based_features():
     # This file has new cell features belonging to
     # fmt-hdf5_cytoshot_full-features_2023.zip
-    path = retrieve_data(data_path /
-                         "fmt-hdf5_cytoshot_extended-moments-features.zip")
+    path = retrieve_data("fmt-hdf5_cytoshot_extended-moments-features.zip")
 
     feats = [
-            "area_um_raw",
-            "deform_raw",
-            "eccentr_prnc",
-            "per_ratio",
-            "per_um_raw",
+        "area_um_raw",
+        "deform_raw",
+        "eccentr_prnc",
+        "per_ratio",
+        "per_um_raw",
     ]
 
     # Make data available
@@ -49,9 +44,9 @@ def test_mask_2d():
         [0, 0, 0, 0, 0, 0],
     ], dtype=bool)[np.newaxis]
     data = feat_contour.moments_based_features(
-                mask=masks,
-                pixel_size=0.2645
-            )
+        mask=masks,
+        pixel_size=0.2645
+    )
     assert data["deform_raw"].shape == (1,)
     # This is the deformation of a square (compared to circle)
     assert np.allclose(data["deform_raw"][0], 0.11377307454724206)

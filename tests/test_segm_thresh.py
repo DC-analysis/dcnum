@@ -1,5 +1,4 @@
 import multiprocessing as mp
-import pathlib
 
 from dcnum import segm
 import h5py
@@ -10,8 +9,6 @@ import pytest
 
 from helper_methods import retrieve_data
 
-data_path = pathlib.Path(__file__).parent / "data"
-
 
 def test_segm_thresh_basic():
     """Basic thresholding segmenter
@@ -20,7 +17,7 @@ def test_segm_thresh_basic():
     created in 2024 using ChipStream and the threshold segmenter.
     """
     path = retrieve_data(
-        data_path / "fmt-hdf5_cytoshot_full-features_2024.zip")
+        "fmt-hdf5_cytoshot_full-features_2024.zip")
 
     # Get all the relevant information
     with h5py.File(path) as h5:
@@ -63,7 +60,7 @@ def test_segm_thresh_get_ppid_from_ppkw():
 def test_segm_thresh_segment_batch(worker_type):
     debug = worker_type == "thread"
     path = retrieve_data(
-        data_path / "fmt-hdf5_cytoshot_full-features_2024.zip")
+        "fmt-hdf5_cytoshot_full-features_2024.zip")
 
     # Get all the relevant information
     with h5py.File(path) as h5:

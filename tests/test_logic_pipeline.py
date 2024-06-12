@@ -135,7 +135,7 @@ def test_basin_strategy_tap():
 
     with h5py.File(path_out) as h5:
         assert h5.attrs["pipeline:dcnum background"] \
-               == "sparsemed:k=150^s=1^t=0^f=0.8^o=1"
+            == "sparsemed:k=150^s=1^t=0^f=0.8^o=1"
         assert "image_bg" in h5["events"]
         assert "bg_off" in h5["events"]
         assert "deform" in h5["events"]
@@ -174,7 +174,7 @@ def test_basin_relative_path():
     # Everything should just work, because we have relative paths in the basin.
     with h5py.File(path_out_new) as h5:
         assert h5.attrs["pipeline:dcnum background"] \
-               == "sparsemed:k=150^s=1^t=0^f=0.8^o=1"
+            == "sparsemed:k=150^s=1^t=0^f=0.8^o=1"
         assert "image_bg" in h5["events"]
         assert "bg_off" in h5["events"]
         assert "deform" in h5["events"]
@@ -207,7 +207,7 @@ def test_chained_pipeline():
 
     with h5py.File(path2) as h5:
         assert h5.attrs["pipeline:dcnum background"] \
-               == "sparsemed:k=150^s=1^t=0^f=0.8^o=1"
+            == "sparsemed:k=150^s=1^t=0^f=0.8^o=1"
         assert "image" in h5["events"]
         assert "image_bg" in h5["events"]
         for feat in h5["events"]:
@@ -228,7 +228,7 @@ def test_chained_pipeline():
         assert "image_bg" in h5["events"]
         assert len(h5["events/deform"]) == 285
         assert h5.attrs["pipeline:dcnum background"] \
-               == "sparsemed:k=250^s=1^t=0^f=0.8^o=1"
+            == "sparsemed:k=250^s=1^t=0^f=0.8^o=1"
         for feat in h5["events"]:
             assert len(h5["events"][feat]) == 285
 
@@ -745,8 +745,8 @@ def test_simple_pipeline(debug):
         assert h5.attrs["experiment:sample"] == "data"
         assert h5.attrs["experiment:date"] == "2022-04-21"
         assert h5.attrs["experiment:run identifier"] == \
-               (f"d5a40aed-0b6c-0412-e87c-59789fdd28d0_"
-                f"dcn-{pp_hash[:7]}")
+            (f"d5a40aed-0b6c-0412-e87c-59789fdd28d0_"
+             f"dcn-{pp_hash[:7]}")
 
 
 @pytest.mark.parametrize("debug", [True, False])
@@ -814,8 +814,8 @@ def test_simple_pipeline_no_offset_correction(debug):
         assert h5.attrs["experiment:sample"] == "data"
         assert h5.attrs["experiment:date"] == "2022-04-21"
         assert h5.attrs["experiment:run identifier"] == \
-               (f"d5a40aed-0b6c-0412-e87c-59789fdd28d0_"
-                f"dcn-{pp_hash[:7]}")
+            (f"d5a40aed-0b6c-0412-e87c-59789fdd28d0_"
+             f"dcn-{pp_hash[:7]}")
 
 
 def test_simple_pipeline_in_thread():

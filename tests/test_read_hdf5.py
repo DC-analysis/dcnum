@@ -1,4 +1,3 @@
-import pathlib
 import pickle
 
 import h5py
@@ -8,8 +7,6 @@ import pytest
 from dcnum import read, write
 
 from helper_methods import retrieve_data
-
-data_path = pathlib.Path(__file__).parent / "data"
 
 
 def test_features_scalar_frame():
@@ -211,8 +208,7 @@ def test_pixel_size_getset(tmp_path):
 
 
 def test_open_real_data():
-    path = retrieve_data(data_path /
-                         "fmt-hdf5_cytoshot_full-features_2023.zip")
+    path = retrieve_data("fmt-hdf5_cytoshot_full-features_2023.zip")
     with read.HDF5Data(path) as h5dat:  # context manager
         # properties
         assert len(h5dat) == 40
@@ -233,8 +229,7 @@ def test_open_real_data():
 
 
 def test_pickling_state():
-    path = retrieve_data(data_path /
-                         "fmt-hdf5_cytoshot_full-features_2023.zip")
+    path = retrieve_data("fmt-hdf5_cytoshot_full-features_2023.zip")
 
     h5d1 = read.HDF5Data(path)
     h5d1.pixel_size = 0.124
@@ -256,7 +251,7 @@ def test_pickling_state():
 
 def test_pickling_state_logs():
     path = retrieve_data(
-        data_path / "fmt-hdf5_cytoshot_full-features_legacy_allev_2023.zip")
+        "fmt-hdf5_cytoshot_full-features_legacy_allev_2023.zip")
     h5d1 = read.HDF5Data(path)
     h5d1.pixel_size = 0.124
     pstate = pickle.dumps(h5d1)
@@ -268,7 +263,7 @@ def test_pickling_state_logs():
 
 def test_pickling_state_tables():
     path = retrieve_data(
-        data_path / "fmt-hdf5_cytoshot_full-features_legacy_allev_2023.zip")
+        "fmt-hdf5_cytoshot_full-features_legacy_allev_2023.zip")
     # The original file does not contain any tables, so we write
     # generate a table
     columns = ["alot", "of", "tables"]
@@ -300,7 +295,7 @@ def test_pickling_state_tables():
 
 def test_read_empty_logs():
     path = retrieve_data(
-        data_path / "fmt-hdf5_cytoshot_full-features_legacy_allev_2023.zip")
+        "fmt-hdf5_cytoshot_full-features_legacy_allev_2023.zip")
     with h5py.File(path, "a") as h5:
         h5.require_group("logs").create_dataset(name="empty_log",
                                                 data=[])
@@ -309,7 +304,7 @@ def test_read_empty_logs():
 
 
 def test_read_zero_size():
-    path = retrieve_data(data_path / "fmt-hdf5_shapein_empty.zip")
+    path = retrieve_data("fmt-hdf5_shapein_empty.zip")
     with read.HDF5Data(path) as hd:
         assert len(hd) == 0
         with pytest.warns(read.cache.EmptyDatasetWarning,
@@ -319,7 +314,7 @@ def test_read_zero_size():
 
 def test_table_with_length_one():
     path = retrieve_data(
-        data_path / "fmt-hdf5_cytoshot_full-features_legacy_allev_2023.zip")
+        "fmt-hdf5_cytoshot_full-features_legacy_allev_2023.zip")
     # The original file does not contain any tables, so we write
     # generate a table
     columns = ["alot", "of", "tables"]

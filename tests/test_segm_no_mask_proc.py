@@ -1,11 +1,8 @@
 # flake8: noqa: F821
-import pathlib
-
 import pytest
 
 from dcnum import segm
 
-data_path = pathlib.Path(__file__).parent / "data"
 SEGM_METH = segm.get_available_segmenters()
 SEGM_KEYS = sorted(SEGM_METH.keys())
 
@@ -20,7 +17,7 @@ def test_ppid_nomask_segmenter():
 
         @staticmethod
         def segment_algorithm(image, *,
-                             thresh: float = -6):
+                              thresh: float = -6):
             return image < thresh
 
     segm.get_available_segmenters.cache_clear()
@@ -50,6 +47,6 @@ def test_ppid_nomask_segmenter_control():
         segm.segm_thresh.SegmentThresh.get_ppid_from_ppkw({"thresh": -3})
 
     ppid2 = segm.segm_thresh.SegmentThresh.get_ppid_from_ppkw(
-            kwargs={"thresh": -3},
-            kwargs_mask={"clear_border": True})
+        kwargs={"thresh": -3},
+        kwargs_mask={"clear_border": True})
     assert ppid2 == "thresh:t=-3:cle=1^f=1^clo=2"

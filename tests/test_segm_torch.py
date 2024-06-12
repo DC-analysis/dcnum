@@ -1,5 +1,3 @@
-import pathlib
-
 import cv2
 import h5py
 import numpy as np
@@ -10,8 +8,6 @@ from dcnum import read, segm, write
 
 from helper_methods import extract_data, retrieve_data, retrieve_model
 
-data_path = pathlib.Path(__file__).parent / "data"
-
 torch = pytest.importorskip("torch")
 
 from dcnum.segm.segm_torch import segm_torch_base  # noqa: E402
@@ -20,7 +16,7 @@ from dcnum.segm.segm_torch import torch_model  # noqa: E402
 
 def test_metadata_loading_from_unet_1316_naiad_g1_abd2a():
     model_file = retrieve_model(
-        data_path / "segm-torch-model_unet-dcnum-test_g1_910c2.zip")
+        "segm-torch-model_unet-dcnum-test_g1_910c2.zip")
     device = torch.device("cpu")
     _, metadata = torch_model.load_model(model_file, device)
     assert isinstance(metadata, dict)
@@ -33,12 +29,12 @@ def test_metadata_loading_from_unet_1316_naiad_g1_abd2a():
 def test_segm_torch_validate_model_file_logs():
     """Test whether model validation fails for invalid logs"""
     model_file = retrieve_model(
-        data_path / "segm-torch-model_unet-dcnum-test_g1_910c2.zip")
+        "segm-torch-model_unet-dcnum-test_g1_910c2.zip")
     sm = segm.segm_torch.SegmentTorchMPO
 
     # Creating a specific log file will mak the model invalid
     path = retrieve_data(
-        data_path / "fmt-hdf5_cytoshot_full-features_2024.zip")
+        "fmt-hdf5_cytoshot_full-features_2024.zip")
 
     with write.HDF5Writer(path) as hw:
         hw.store_log("testing-fail",
@@ -61,12 +57,12 @@ def test_segm_torch_validate_model_file_logs():
 def test_segm_torch_validate_model_file_meta():
     """Test whether model validation fails for invalid metadata"""
     model_file = retrieve_model(
-        data_path / "segm-torch-model_unet-dcnum-test_g1_910c2.zip")
+        "segm-torch-model_unet-dcnum-test_g1_910c2.zip")
     sm = segm.segm_torch.SegmentTorchMPO
 
     # Create a test dataset with metadata that will make the model invalid
     path = retrieve_data(
-        data_path / "fmt-hdf5_cytoshot_full-features_2024.zip")
+        "fmt-hdf5_cytoshot_full-features_2024.zip")
 
     with h5py.File(path, "a") as h5:
         h5.attrs["setup:chip region"] = "reservoir"
@@ -103,9 +99,9 @@ def test_segm_torch_validate_model_file_meta():
 def test_segm_torch_mpo():
     """Basic PyTorch segmenter"""
     path = retrieve_data(
-        data_path / "fmt-hdf5_cytoshot_full-features_2024.zip")
+        "fmt-hdf5_cytoshot_full-features_2024.zip")
     model_file = retrieve_model(
-        data_path / "segm-torch-model_unet-dcnum-test_g1_910c2.zip")
+        "segm-torch-model_unet-dcnum-test_g1_910c2.zip")
 
     sm = segm.segm_torch.SegmentTorchMPO(model_file=model_file)
     assert not sm.requires_background_correction
@@ -126,9 +122,9 @@ def test_segm_torch_mpo():
                                         "cell_image_5"])
 def test_segm_torch_mpo_explicit(image_stem):
     model_file = retrieve_model(
-        data_path / "segm-torch-model_unet-dcnum-test_g1_910c2.zip")
+        "segm-torch-model_unet-dcnum-test_g1_910c2.zip")
     img_dir = extract_data(
-        data_path / "segm-torch-test-data_unet-dcnum-test_g1_910c2.zip")
+        "segm-torch-test-data_unet-dcnum-test_g1_910c2.zip")
 
     image = cv2.imread(str(img_dir / f"{image_stem}.png"))[:, :, 0]
     mask_exp_segm = np.array(
@@ -160,9 +156,9 @@ def test_segm_torch_mpo_explicit(image_stem):
                                         "cell_image_5"])
 def test_segm_torch_mpo_sto_similarity(image_stem):
     model_file = retrieve_model(
-        data_path / "segm-torch-model_unet-dcnum-test_g1_910c2.zip")
+        "segm-torch-model_unet-dcnum-test_g1_910c2.zip")
     img_dir = extract_data(
-        data_path / "segm-torch-test-data_unet-dcnum-test_g1_910c2.zip")
+        "segm-torch-test-data_unet-dcnum-test_g1_910c2.zip")
 
     image = cv2.imread(str(img_dir / f"{image_stem}.png"))[:, :, 0]
 

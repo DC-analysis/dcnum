@@ -1,5 +1,4 @@
 import collections
-import pathlib
 
 import h5py
 
@@ -7,12 +6,9 @@ from dcnum import write
 
 from helper_methods import retrieve_data
 
-data_path = pathlib.Path(__file__).parent / "data"
-
 
 def test_writer_thread_basic():
-    path = retrieve_data(data_path /
-                         "fmt-hdf5_cytoshot_full-features_2023.zip")
+    path = retrieve_data("fmt-hdf5_cytoshot_full-features_2023.zip")
     path_wrt = path.with_name("written.hdf5")
     dq = collections.deque()
 

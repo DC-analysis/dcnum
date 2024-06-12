@@ -1,5 +1,3 @@
-import pathlib
-
 import h5py
 import numpy as np
 
@@ -7,13 +5,10 @@ from dcnum.feat import feat_texture
 
 from helper_methods import retrieve_data
 
-data_path = pathlib.Path(__file__).parent / "data"
-
 
 def test_basic_haralick():
     # This original file was generated with dcevent for reference.
-    path = retrieve_data(data_path /
-                         "fmt-hdf5_cytoshot_full-features_2023.zip")
+    path = retrieve_data("fmt-hdf5_cytoshot_full-features_2023.zip")
     # Make data available
     with h5py.File(path) as h5:
         ret_arr = feat_texture.haralick_texture_features(

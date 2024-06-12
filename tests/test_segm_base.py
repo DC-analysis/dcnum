@@ -1,4 +1,3 @@
-import pathlib
 import types
 
 import pytest
@@ -8,7 +7,6 @@ from dcnum.meta import ppid
 import numpy as np
 
 
-data_path = pathlib.Path(__file__).parent / "data"
 SEGM_METH = segm.get_available_segmenters()
 SEGM_KEYS = sorted(SEGM_METH.keys())
 
@@ -47,7 +45,7 @@ def test_segmenter_process_mask_clear_border():
         [2, 0, 2, 2, 2, 0, 0, 2],
         [2, 0, 2, 2, 2, 0, 0, 2],
         [2, 2, 2, 2, 2, 2, 2, 2],
-        ], dtype=int)
+    ], dtype=int)
 
     lbs = segm.Segmenter.process_mask(label,
                                       clear_border=True,
@@ -75,7 +73,7 @@ def test_segmenter_labeled_mask_clear_border2():
         [0, 0, 0, 0, 0, 0, 0, 0],
         [0, 0, 0, 0, 0, 0, 0, 0],
         [0, 0, 0, 0, 0, 0, 0, 0],
-        ], dtype=int)
+    ], dtype=int)
 
     sm = segm.segm_thresh.SegmentThresh(thresh=-6)
 
@@ -100,7 +98,7 @@ def test_segmenter_labeled_mask_spurious_noise_closing():
         [0, 0, 0, 0, 0, 0, 0, 0],
         [0, 0, 3, 3, 0, 0, 0, 0],  # noise, 3
         [0, 0, 0, 0, 0, 0, 0, 0],
-        ], dtype=int)
+    ], dtype=int)
 
     # Structuring element disk 1:
     # [0, 1, 0],

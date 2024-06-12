@@ -34,7 +34,7 @@ def test_segm_sto_bg_off_batch():
         [0, 0,  0,  0,  0,  0, 0, 0],
         [0, 0,  0,  0,  0,  0, 0, 0],
         [0, 0,  0,  0,  0,  0, 0, 0],
-        ], dtype=int)
+    ], dtype=int)
 
     sm = MockSTOSegmenter(kwargs_mask={"clear_border": True,
                                        "fill_holes": True,
@@ -55,7 +55,7 @@ def test_segm_sto_bg_off_batch():
         [0, 0, 0, 0, 0, 0, 0, 0],
         [0, 0, 0, 0, 0, 0, 0, 0],
         [0, 0, 0, 0, 0, 0, 0, 0],
-        ], dtype=int)
+    ], dtype=int)
     label2_exp = np.array([
         [0, 0, 0, 0, 0, 0, 0, 0],
         [0, 0, 0, 0, 0, 0, 0, 0],
@@ -68,7 +68,7 @@ def test_segm_sto_bg_off_batch():
         [0, 0, 0, 0, 0, 0, 0, 0],
         [0, 0, 0, 0, 0, 0, 0, 0],
         [0, 0, 0, 0, 0, 0, 0, 0],
-        ], dtype=int)
+    ], dtype=int)
 
     assert np.all(labels[0] == label1_exp)
     assert np.all(labels[1] == label2_exp)
@@ -100,7 +100,7 @@ def test_segm_sto_bg_off_single():
         [0, 0,  0,  0,  0,  0, 0, 0],
         [0, 0,  0,  0,  0,  0, 0, 0],
         [0, 0,  0,  0,  0,  0, 0, 0],
-        ], dtype=int)
+    ], dtype=int)
 
     sm = MockSTOSegmenter(kwargs_mask={"clear_border": True,
                                        "fill_holes": True,
@@ -119,7 +119,7 @@ def test_segm_sto_bg_off_single():
         [0, 0, 0, 0, 0, 0, 0, 0],
         [0, 0, 0, 0, 0, 0, 0, 0],
         [0, 0, 0, 0, 0, 0, 0, 0],
-        ], dtype=int)
+    ], dtype=int)
 
     assert np.all(label1 == label1_exp)
 
@@ -136,7 +136,7 @@ def test_segm_sto_bg_off_single():
         [0, 0, 0, 0, 0, 0, 0, 0],
         [0, 0, 0, 0, 0, 0, 0, 0],
         [0, 0, 0, 0, 0, 0, 0, 0],
-        ], dtype=int)
+    ], dtype=int)
 
     assert np.all(label2 == label2_exp)
 
@@ -161,7 +161,7 @@ def test_segmenter_sto_labeled_mask_fill_holes():
         [0, 0, 1, 1, 1, 1, 1, 0, 0],
         [0, 0, 0, 0, 0, 0, 0, 0, 0],
         [0, 0, 0, 0, 0, 0, 0, 0, 0],
-        ], dtype=bool)
+    ], dtype=bool)
 
     sm1 = MockSTOSegmenter(kwargs_mask={"clear_border": True,
                                         "fill_holes": True,
@@ -224,7 +224,7 @@ def test_segmenter_sto_labeled_mask_fill_holes_int32():
         [0, 0, 1, 1, 1, 0, 0, 0],
         [0, 0, 1, 1, 1, 0, 0, 0],
         [0, 0, 0, 0, 0, 0, 0, 0],
-        ], dtype=bool)
+    ], dtype=bool)
 
     sm1 = MockSTOSegmenter()
     labels = np.array(sm1.segment_single(-10 * mask), dtype=np.int64)
@@ -263,7 +263,7 @@ def test_segm_sto_mask_postprocessing_removed_border_fill_holes():
         [0, 0, 2, 2, 2, 0, 0, 0],
         [0, 0, 2, 2, 2, 0, 0, 0],
         [0, 0, 0, 0, 0, 0, 0, 0],
-        ], dtype=int)
+    ], dtype=int)
     assert np.all(label == label_exp)
 
 
@@ -290,5 +290,5 @@ def test_segm_sto_mask_postprocessing_removed_border_no_fill_holes():
         [0, 0, 3, 3, 3, 0, 0, 0],
         [0, 0, 3, 3, 3, 0, 0, 0],
         [0, 0, 0, 0, 0, 0, 0, 0],
-        ], dtype=int)
+    ], dtype=int)
     assert np.all(label == label_exp)

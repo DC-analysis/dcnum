@@ -112,7 +112,7 @@ def test_copy_metadata_logs():
         for key in h5_src["logs"]:
             assert np.all(h5_src[f"logs/{key}"][:] == h5_dst[f"logs/{key}"][:])
             assert h5_dst[f"logs/{key}"].attrs["software"] \
-                   == f"dcnum {version}"
+                == f"dcnum {version}"
         assert h5_dst["logs/dcevent-analyze"][0] == b"{"
         assert h5_dst["logs/dcevent-analyze"][1] == b'  "dcevent": {'
 
@@ -133,7 +133,7 @@ def test_copy_metadata_logs_variable_length():
         for key in h5_src["logs"]:
             assert np.all(h5_src[f"logs/{key}"][:] == h5_dst[f"logs/{key}"][:])
             assert h5_dst[f"logs/{key}"].attrs["software"] \
-                   == f"dcnum {version}"
+                == f"dcnum {version}"
         assert h5_dst["logs/M1_para.ini"][0] == b"[General]"
         assert h5_dst["logs/M1_camera.ini"][1] == b"Shutter Time = 20"
 

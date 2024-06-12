@@ -21,7 +21,7 @@ class MockImageData:
         [0, 0, 1, 1, 1, 0, 0, 0],
         [0, 0, 1, 1, 1, 0, 0, 0],
         [0, 0, 0, 0, 0, 0, 0, 0],
-        ], dtype=bool)
+    ], dtype=bool)
 
     def get_chunk(self, chunk_index):
         image = np.array(-(10 + chunk_index) * self.mask, dtype=np.int16)

@@ -1,5 +1,3 @@
-import pathlib
-
 import h5py
 import numpy as np
 import scipy.ndimage as ndi
@@ -7,8 +5,6 @@ import scipy.ndimage as ndi
 from dcnum.feat import feat_contour
 
 from helper_methods import retrieve_data
-
-data_path = pathlib.Path(__file__).parent / "data"
 
 
 def test_inert_ratio_prnc():
@@ -151,8 +147,7 @@ def test_inert_ratio_prnc_simple_2():
 
 def test_moments_based_features():
     # This original file was generated with dcevent for reference.
-    path = retrieve_data(data_path /
-                         "fmt-hdf5_cytoshot_full-features_2023.zip")
+    path = retrieve_data("fmt-hdf5_cytoshot_full-features_2023.zip")
     feats = [
         "deform",
         "size_x",
@@ -201,9 +196,9 @@ def test_mask_0d():
         [0, 0, 0, 0, 0, 0],
     ], dtype=bool)[np.newaxis]
     data = feat_contour.moments_based_features(
-                mask=masks,
-                pixel_size=0.2645
-            )
+        mask=masks,
+        pixel_size=0.2645
+    )
     assert data["deform"].shape == (1,)
     assert np.isnan(data["deform"][0])
     assert np.isnan(data["area_um"][0])
@@ -219,9 +214,9 @@ def test_mask_1d():
         [0, 0, 0, 0, 0, 0],
     ], dtype=bool)[np.newaxis]
     data = feat_contour.moments_based_features(
-                mask=masks,
-                pixel_size=0.2645
-            )
+        mask=masks,
+        pixel_size=0.2645
+    )
     assert data["deform"].shape == (1,)
     assert np.isnan(data["deform"][0])
     assert np.isnan(data["area_um"][0])
@@ -237,9 +232,9 @@ def test_mask_1d_large():
         [0, 0, 1, 0, 0, 0],
     ], dtype=bool)[np.newaxis]
     data = feat_contour.moments_based_features(
-                mask=masks,
-                pixel_size=0.2645
-            )
+        mask=masks,
+        pixel_size=0.2645
+    )
     assert data["deform"].shape == (1,)
     assert np.isnan(data["deform"][0])
     assert np.isnan(data["area_um"][0])
@@ -257,9 +252,9 @@ def test_mask_1d_large_no_border():
         [0, 0, 0, 0, 0, 0],
     ], dtype=bool)[np.newaxis]
     data = feat_contour.moments_based_features(
-                mask=masks,
-                pixel_size=0.2645
-            )
+        mask=masks,
+        pixel_size=0.2645
+    )
     assert data["deform"].shape == (1,)
     assert np.isnan(data["deform"][0])
     assert np.isnan(data["area_um"][0])
@@ -275,9 +270,9 @@ def test_mask_2d():
         [0, 0, 0, 0, 0, 0],
     ], dtype=bool)[np.newaxis]
     data = feat_contour.moments_based_features(
-                mask=masks,
-                pixel_size=0.2645
-            )
+        mask=masks,
+        pixel_size=0.2645
+    )
     assert data["deform"].shape == (1,)
     # This is the deformation of a square (compared to circle)
     assert np.allclose(data["deform"][0], 0.11377307454724206)
@@ -305,8 +300,8 @@ def test_mask_mixed():
     mixed_masks = np.append(mask_valid[None, ...],
                             mask_invalid[None, ...], axis=0)
     data = feat_contour.moments_based_features(
-                mask=mixed_masks,
-                pixel_size=0.2645)
+        mask=mixed_masks,
+        pixel_size=0.2645)
     assert data["deform"].shape == (2,)
     assert np.all(data["valid"][:] == np.array([True, False]))
     assert not np.isnan(data["deform"][0])

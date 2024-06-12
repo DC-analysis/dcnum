@@ -1,5 +1,3 @@
-import pathlib
-
 from dcnum import read
 import h5py
 import numpy as np
@@ -7,13 +5,10 @@ import pytest
 
 from helper_methods import retrieve_data
 
-data_path = pathlib.Path(__file__).parent / "data"
-
 
 @pytest.mark.parametrize("path_out", [None, True])
 def test_concat_basic(path_out):
-    path = retrieve_data(data_path /
-                         "fmt-hdf5_cytoshot_full-features_2023.zip")
+    path = retrieve_data("fmt-hdf5_cytoshot_full-features_2023.zip")
     # create simple concatenated dataset, repeating a file
     data = read.concatenated_hdf5_data([path, path, path],
                                        path_out=path_out)
@@ -22,8 +17,7 @@ def test_concat_basic(path_out):
 
 @pytest.mark.parametrize("path_out", [None, True])
 def test_concat_basic_frame(path_out):
-    path = retrieve_data(data_path /
-                         "fmt-hdf5_cytoshot_full-features_2023.zip")
+    path = retrieve_data("fmt-hdf5_cytoshot_full-features_2023.zip")
     # create simple concatenated dataset, repeating a file
     data = read.concatenated_hdf5_data([path, path, path],
                                        path_out=path_out)
@@ -43,8 +37,7 @@ def test_concat_basic_frame(path_out):
 
 
 def test_concat_basic_to_file(tmp_path):
-    path = retrieve_data(data_path /
-                         "fmt-hdf5_cytoshot_full-features_2023.zip")
+    path = retrieve_data("fmt-hdf5_cytoshot_full-features_2023.zip")
     # create simple concatenated dataset, repeating a file
     path_out = tmp_path / "test.rtdc"
     assert not path_out.exists()
@@ -56,8 +49,7 @@ def test_concat_basic_to_file(tmp_path):
 
 def test_concat_ignore_contour(tmp_path):
     # get file wtih contour information
-    path = retrieve_data(data_path /
-                         "fmt-hdf5_cytoshot_full-features_2023.zip")
+    path = retrieve_data("fmt-hdf5_cytoshot_full-features_2023.zip")
     cdata = np.array([[2, 2], [2, 3], [2, 5], [4, 5], [4, 2]])
     with h5py.File(path, mode="a") as h5:
         contour = h5["events"].create_group("contour")
@@ -76,10 +68,8 @@ def test_concat_ignore_contour(tmp_path):
 
 
 def test_concat_invalid_input_feature_number():
-    path = retrieve_data(data_path /
-                         "fmt-hdf5_cytoshot_full-features_2023.zip")
-    path2 = retrieve_data(data_path /
-                          "fmt-hdf5_cytoshot_full-features_2023.zip")
+    path = retrieve_data("fmt-hdf5_cytoshot_full-features_2023.zip")
+    path2 = retrieve_data("fmt-hdf5_cytoshot_full-features_2023.zip")
 
     # Add a new feature to path2
     with h5py.File(path2, mode="a") as h5:
@@ -91,8 +81,7 @@ def test_concat_invalid_input_feature_number():
 
 
 def test_concat_invalid_input_path():
-    path = retrieve_data(data_path /
-                         "fmt-hdf5_cytoshot_full-features_2023.zip")
+    path = retrieve_data("fmt-hdf5_cytoshot_full-features_2023.zip")
     invalid_output = 42
     with pytest.raises(ValueError, match="Invalid type"):
         read.concatenated_hdf5_data([path, path, path],
@@ -100,17 +89,14 @@ def test_concat_invalid_input_path():
 
 
 def test_concat_invalid_input_path_number():
-    path = retrieve_data(data_path /
-                         "fmt-hdf5_cytoshot_full-features_2023.zip")
+    path = retrieve_data("fmt-hdf5_cytoshot_full-features_2023.zip")
     with pytest.raises(ValueError, match="Please specify at least two"):
         read.concatenated_hdf5_data([path])
 
 
 def test_concat_specify_input_feature_number():
-    path = retrieve_data(data_path /
-                         "fmt-hdf5_cytoshot_full-features_2023.zip")
-    path2 = retrieve_data(data_path /
-                          "fmt-hdf5_cytoshot_full-features_2023.zip")
+    path = retrieve_data("fmt-hdf5_cytoshot_full-features_2023.zip")
+    path2 = retrieve_data("fmt-hdf5_cytoshot_full-features_2023.zip")
 
     # Add a new feature to path2
     with h5py.File(path2, mode="a") as h5:
