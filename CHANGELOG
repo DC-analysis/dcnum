@@ -1,5 +1,7 @@
 0.23.2
  - enh: add DCNumPipelineJob.validate method
+ - enh: list Python libraries used in job log
+ - setup: change required pytorch version from 2.3 to 2.2 (hardware support)
 0.23.1
  - enh: support passing custom default arguments to get_class_method_info
  - tests: fix torch preprocessing tests
