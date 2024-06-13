@@ -34,6 +34,7 @@ from ..write import (
 from .job import DCNumPipelineJob
 from .json_encoder import ExtendedJSONEncoder
 
+
 # Force using "spawn" method for multiprocessing, because we are using
 # queues and threads and would end up with race conditions otherwise.
 mp_spawn = mp.get_context("spawn")
@@ -562,8 +563,8 @@ class DCNumJobRunner(threading.Thread):
             # 3. image features from the input file
             [self.draw.h5, ["image", "image_bg", "bg_off"], "optional"],
         ]
-        with h5py.File(self.path_temp_out, "a") as hout:
-            hw = HDF5Writer(hout)
+        with HDF5Writer(self.path_temp_out) as hw:
+            hout = hw.h5
             # First, we have to determine the basin mapping from input to
             # output. This information is stored by the QueueCollectorThread
             # in the "basinmap0" feature, ready to be used by us.
@@ -576,7 +577,7 @@ class DCNumJobRunner(threading.Thread):
                 # mapping of the input file was set to slice(1, 100), then the
                 # first image would not be there, and we would have
                 # [1, 1, 1, ...].
-                idx_um = hout["events/index_unmapped"]
+                idx_um = hout["events/index_unmapped"][:]
 
                 # If we want to convert this to an actual basinmap feature,
                 # then we have to convert those indices to indices that map

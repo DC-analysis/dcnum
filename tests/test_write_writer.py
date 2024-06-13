@@ -84,6 +84,43 @@ def test_copy_features_error_type_group():
                                 )
 
 
+@pytest.mark.parametrize("samples", [15, 89, 500, 714, 965, 1482])
+def test_copy_features_large_dataset(samples):
+    """
+    Make sure mapping works properly for datasets that are larger
+    than the regular chunk size.
+    """
+    path_orig = retrieve_data(
+        "fmt-hdf5_cytoshot_full-features_legacy_allev_2023.zip")
+
+    # create large input file
+    path_large = path_orig.with_name("large.rtdc")
+    with write.HDF5Writer(path_large) as hw, read.HDF5Data(path_orig) as hd:
+        write.copy_metadata(h5_src=hd.h5, h5_dst=hw.h5)
+        image = hd.h5["events/image"][:]
+        iterations = (1000 // image.shape[0]) + 1
+        for ii in range(iterations):
+            hw.store_feature_chunk("image", image)
+        size = hw.h5["events/image"].shape[0]
+        hw.h5.attrs["experiment:event count"] = size
+        # 1000 should be big enough for chunk sizes of about 40
+        assert size > 1000, "sanity check"
+
+    # define output mapping
+    mapping = np.sort(np.random.randint(low=0, high=size, size=samples))
+    assert len(mapping) == samples
+
+    # now write to the output file
+    path_out = path_orig.with_name("output.rtdc")
+    with h5py.File(path_large) as hl, h5py.File(path_out, "a") as ho:
+        write.copy_features(h5_src=hl, h5_dst=ho,
+                            features=["image"], mapping=mapping)
+
+    # make sure this worked
+    with h5py.File(path_large) as hl, h5py.File(path_out) as ho:
+        assert np.all(hl["events/image"][:][mapping] == ho["events/image"][:])
+
+
 def test_copy_metadata_empty_log_variable_length_string():
     path = retrieve_data(
         "fmt-hdf5_cytoshot_full-features_legacy_allev_2023.zip")

@@ -48,7 +48,13 @@ class HDF5Writer:
             self.h5 = obj
             self.h5_owned = False
         else:
-            self.h5 = h5py.File(obj, mode=mode, libver="latest")
+            self.h5 = h5py.File(obj,
+                                mode=mode,
+                                libver="latest",
+                                # Set chunk cache size to 3 MiB for each
+                                # dataset to allow partial writes.
+                                rdcc_nbytes=3145728,
+                                )
             self.h5_owned = True
         self.events = self.h5.require_group("events")
         ds_kwds = set_default_filter_kwargs(ds_kwds)
@@ -323,8 +329,6 @@ def copy_features(h5_src: h5py.File,
     """
     ei = h5_src["events"]
     eo = h5_dst.require_group("events")
-    # This is the size of the output dataset
-    size = h5_dst.attrs["experiment:event count"]
     hw = HDF5Writer(h5_dst)
     for feat in features:
         if feat in eo:
@@ -341,20 +345,28 @@ def copy_features(h5_src: h5py.File,
                           dst_name=feat.encode(),
                           )
         else:
-            # Perform mapping and store the features in chunks to keep
-            # memory usage down.
+            # We have to perform mapping.
+            # Since h5py is very slow at indexing with arrays,
+            # we instead read the data in chunks from the input file,
+            # and perform the mapping afterward using the numpy arrays.
             dsi = ei[feat]
             chunk_size = hw.get_best_nd_chunks(dsi[0].shape, dsi.dtype)[0]
+            size_in = dsi.shape[0]
             start = 0
-            while start < size:
-                chunk_idx = mapping[start:start + chunk_size]
-                # h5py only supports indexing in increasing order
-                chunk_unique, order = np.unique(chunk_idx, return_inverse=True)
-                data_unique = dsi[chunk_unique]
-                data = data_unique[order]
+            while start < size_in:
+                # Get a big chunk of data
+                big_chunk = 10 * chunk_size
+                stop = start + big_chunk
+                data_in = dsi[start:stop]
+                # Determine the indices that we need from that chunk.
+                mapping_idx = (start <= mapping) * (mapping < stop)
+                mapping_chunk = mapping[mapping_idx] - start
+                data = data_in[mapping_chunk]
+                # Note that HDF5 does its own caching, properly handling
+                # partial chunk writes.
                 hw.store_feature_chunk(feat, data)
                 # increment start
-                start += chunk_size
+                start = stop
 
 
 def copy_metadata(h5_src: h5py.File,
