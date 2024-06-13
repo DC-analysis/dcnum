@@ -1,6 +1,7 @@
 0.23.3
  - fix: ignore non-file-type-like basins
  - fix: workaround for slow reading from HDF5 (don't use index arrays)
+ - fix: avoid excessive stalling when writer is slow
 0.23.2
  - enh: add DCNumPipelineJob.validate method
  - enh: list Python libraries used in job log
