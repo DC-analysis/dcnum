@@ -205,7 +205,9 @@ class HDF5Data:
                     bn_data = "\n".join(
                         [s.decode() for s in h5["basins"][bnkey][:].tolist()])
                     bn_dict = json.loads(bn_data)
-                    basins.append(bn_dict)
+                    if bn_dict["type"] == "file":
+                        # we only support file-based basins
+                        basins.append(bn_dict)
                 self.basins = sorted(basins, key=lambda x: x["name"])
 
         if state["pixel_size"] is not None:
