@@ -37,6 +37,7 @@ class SegmentTorchMPO(TorchSegmenterBase, MPOSegmenter):
         # all the multiprocessing.
         # https://pytorch.org/docs/stable/generated/torch.set_num_threads.html#torch.set_num_threads
         torch.set_num_threads(1)
+        torch.set_num_interop_threads(1)
         device = torch.device("cpu")
 
         # Load model and metadata
