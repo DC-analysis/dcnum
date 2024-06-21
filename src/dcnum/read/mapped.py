@@ -27,8 +27,18 @@ class MappedHDF5Dataset:
         if isinstance(idx, numbers.Integral):
             return self.h5ds[self.mapping_indices[idx]]
         else:
-            idx_mapped = self.mapping_indices[idx]
-            return self.h5ds[idx_mapped]
+            midx = self.mapping_indices[idx]
+            start = np.min(midx)
+            # Add one, because the final index must be included
+            stop = np.max(midx) + 1
+            # We have to perform mapping.
+            # Since h5py is very slow at indexing with arrays,
+            # we instead read the data in chunks from the input file,
+            # and perform the mapping afterward using the numpy arrays.
+            data_in = self.h5ds[start:stop]
+            # Determine the indices that we need from that chunk.
+            data = data_in[midx - start]
+            return data
 
 
 def get_mapping_indices(

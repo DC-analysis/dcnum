@@ -102,10 +102,12 @@ class HDF5Data:
         elif (feat in self.h5["events"]
               and len(self.h5["events"][feat].shape) == 1):  # cache scalar
             if self.index_mapping is None:
-                idx_map = slice(None)  # no mapping indices, just slice
+                # no mapping indices, just slice
+                dat_sc = self.h5["events"][feat][:]
             else:
-                idx_map = get_mapping_indices(self.index_mapping)
-            self._cache_scalar[feat] = self.h5["events"][feat][idx_map]
+                dat_sc = get_mapped_object(self.h5["events"][feat],
+                                           index_mapping=self.index_mapping)[:]
+            self._cache_scalar[feat] = dat_sc
             return self._cache_scalar[feat]
         else:
             if feat in self.h5["events"]:
@@ -208,6 +210,9 @@ class HDF5Data:
                     if bn_dict["type"] == "file":
                         # we only support file-based basins
                         basins.append(bn_dict)
+                        # TODO:
+                        #  - support iterative mapped basins and catch
+                        #    circular basin definitions.
                 self.basins = sorted(basins, key=lambda x: x["name"])
 
         if state["pixel_size"] is not None:

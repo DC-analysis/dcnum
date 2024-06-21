@@ -18,13 +18,15 @@ data_path = pathlib.Path(__file__).parent / "data"
     (slice(1, 5), slice(1, 5, None)),
     (slice(3, 6), slice(3, 6, None)),
     ([1, 4, 6], [1, 4, 6]),
+    # repetitions supported in dcnum 0.24.0
+    ([1, 1, 4, 6], [1, 1, 4, 6]),
 ])
 def test_features_scalar_frame(index_mapping, np_slice):
     path = retrieve_data(
         "fmt-hdf5_cytoshot_full-features_legacy_allev_2023.zip")
 
     with h5py.File(path) as h5:
-        tdata = h5["/events/time"][np_slice]
+        tdata = h5["/events/time"][:][np_slice]
 
     with read.HDF5Data(path, index_mapping=index_mapping) as hd:
         assert "time" in hd
@@ -41,6 +43,8 @@ def test_features_scalar_frame(index_mapping, np_slice):
     (slice(1, 5), slice(1, 5, None)),
     (slice(3, 6), slice(3, 6, None)),
     ([1, 4, 6], [1, 4, 6]),
+    # repetitions supported in dcnum 0.24.0
+    ([1, 1, 4, 6], [1, 1, 4, 6]),
 ])
 def test_features_scalar_frame_from_basin(index_mapping, np_slice):
     path = retrieve_data(
@@ -52,9 +56,9 @@ def test_features_scalar_frame_from_basin(index_mapping, np_slice):
     start = np_slice.start or 0 if isinstance(np_slice, slice) else np_slice[0]
 
     with h5py.File(path) as h5:
-        tdata = h5["/events/time"][np_slice]
+        tdata = h5["/events/time"][:][np_slice]
         tfull = h5["/events/time"][:]
-        image0 = h5["/events/image"][start]
+        image0 = h5["/events/image"][:][start]
 
     with read.HDF5Data(path_2, index_mapping=index_mapping) as hd:
         assert "time" not in hd.h5["events"], "sanity checkts"
@@ -75,6 +79,8 @@ def test_features_scalar_frame_from_basin(index_mapping, np_slice):
     (slice(1, 5), slice(1, 5, None)),
     (slice(3, 6), slice(3, 6, None)),
     ([1, 4, 6], [1, 4, 6]),
+    # repetitions supported in dcnum 0.24.0
+    ([1, 1, 4, 6], [1, 1, 4, 6]),
 ])
 def test_features_scalar_frame_from_basin_nested(index_mapping, np_slice):
     path = retrieve_data(
@@ -85,7 +91,7 @@ def test_features_scalar_frame_from_basin_nested(index_mapping, np_slice):
     write.create_with_basins(path_out=path_basin_nest, basin_paths=[path_2])
 
     with h5py.File(path) as h5:
-        tdata = h5["/events/time"][np_slice]
+        tdata = h5["/events/time"][:][np_slice]
 
     with read.HDF5Data(path_basin_nest, index_mapping=index_mapping) as hd:
         assert "time" in hd

@@ -1,3 +1,5 @@
+0.24.0
+ - enh: support numpy indexing for mapped basins
 0.23.4
  - enh: run set_num_interop_threads(1) for torchmpo segmenter
 0.23.3
