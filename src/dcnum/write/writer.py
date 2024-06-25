@@ -17,6 +17,11 @@ class CreatingFileWithoutBasinWarning(UserWarning):
     pass
 
 
+class IgnoringBasinTypeWarning(UserWarning):
+    """Issued when a specific basin type is ignored"""
+    pass
+
+
 class HDF5Writer:
     def __init__(self,
                  # TODO: make this a mandatory argument when `path` is
@@ -400,7 +405,8 @@ def copy_basins(h5_src: h5py.File,
                            mapping=mapping,
                            )
         else:
-            warnings.warn(f"Ignored basin of type {bn_dict['type']}")
+            warnings.warn(f"Ignored basin of type '{bn_dict['type']}'",
+                          IgnoringBasinTypeWarning)
 
 
 def copy_features(h5_src: h5py.File,
