@@ -11,6 +11,91 @@ from dcnum import __version__ as version
 from helper_methods import retrieve_data
 
 
+def test_copy_basins_none():
+    path = retrieve_data(
+        "fmt-hdf5_cytoshot_full-features_legacy_allev_2023.zip")
+    path_wrt = path.with_name("written.hdf5")
+    with h5py.File(path, "r") as h5_src, h5py.File(path_wrt, "w") as h5_dst:
+        write.copy_metadata(h5_src=h5_src, h5_dst=h5_dst)
+        write.copy_basins(h5_src=h5_src,
+                          h5_dst=h5_dst,
+                          )
+        assert "basins" not in h5_src
+        assert "basins" not in h5_dst
+
+
+def test_copy_basins_simple():
+    path = retrieve_data(
+        "fmt-hdf5_cytoshot_full-features_legacy_allev_2023.zip")
+    path_wrt = path.with_name("written.hdf5")
+    path_out = path.with_name("out.hdf5")
+
+    with h5py.File(path) as h5:
+        deform = h5["events/deform"][:]
+
+    write.create_with_basins(path_out=path_wrt, basin_paths=[path.resolve()])
+
+    with (h5py.File(path_wrt, "r") as h5_src,
+          h5py.File(path_out, "w") as h5_dst):
+        write.copy_metadata(h5_src=h5_src, h5_dst=h5_dst)
+        write.copy_basins(h5_src=h5_src,
+                          h5_dst=h5_dst,
+                          )
+        assert "basins" in h5_src
+        assert "basins" in h5_dst
+
+    with read.HDF5Data(path_out) as hd:
+        assert np.all(deform == hd["deform"][:])
+
+
+@pytest.mark.parametrize("store_internal", [True, False])
+def test_copy_basins_internal(store_internal):
+    path = retrieve_data(
+        "fmt-hdf5_cytoshot_full-features_legacy_allev_2023.zip")
+    path_out = path.with_name("out.hdf5")
+
+    with h5py.File(path) as h5:
+        deform = h5["events/deform"][:]
+
+    # Add an internal basin
+    with write.HDF5Writer(path) as hw:
+        hw.store_basin(name="test userdef1",
+                       mapping=np.ones(deform.shape),
+                       internal_data={"userdef1": np.array([5, 6])},
+                       )
+
+    with h5py.File(path, "r") as h5_src, h5py.File(path_out, "w") as h5_dst:
+        write.copy_metadata(h5_src=h5_src, h5_dst=h5_dst)
+        h5_dst.require_group("events")
+        assert "basinmap0" in h5_src["events"]
+        assert "basinmap0" not in h5_dst["events"]
+        assert "basinmap1" not in h5_dst["events"]
+
+        # create a fake basinmap0 in dst to make sure we are creating
+        # a new basinmap feature and to make sure indexing works.
+        h5_dst["events"]["basinmap0"] = np.zeros(deform.shape)
+
+        write.copy_basins(h5_src=h5_src,
+                          h5_dst=h5_dst,
+                          internal_basins=store_internal,
+                          )
+
+        assert "basinmap0" in h5_dst["events"]
+
+        if store_internal:
+            assert "basinmap1" in h5_dst["events"]
+            assert np.all(h5_dst["events/basinmap0"] == np.zeros(deform.shape))
+            assert np.all(h5_dst["events/basinmap1"] == np.ones(deform.shape))
+        else:
+            assert "basinmap1" not in h5_dst["events"]
+
+    with read.HDF5Data(path_out) as hd:
+        if store_internal:
+            assert np.all(hd["userdef1"][:] == np.full(deform.shape, 6))
+        else:
+            assert "userdef1" not in hd
+
+
 @pytest.mark.parametrize("mapping,mslice", [
     [None, slice(None)],
     [np.arange(3), slice(0, 3)],
