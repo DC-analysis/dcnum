@@ -93,6 +93,55 @@ def test_median_sparsemend_full_bg_off(tmp_path):
             input_data - hd["image_bg"] - hd["bg_off"].reshape(-1, 1, 1) == 0)
 
 
+def test_median_sparsemend_full_internal_image_bg(tmp_path):
+    """Test computation of internal image_bg feature"""
+    event_count = 720
+    kernel_size = 10
+    split_time = 0.01
+    output_path = tmp_path / "test.h5"
+    # image shape: 5 * 7
+    input_data = np.arange(5*7).reshape(1, 5, 7) * np.ones((event_count, 1, 1))
+    # Add images that have an offset which should be corrected in bg_off,
+    # but be ignored by the median background computation.
+    input_data[3] += 1
+    input_data[25] += 2
+    input_data[101] += 3
+    # Add a few `kernel_size` images that have a higher value.
+    # duration and time are hard-coded
+    duration = event_count / 3600 * 1.5
+    dtime = np.linspace(0, duration, event_count)
+    start = np.argmin(np.abs(dtime - 0.15))
+    stop = np.argmin(np.abs(dtime - 0.16))
+    input_data[start:stop] += 4
+    assert np.all(input_data[0] == input_data[1])
+    assert np.all(input_data[0].flatten() == np.arange(5*7))
+
+    with bg_sparse_median.BackgroundSparseMed(input_data=input_data,
+                                              output_path=output_path,
+                                              kernel_size=kernel_size,
+                                              split_time=split_time,
+                                              thresh_cleansing=0,
+                                              frac_cleansing=.8,
+                                              offset_correction=True
+                                              ) as bic:
+        assert len(bic.shared_input_raw) == kernel_size * 5 * 7
+        assert bic.kernel_size == kernel_size
+        # process the data
+        bic.process()
+    assert output_path.exists()
+
+    with read.HDF5Data(output_path) as hd:
+        bg0 = hd["image_bg"][0]
+        # sanity checks (bg_off contains the offset)
+        assert np.all(bg0 == hd["image_bg"][3])
+        assert np.all(bg0 == hd["image_bg"][25])
+        assert np.all(bg0 == hd["image_bg"][101])
+        # Real test. The interval size is really dependent on the timing,
+        # the actual interval is bigger than 10.
+        for ii in range(start-5, start+5):
+            assert np.all(bg0 + 4 == hd["image_bg"][ii])
+
+
 def test_median_sparsemend_full_with_file(tmp_path):
     path_in = retrieve_data("fmt-hdf5_cytoshot_full-features_2023.zip")
     dtime = np.linspace(0, 1, 40)
