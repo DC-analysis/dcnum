@@ -29,6 +29,8 @@ jobs:
         python -m pip install coverage flake8 pytest
     - name: Install dcnum
       run: |
+        # mahotas 1.4.15 does not yet support numpy 2.0
+        pip install "numpy<2"
         pip install .[torch]
     - name: List installed packages
       run: |
