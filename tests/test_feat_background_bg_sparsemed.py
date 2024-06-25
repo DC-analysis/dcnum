@@ -52,6 +52,47 @@ def test_median_sparsemend_full(tmp_path, event_count, kernel_size,
     assert output_path.exists()
 
 
+def test_median_sparsemend_full_bg_off(tmp_path):
+    """Test computation of bg_off"""
+    event_count = 720
+    kernel_size = 10
+    split_time = 0.01
+    output_path = tmp_path / "test.h5"
+    # image shape: 5 * 7
+    input_data = np.arange(5*7).reshape(1, 5, 7) * np.ones((event_count, 1, 1))
+    # Add images that have an offset which should be corrected in bg_off
+    input_data[3] += 1
+    input_data[25] += 2
+    input_data[101] += 3
+    bg_off_exp = np.zeros(event_count)
+    bg_off_exp[3] = 1
+    bg_off_exp[25] = 2
+    bg_off_exp[101] = 3
+    assert np.all(input_data[0] == input_data[1])
+    assert np.all(input_data[0].flatten() == np.arange(5*7))
+
+    with bg_sparse_median.BackgroundSparseMed(input_data=input_data,
+                                              output_path=output_path,
+                                              kernel_size=kernel_size,
+                                              split_time=split_time,
+                                              thresh_cleansing=0,
+                                              frac_cleansing=.8,
+                                              offset_correction=True
+                                              ) as bic:
+        assert len(bic.shared_input_raw) == kernel_size * 5 * 7
+        assert bic.kernel_size == kernel_size
+        # process the data
+        bic.process()
+    assert output_path.exists()
+    with h5py.File(output_path) as h5:
+        assert np.all(bg_off_exp == h5["events/bg_off"][:])
+
+    with read.HDF5Data(output_path) as hd:
+        # This is basically the definition of bg_off (a correction factor)
+        assert np.all(
+            input_data - hd["image_bg"] - hd["bg_off"].reshape(-1, 1, 1) == 0)
+
+
 def test_median_sparsemend_full_with_file(tmp_path):
     path_in = retrieve_data("fmt-hdf5_cytoshot_full-features_2023.zip")
     dtime = np.linspace(0, 1, 40)
