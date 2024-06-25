@@ -345,6 +345,7 @@ class BackgroundSparseMed(Background):
 
         # store the offset correction, if applicable
         if self.offset_correction:
+            logger.info("Computing background offset correction")
             # compute the mean at the top of all background images
             sh, sw = self.input_data.shape[1:]
             roi_full = (slice(None), slice(0, 20), slice(0, sw))
