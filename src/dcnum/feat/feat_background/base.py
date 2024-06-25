@@ -43,6 +43,7 @@ class Background(abc.ABC):
         """
         # proper conversion to Path objects
         output_path = pathlib.Path(output_path)
+        self.output_path = output_path
         if isinstance(input_data, str):
             input_data = pathlib.Path(input_data)
         # kwargs checks
@@ -188,20 +189,27 @@ class Background(abc.ABC):
             return self.image_proc.value
 
     def process(self):
+        """Perform the background computation
+
+        This irreversibly removes/overrides any "image_bg" and
+        "bg_off" features defined in the output file `self.h5out`.
+        """
         # Delete any old background data
-        for key in ["image_bg", "bg_off"]:
-            if key in self.h5out["events"]:
-                del self.h5out["events"][key]
+        for ds_key in ["image_bg", "bg_off"]:
+            for grp_key in ["events", "basin_events"]:
+                if grp_key in self.h5out and ds_key in self.h5out[grp_key]:
+                    del self.h5out[grp_key][ds_key]
         # Perform the actual background computation
         self.process_approach()
         bg_ppid = self.get_ppid()
         # Store pipeline information in the image_bg/bg_off feature
-        for key in ["image_bg", "bg_off"]:
-            if key in self.h5out["events"]:
-                self.h5out[f"events/{key}"].attrs["dcnum ppid background"] = \
-                    bg_ppid
-                self.h5out[F"events/{key}"].attrs["dcnum ppid generation"] = \
-                    ppid.DCNUM_PPID_GENERATION
+        for ds_key in ["image_bg", "bg_off"]:
+            for grp_key in ["events", "basin_events"]:
+                if grp_key in self.h5out and ds_key in self.h5out[grp_key]:
+                    self.h5out[f"{grp_key}/{ds_key}"].attrs[
+                        "dcnum ppid background"] = bg_ppid
+                    self.h5out[F"{grp_key}/{ds_key}"].attrs[
+                        "dcnum ppid generation"] = ppid.DCNUM_PPID_GENERATION
 
     @abc.abstractmethod
     def process_approach(self):

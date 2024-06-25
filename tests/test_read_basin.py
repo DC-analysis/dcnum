@@ -13,10 +13,9 @@ def test_basin_features():
     create_with_basins(path_out=h5path_basin, basin_paths=[h5path])
     with HDF5Data(h5path_basin) as hd:
         assert len(hd.basins) == 1
-        h5dat, features = hd.get_basin_data(0)
-        assert "time" in h5dat.h5["events"]
-        assert "time" in features
-        assert "time" in h5dat
+        bn_grp, bn_feats, _ = hd.get_basin_data(0)
+        assert "time" in bn_grp
+        assert "time" in bn_feats
 
 
 def test_basin_features_nested():
@@ -29,16 +28,16 @@ def test_basin_features_nested():
         assert len(hd.basins) == 2
         assert "time" in hd
         for ii, bn_dict in enumerate(hd.basins):
-            h5dat, features = hd.get_basin_data(ii)
+            bn_grp, bn_feats, _ = hd.get_basin_data(ii)
             if str(bn_dict["paths"][0]) == str(h5path):
                 # First basin-based dataset, should contain features.
-                assert "time" in features
-                assert "time" in h5dat
+                assert "time" in bn_feats
+                assert "time" in bn_grp
             else:
                 # Nested basin, only contains basin, no features available.
                 assert bn_dict["paths"][0] == str(h5path_basin)
-                assert "time" not in features
-                assert "time" in h5dat
+                assert "time" not in bn_feats
+                assert "time" not in bn_grp
 
 
 def test_basin_not_available():
@@ -71,8 +70,8 @@ def test_basin_not_available():
         assert hd.image_bg is None
         assert hd.image_corr is None
         assert hd.mask is None
-        _, features = hd.get_basin_data(0)
-        assert not features
+        _, bn_feats, _ = hd.get_basin_data(0)
+        assert not bn_feats
 
 
 def test_basin_nothing_available():
@@ -100,7 +99,8 @@ def test_basin_nothing_available():
     # Now open the scalar dataset and check whether basins missing
     with HDF5Data(h5path_small) as hd:
         assert "image" not in hd
-        _, features = hd.get_basin_data(0)
+        _, bn_feats, _ = hd.get_basin_data(0)
+        assert "image" not in bn_feats
 
 
 def test_basin_path_absolute():
@@ -123,7 +123,9 @@ def test_basin_path_absolute():
 
     # Now open the scalar dataset and check whether basins are defined
     with HDF5Data(h5path_small) as hd:
-        assert "image" in hd.get_basin_data(0)[1]
+        bn_group, bn_feats, _ = hd.get_basin_data(0)
+        assert "image" in bn_feats
+        assert "image" in bn_group
         assert "image" in hd.keys()
         assert np.median(hd["image"][0]) == 187
 
@@ -148,8 +150,9 @@ def test_basin_relative():
 
     # Now open the scalar dataset and check whether basins are defined
     with HDF5Data(h5path_small) as hd:
-        assert "image" in hd.get_basin_data(0)[1]
-        assert "image" in hd.keys()
+        bn_group, bn_feats, _ = hd.get_basin_data(0)
+        assert "image" in bn_feats
+        assert "image" in bn_group
         assert np.median(hd["image"][0]) == 187
         assert np.median(hd.image[0]) == 187
         assert np.median(hd.image_corr[0]) == 1
@@ -173,7 +176,9 @@ def test_basin_scalar_features():
 
     # Now open the scalar dataset and check whether basins are defined
     with HDF5Data(h5path_small) as hd:
-        assert "image" in hd.get_basin_data(0)[1]
+        bn_group, bn_feats, _ = hd.get_basin_data(0)
+        assert "image" in bn_feats
+        assert "image" in bn_group
         assert "image" in hd.keys()
         assert "area_um" in hd.keys()
         assert "deform" in hd.keys()
@@ -197,7 +202,9 @@ def test_basin_self_reference():
 
     # Now open the scalar dataset and check whether basins are defined
     with HDF5Data(h5path) as hd:
-        assert "image" in hd.get_basin_data(0)[1]
+        bn_group, bn_feats, _ = hd.get_basin_data(0)
+        assert "image" in bn_feats
+        assert "image" in bn_group
         assert "image" in hd.keys()
         assert np.median(hd["image"][0]) == 187
         assert np.median(hd.image[0]) == 187

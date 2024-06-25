@@ -40,7 +40,7 @@ def test_base_background_input_has_basin(tmp_path):
 
     # Make sure the basins exist in the input file
     with h5py.File(output_path) as h5:
-        assert len(h5["basins"].keys()) == 2
+        assert len(h5["basins"].keys()) == 3
         assert "basins" in h5
         keys = list(h5["basins"].keys())
         bpaths = []
@@ -85,7 +85,14 @@ def test_base_background_input_is_output(tmp_path):
     "ignore::dcnum.write.writer.CreatingFileWithoutBasinWarning")
 def test_base_background_output_basin_none(
         tmp_path):
-    """In dcnum 0.13.0, we introduced `create_with_basins`"""
+    """
+    In dcnum 0.13.0, we introduced `create_with_basins`, and the purpose
+    of this test was to check whether the data are written to the output
+    file.
+    In dcnum 0.24.0, we introduced internal basins, and the purpose
+    of this test was to make sure that the internal basins exist.
+
+    """
     event_count = 720
     output_path = tmp_path / "test.h5"
     # image shape: 5 * 7
@@ -101,14 +108,21 @@ def test_base_background_output_basin_none(
                                               frac_cleansing=.8,
                                               ) as bic:
         bic.process()
-    # Make sure the basins exist in the input file
+    # Make sure the basin data exists in the input file
     with h5py.File(output_path) as h5:
-        assert "basins" not in h5, "because the input is not a file"
+        assert len(h5["basins"]) == 1, "one internal basin"
+        assert "image_bg" in h5["basin_events"]
 
 
 def test_base_background_output_basin_simple(
         tmp_path):
-    """In dcnum 0.13.0, we introduced `create_with_basins`"""
+    """
+    In dcnum 0.13.0, we introduced `create_with_basins`, and the purpose
+    of this test was to make sure that the image data in the input is
+    referred to in the output file via a basin.
+    In dcnum 0.24.0, we introduced internal basins, which means that
+    the image_bg data are written to an additional, internal basin.
+    """
     event_count = 720
     output_path = tmp_path / "test.h5"
     input_path = tmp_path / "input.h5"
@@ -129,11 +143,15 @@ def test_base_background_output_basin_simple(
     # Make sure the basins exist in the input file
     with h5py.File(output_path) as h5:
         assert "basins" in h5
-        assert len(h5["basins"].keys()) == 1
-        key = list(h5["basins"].keys())[0]
-        bn_lines = [k.decode("utf-8") for k in h5["basins"][key]]
-        bdat = json.loads(" ".join(bn_lines))
-        assert bdat["paths"][0] == str(input_path)
+        assert len(h5["basins"].keys()) == 2
+        bn_keys = list(h5["basins"].keys())
+        for key in bn_keys:
+            bn_lines = [k.decode("utf-8") for k in h5["basins"][key]]
+            bdat = json.loads(" ".join(bn_lines))
+            if bdat["type"] == "file":
+                assert bdat["paths"][0] == str(input_path)
+            elif bdat["type"] == "internal":
+                assert bdat["paths"][0] == "basin_events"
 
     # Add a cherry on top (make sure everything is parseable with HDF5Data)
     with HDF5Data(output_path) as hd:

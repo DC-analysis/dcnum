@@ -86,7 +86,7 @@ def test_basin_strategy_drain_mapped_input():
     """When basin strategy is "drain", features are mapped from the input
 
     This test also makes sure that basin index mapping works for input files
-    that are opened with the "index_mapping" keyword argument ot HDF5Data.
+    that are opened with the "index_mapping" keyword argument of HDF5Data.
     """
     path_orig = retrieve_data("fmt-hdf5_cytoshot_full-features_2023.zip")
     path = path_orig.with_name("input.rtdc")
@@ -103,7 +103,8 @@ def test_basin_strategy_drain_mapped_input():
         runner.run()
 
     with h5py.File(path_out) as ho, h5py.File(path) as hi:
-        assert "image_bg" in ho["events"]
+        assert "image_bg" not in ho["events"]
+        assert "image_bg" in ho["basin_events"]
         assert "image" in ho["events"]
         assert "bg_off" in ho["events"]
         assert "deform" in ho["events"]
@@ -136,7 +137,8 @@ def test_basin_strategy_tap():
     with h5py.File(path_out) as h5:
         assert h5.attrs["pipeline:dcnum background"] \
             == "sparsemed:k=150^s=1^t=0^f=0.8^o=1"
-        assert "image_bg" in h5["events"]
+        assert "image_bg" not in h5["events"]
+        assert "image_bg" in h5["basin_events"]
         assert "bg_off" in h5["events"]
         assert "deform" in h5["events"]
         # the rest of the original features are basins!
@@ -175,7 +177,8 @@ def test_basin_relative_path():
     with h5py.File(path_out_new) as h5:
         assert h5.attrs["pipeline:dcnum background"] \
             == "sparsemed:k=150^s=1^t=0^f=0.8^o=1"
-        assert "image_bg" in h5["events"]
+        assert "image_bg" not in h5["events"]
+        assert "image_bg" in h5["basin_events"]
         assert "bg_off" in h5["events"]
         assert "deform" in h5["events"]
         # the rest of the original features are basins!
@@ -209,7 +212,8 @@ def test_chained_pipeline():
         assert h5.attrs["pipeline:dcnum background"] \
             == "sparsemed:k=150^s=1^t=0^f=0.8^o=1"
         assert "image" in h5["events"]
-        assert "image_bg" in h5["events"]
+        assert "image_bg" not in h5["events"]
+        assert "image_bg" in h5["basin_events"]
         for feat in h5["events"]:
             assert len(h5["events"][feat]) == 275
 
@@ -225,7 +229,8 @@ def test_chained_pipeline():
     with h5py.File(job2["path_out"]) as h5:
         assert "deform" in h5["events"]
         assert "image" in h5["events"]
-        assert "image_bg" in h5["events"]
+        assert "image_bg" not in h5["events"]
+        assert "image_bg" in h5["basin_events"]
         assert len(h5["events/deform"]) == 285
         assert h5.attrs["pipeline:dcnum background"] \
             == "sparsemed:k=250^s=1^t=0^f=0.8^o=1"
@@ -302,6 +307,7 @@ def test_duplicate_pipeline():
     with h5py.File(job2["path_out"]) as h5:
         assert "deform" in h5["events"]
         assert "image" in h5["events"]
+        # image_bg is in "events", because the background was copied
         assert "image_bg" in h5["events"]
         assert len(h5["events/deform"]) == 395
         assert h5.attrs["pipeline:dcnum mapping"] == "0"
@@ -386,6 +392,7 @@ def test_duplicate_pipeline_redo_index_mapping():
     with h5py.File(job2["path_out"]) as h5:
         assert "deform" in h5["events"]
         assert "image" in h5["events"]
+        # image_bg is in "events", because the background was copied
         assert "image_bg" in h5["events"]
         # We have not 24 here, because the index mapping enumerates events,
         # not frames.
@@ -469,6 +476,7 @@ def test_duplicate_pipeline_redo_yield():
     with h5py.File(job2["path_out"]) as h5:
         assert "deform" in h5["events"]
         assert "image" in h5["events"]
+        # image_bg is in "events", because the background was copied
         assert "image_bg" in h5["events"]
         assert len(h5["events/deform"]) == 395
         assert h5.attrs["pipeline:dcnum mapping"] == "0"
@@ -518,6 +526,7 @@ def test_index_mapping_pipeline(index_mapping, size, mapping_out):
     with h5py.File(job["path_out"]) as h5:
         assert "deform" in h5["events"]
         assert "image" in h5["events"]
+        # image_bg is in "events", because the background was copied
         assert "image_bg" in h5["events"]
         assert len(h5["events/deform"]) == size
         assert h5.attrs["pipeline:dcnum mapping"] == mapping_out
@@ -892,7 +901,10 @@ def test_recomputation_of_background_metadata_changed(attr, oldval, newbg):
 
     with h5py.File(job["path_out"]) as h5:
         assert h5.attrs[attr] != oldval, "sanity check"
-        has_old_bg = np.all(h5["events/image_bg"][:, 0, 0] == 200)
+        if "image_bg" in h5.get("basin_events", {}):
+            has_old_bg = np.all(h5["basin_events/image_bg"][:, 0, 0] == 200)
+        else:
+            has_old_bg = np.all(h5["events/image_bg"][:, 0, 0] == 200)
         assert not has_old_bg == newbg
 
 
@@ -932,7 +944,7 @@ def test_task_background():
 
         with h5py.File(runner.path_temp_in) as h5:
             assert "image" not in h5["events"], "image is in the basin file"
-            image_bg = h5["events/image_bg"]
+            image_bg = h5["basin_events/image_bg"]
             assert image_bg.attrs["dcnum ppid background"] == bg_id
             assert image_bg.attrs["dcnum ppid generation"] == gen_id
 
@@ -968,7 +980,8 @@ def test_task_background_close_input_file_on_demand():
 
         with read.HDF5Data(runner.path_temp_in) as hd:
             assert "image_bg" in hd
-            assert "image_bg" in hd.h5["events"]
+            assert "image_bg" not in hd.h5["events"]
+            assert "image_bg" in hd.h5["basin_events"]
 
 
 def test_task_background_data_properties():
@@ -992,9 +1005,11 @@ def test_task_background_data_properties():
 
         with read.HDF5Data(runner.path_temp_in) as hd:
             assert "image_bg" in hd
-            assert "image_bg" in hd.h5["events"]
+            assert "image_bg" not in hd.h5["events"]
+            assert "image_bg" in hd.h5["basin_events"]
 
-        assert "image_bg" in runner.dtin.h5["events"]
+        assert "image_bg" in runner.dtin.h5["basin_events"]
 
         assert np.all(runner.draw.h5["events/image_bg"][:, 0, 0] == 200)
-        assert not np.all(runner.dtin.h5["events/image_bg"][:, 0, 0] == 200)
+        assert not np.all(
+            runner.dtin.h5["basin_events/image_bg"][:, 0, 0] == 200)

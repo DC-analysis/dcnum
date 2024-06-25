@@ -403,6 +403,12 @@ class DCNumJobRunner(threading.Thread):
                                   features=orig_feats,
                                   mapping=None)
 
+        # Handle basin data according to the user's request
+        self.state = "plumbing"
+        self.task_enforce_basin_strategy()
+
+        self.state = "cleanup"
+
         with HDF5Writer(self.path_temp_out) as hw:
             # pipeline metadata
             hw.h5.attrs["pipeline:dcnum generation"] = self.ppdict["gen_id"]
@@ -462,11 +468,7 @@ class DCNumJobRunner(threading.Thread):
 
             # copy metadata/logs/tables from original file
             with h5py.File(self.job["path_in"]) as h5_src:
-                copy_metadata(h5_src=h5_src,
-                              h5_dst=hw.h5,
-                              # Don't copy basins, we would have to index-map
-                              # them first.
-                              copy_basins=False)
+                copy_metadata(h5_src=h5_src, h5_dst=hw.h5)
             if redo_seg:
                 # Store the correct measurement identifier. This is used to
                 # identify this file as a correct basin in subsequent pipeline
@@ -489,12 +491,6 @@ class DCNumJobRunner(threading.Thread):
                 # The new measurement identifier is a combination of both.
                 mid_new = f"{mid_cur}_{mid_ap}" if mid_cur else mid_ap
                 hw.h5.attrs["experiment:run identifier"] = mid_new
-
-        # Handle basin data according to the user's request
-        self.state = "plumbing"
-        self.task_enforce_basin_strategy()
-
-        self.state = "cleanup"
 
         trun = datetime.timedelta(seconds=round(time.monotonic() - time_start))
         self.logger.info(f"Run duration: {str(trun)}")
@@ -547,22 +543,17 @@ class DCNumJobRunner(threading.Thread):
         """
         self._progress_bn = 0
         t0 = time.perf_counter()
-        # We need to make sure that the features are correctly attributed
-        # from the input files. E.g. if the input file already has
-        # background images, but we recompute the background images, then
-        # we have to use the data from the recomputed background file.
-        # We achieve this by keeping a specific order and only copying those
-        # features that we don't already have in the output file.
-        feats_raw = [
-            # 1. background data from the temporary input image
-            # (this must come before draw [sic!])
-            [self.dtin.h5, ["image_bg", "bg_off"], "critical"],
-            # 2. frame-based scalar features from the raw input file
-            # (e.g. "temp" or "frame")
-            [self.draw.h5, self.draw.features_scalar_frame, "optional"],
-            # 3. image features from the input file
-            [self.draw.h5, ["image", "image_bg", "bg_off"], "optional"],
-        ]
+        # We have these points to consider:
+        # - We must use the `basinmap` feature to map from the original
+        #   file to the output file.
+        # - We must copy "bg_off" and "image_bg" to the output file.
+        # - For the "drain" basin strategy, we also have to copy all the
+        #   other features.
+        # - If "image_bg" is defined as an internal basin in the input
+        #   file, we have to convert the mapping and store a corresponding
+        #   internal basin in the output file.
+
+        # Determine the basinmap feature
         with HDF5Writer(self.path_temp_out) as hw:
             hout = hw.h5
             # First, we have to determine the basin mapping from input to
@@ -584,14 +575,15 @@ class DCNumJobRunner(threading.Thread):
                 # to the original input HDF5 file.
                 raw_im = self.draw.index_mapping
                 if raw_im is None:
-                    self.logger.info("Input file mapped with basinmap0")
                     # Create a hard link to save time and space
                     hout["events/basinmap0"] = hout["events/index_unmapped"]
-                    basinmap = idx_um
+                    basinmap0 = idx_um
                 else:
-                    basinmap = get_mapping_indices(raw_im)[idx_um]
+                    self.logger.info("Converting input mapping")
+                    basinmap0 = get_mapping_indices(raw_im)[idx_um]
                     # Store the mapped basin data in the output file.
-                    hw.store_feature_chunk("basinmap0", basinmap)
+                    hw.store_feature_chunk("basinmap0", basinmap0)
+                self.logger.info("Input mapped to output with basinmap0")
                 # We don't need them anymore.
                 del hout["events/index_unmapped"]
 
@@ -599,19 +591,72 @@ class DCNumJobRunner(threading.Thread):
                 # is the size of the raw dataset and the latter is its mapped
                 # size!
                 size_raw = self.draw.h5.attrs["experiment:event count"]
-                if (len(basinmap) == size_raw
-                        and np.all(basinmap == np.arange(size_raw))):
+                if (len(basinmap0) == size_raw
+                        and np.all(basinmap0 == np.arange(size_raw))):
                     # This means that the images in the input overlap perfectly
                     # with the images in the output, i.e. a "copy" segmenter
                     # was used or something is very reproducible.
                     # We set basinmap to None to be more efficient.
-                    basinmap = None
+                    basinmap0 = None
 
             else:
                 # The input is identical to the output, because we are using
                 # the same pipeline identifier.
-                basinmap = None
+                basinmap0 = None
 
+            # List of features we have to copy from input to output.
+            # We need to make sure that the features are correctly attributed
+            # from the input files. E.g. if the input file already has
+            # background images, but we recompute the background images, then
+            # we have to use the data from the recomputed background file.
+            # We achieve this by keeping a specific order and only copying
+            # those features that we don't already have in the output file.
+            feats_raw = [
+                # background data from the temporary input image
+                [self.dtin.h5, ["bg_off"], "critical"],
+                [self.draw.h5, self.draw.features_scalar_frame, "optional"],
+                [self.draw.h5, ["image", "bg_off"], "optional"],
+            ]
+
+            # Store image_bg as an internal basin, if defined in input
+            for idx in range(len(self.dtin.basins)):
+                bn_dict = self.dtin.basins[idx]
+                if (bn_dict["type"] == "internal"
+                        and "image_bg" in bn_dict["features"]):
+                    self.logger.info(
+                        "Copying internal basin background images")
+                    bn_grp, bn_feats, bn_map = self.dtin.get_basin_data(idx)
+                    assert "image_bg" in bn_feats
+                    # Load all images into memory (should only be ~600)
+                    bg_images1 = self.dtin.h5["basin_events"]["image_bg"][:]
+                    # Get the original internal mapping for these images
+                    # Note that `basinmap0` always refers to indices in the
+                    # original raw input file, and not to indices in an
+                    # optional mapped input file (using `index_mapping`).
+                    # Therefore, we do `self.dtin.h5["events"]["basinmap0"]`
+                    # instead of `self.dtin["basinmap0"]`
+                    basinmap_in = self.dtin.h5["events"][bn_dict["mapping"]][:]
+                    # Now we have to convert the indices in `basinmap_in`
+                    # to indices in the output file.
+                    basinmap1 = basinmap_in[basinmap0]
+                    # Store the internal mapping in the output file
+                    hw.store_basin(name=bn_dict["name"],
+                                   description=bn_dict["description"],
+                                   mapping=basinmap1,
+                                   internal_data={"image_bg": bg_images1}
+                                   )
+                    break
+            else:
+                self.logger.info("Background images must be copied")
+                # There is no internal image_bg feature, probably because
+                # the user did not use the sparsemed background correction.
+                # In this case, we simply add "image_bg" to the `feats_raw`.
+                feats_raw += [
+                    [self.dtin.h5, ["image_bg"], "critical"],
+                    [self.draw.h5, ["image_bg"], "optional"],
+                ]
+
+            # Copy the features required in the output file.
             for hin, feats, importance in feats_raw:
                 # Only consider features that are available in the input
                 # and that are not already in the output.
@@ -626,7 +671,7 @@ class DCNumJobRunner(threading.Thread):
                     copy_features(h5_src=hin,
                                   h5_dst=hout,
                                   features=feats,
-                                  mapping=basinmap)
+                                  mapping=basinmap0)
                 else:
                     # TAP: Create basins for the "optional" features in the
                     # output file. Note that the "critical" features never
@@ -638,7 +683,7 @@ class DCNumJobRunner(threading.Thread):
                     paths = [pin, os.path.relpath(pin, pout)]
                     hw.store_basin(name="dcnum basin",
                                    features=feats,
-                                   mapping=basinmap,
+                                   mapping=basinmap0,
                                    paths=paths,
                                    description=f"Created with dcnum {version}",
                                    )

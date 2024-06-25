@@ -21,8 +21,7 @@ def test_basin_features_path_absolute():
     with h5py.File(path_src) as src, h5py.File(path, "w") as dst:
         # first, copy all the scalar features to the new file
         write.copy_metadata(h5_src=src,
-                            h5_dst=dst,
-                            copy_basins=False)
+                            h5_dst=dst)
         # store the basin information in the new dataset
         hw = write.HDF5Writer(dst)
         hw.store_basin(name="test basin",
@@ -49,8 +48,7 @@ def test_basin_features_path_absolute_mapped():
     with h5py.File(path_src) as src, h5py.File(path, "w") as dst:
         # first, copy all the scalar features to the new file
         write.copy_metadata(h5_src=src,
-                            h5_dst=dst,
-                            copy_basins=False)
+                            h5_dst=dst)
         dst.attrs["experiment:event count"] = 6
         # store the basin information in the new dataset
         hw = write.HDF5Writer(dst)
@@ -90,7 +88,7 @@ def test_basin_mapped_with_mapped_dataset():
         # first, copy all the scalar features to the new file
         write.copy_metadata(h5_src=src,
                             h5_dst=dst,
-                            copy_basins=False)
+                            )
         dst.attrs["experiment:event count"] = 6
         # store the basin information in the new dataset
         hw = write.HDF5Writer(dst)
@@ -133,7 +131,7 @@ def test_basin_multiple(mapping, numevents):
         # first, copy all the scalar features to the new file
         write.copy_metadata(h5_src=src,
                             h5_dst=bn1,
-                            copy_basins=False)
+                            )
         # store the basin information in the new dataset
         hw1 = write.HDF5Writer(bn1)
         # also store feature information
@@ -141,7 +139,7 @@ def test_basin_multiple(mapping, numevents):
 
         write.copy_metadata(h5_src=src,
                             h5_dst=bn2,
-                            copy_basins=False)
+                            )
         hw2 = write.HDF5Writer(bn2)
         # also store feature information
         hw2.store_feature_chunk("aspect", src["events/aspect"][:])
@@ -155,7 +153,7 @@ def test_basin_multiple(mapping, numevents):
     with h5py.File(path_src) as src, h5py.File(path, "w") as dst:
         write.copy_metadata(h5_src=src,
                             h5_dst=dst,
-                            copy_basins=False)
+                            )
         dst.attrs["experiment:event count"] = numevents
         hw = write.HDF5Writer(dst)
         hw.store_basin(name="test basin 1",
@@ -178,13 +176,17 @@ def test_basin_multiple(mapping, numevents):
         # We only have one basin.
         assert len(hd.basins) == 2
         # Deformation is stored in the basin file, so we can access it.
-        assert np.all(hd["deform"] == hd0["deform"][mapping])
-        assert np.all(hd["aspect"] == hd0["aspect"][mapping])
+        assert np.all(hd["deform"][:] == hd0["deform"][mapping][:])
+        assert np.all(hd["aspect"][:] == hd0["aspect"][mapping][:])
         # We did not explicitly define features above.
         assert "features" not in hd.basins[0]
         # basins are sorted according to name
-        assert "deform" in hd.get_basin_data(0)[1]
-        assert "aspect" in hd.get_basin_data(1)[1]
+        bn_group1, bn_feats1, _ = hd.get_basin_data(0)
+        assert "deform" in bn_feats1
+        assert "deform" in bn_group1
+        bn_group2, bn_feats2, _ = hd.get_basin_data(1)
+        assert "aspect" in bn_feats2
+        assert "aspect" in bn_group2
         # The "aspect" feature is in level1, so we can access it.
         assert "aspect" in hd
         # The "image" and "area_um" features are not in level1, theay are
@@ -213,7 +215,7 @@ def test_basin_no_inception():
         # first, copy all the scalar features to the new file
         write.copy_metadata(h5_src=src,
                             h5_dst=dst,
-                            copy_basins=False)
+                            )
         dst.attrs["experiment:event count"] = 3
         # store the basin information in the new dataset
         hw = write.HDF5Writer(dst)
@@ -246,7 +248,7 @@ def test_basin_no_inception():
         # first, copy all the scalar features to the new file
         write.copy_metadata(h5_src=src,
                             h5_dst=dst,
-                            copy_basins=False)
+                            )
         dst.attrs["experiment:event count"] = 2
         # store the basin information in the new dataset
         hw = write.HDF5Writer(dst)

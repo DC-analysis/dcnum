@@ -16,7 +16,8 @@ class BackgroundSparseMed(Background):
     def __init__(self, input_data, output_path, kernel_size=200,
                  split_time=1., thresh_cleansing=0, frac_cleansing=.8,
                  offset_correction=True,
-                 compress=True, num_cpus=None):
+                 compress=True,
+                 num_cpus=None):
         """Sparse median background correction with cleansing
 
         In contrast to the rolling median background correction,
@@ -79,6 +80,11 @@ class BackgroundSparseMed(Background):
         num_cpus: int
             Number of CPUs to use for median computation. Defaults to
             `multiprocessing.cpu_count()`.
+
+        .. versionchanged:: 0.23.5
+
+            The background image data are stored as an internal
+            mapped basin to reduce the output file size.
         """
         super(BackgroundSparseMed, self).__init__(
             input_data=input_data,
@@ -329,28 +335,47 @@ class BackgroundSparseMed(Background):
             # Fill up remainder of index array with last entry
             bg_idx[idx1:] = ii
 
-        self.image_proc.value = 1
+        # Store the background images as an internal mapped basin
+        self.writer.store_basin(
+            name="background images",
+            description=f"Pipeline identifier: {self.get_ppid()}",
+            mapping=bg_idx,
+            internal_data={"image_bg": bg_images}
+            )
 
-        # Write background data
-        pos = 0
-        step = 1000
-        while pos < self.image_count:
-            stop = min(pos + step, self.image_count)
-            cur_slice = slice(pos, stop)
-            cur_bg_data = bg_images[bg_idx[cur_slice]]
-            self.writer.store_feature_chunk("image_bg", cur_bg_data)
-            if self.offset_correction:
+        # store the offset correction, if applicable
+        if self.offset_correction:
+            # compute the mean at the top of all background images
+            sh, sw = self.input_data.shape[1:]
+            roi_full = (slice(None), slice(0, 20), slice(0, sw))
+            bg_data_mean = np.mean(bg_images[roi_full], axis=(1, 2))
+            pos = 0
+            step = self.writer.get_best_nd_chunks(item_shape=(sh, sw),
+                                                  feat_dtype=np.uint8)[0]
+            bg_off = np.zeros(self.image_count, dtype=float)
+            # For every chunk in the input image data, compute that
+            # value as well and store the resulting offset value.
+            # TODO: Could this be parallelized, or are we limited in reading?
+            while pos < self.image_count:
+                stop = min(pos + step, self.image_count)
                 # Record background offset correction "bg_off". We take a
                 # slice of 20px from the top of the image (there are normally
                 # no events here, only the channel walls are visible).
-                sh, sw = self.input_data.shape[1:]
-                roi_full = (slice(None), slice(0, 20), slice(0, sw))
+                cur_slice = slice(pos, stop)
+                # mean background brightness
+                val_bg = bg_data_mean[bg_idx[cur_slice]]
+                # mean image brightness
                 roi_cur = (cur_slice, slice(0, 20), slice(0, sw))
-                val_bg = np.mean(cur_bg_data[roi_full], axis=(1, 2))
                 val_dat = np.mean(self.input_data[roi_cur], axis=(1, 2))
                 # background image = image_bg + bg_off
-                self.writer.store_feature_chunk("bg_off", val_dat - val_bg)
-            pos += step
+                bg_off[cur_slice] = val_dat - val_bg
+                # set progress
+                self.image_proc.value = 0.5 * (1 + pos / self.image_count)
+                pos = stop
+            # finally, store the background offset feature
+            self.writer.store_feature_chunk("bg_off", bg_off)
+
+        self.image_proc.value = 1
 
     def process_second(self,
                        ii: int,
@@ -393,7 +418,9 @@ class BackgroundSparseMed(Background):
 
         self.bg_images[ii] = self.shared_output.reshape(self.image_shape)
 
-        self.image_proc.value = idx_stop / self.image_count
+        self.image_proc.value = idx_stop / (
+                # with offset correction, everything is slower
+                self.image_count * (1 + self.offset_correction))
 
 
 class WorkerSparseMed(mp_spawn.Process):

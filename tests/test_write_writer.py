@@ -22,7 +22,7 @@ def test_copy_features(mapping, mslice):
     path_wrt = path.with_name("written.hdf5")
 
     with h5py.File(path, "r") as h5_src, h5py.File(path_wrt, "w") as h5_dst:
-        write.copy_metadata(h5_src=h5_src, h5_dst=h5_dst, copy_basins=False)
+        write.copy_metadata(h5_src=h5_src, h5_dst=h5_dst)
         write.copy_features(h5_src=h5_src,
                             h5_dst=h5_dst,
                             features=["deform", "image", "aspect"],
@@ -42,7 +42,7 @@ def test_copy_features_error_exists():
     path_wrt = path.with_name("written.hdf5")
 
     with h5py.File(path, "r") as h5_src, h5py.File(path_wrt, "w") as h5_dst:
-        write.copy_metadata(h5_src=h5_src, h5_dst=h5_dst, copy_basins=False)
+        write.copy_metadata(h5_src=h5_src, h5_dst=h5_dst)
         write.copy_features(h5_src=h5_src,
                             h5_dst=h5_dst,
                             features=["deform"],
@@ -60,7 +60,7 @@ def test_copy_features_error_missing():
     path_wrt = path.with_name("written.hdf5")
 
     with h5py.File(path, "r") as h5_src, h5py.File(path_wrt, "w") as h5_dst:
-        write.copy_metadata(h5_src=h5_src, h5_dst=h5_dst, copy_basins=False)
+        write.copy_metadata(h5_src=h5_src, h5_dst=h5_dst)
         with pytest.raises(KeyError, match="object 'peter' doesn't exist"):
             write.copy_features(h5_src=h5_src,
                                 h5_dst=h5_dst,
@@ -74,7 +74,7 @@ def test_copy_features_error_type_group():
     path_wrt = path.with_name("written.hdf5")
 
     with h5py.File(path, "a") as h5_src, h5py.File(path_wrt, "w") as h5_dst:
-        write.copy_metadata(h5_src=h5_src, h5_dst=h5_dst, copy_basins=False)
+        write.copy_metadata(h5_src=h5_src, h5_dst=h5_dst)
         h5_src["events"].require_group("peter")
         with pytest.raises(NotImplementedError,
                            match="dataset-based features are supported"):
@@ -185,10 +185,8 @@ def test_copy_metadata_without_basins():
     with h5py.File(path_wrt) as hin, h5py.File(path_test, "a") as h5:
         assert "basins" in hin
         assert "basins" not in h5
-        write.copy_metadata(h5_src=hin, h5_dst=h5, copy_basins=False)
+        write.copy_metadata(h5_src=hin, h5_dst=h5)
         assert "basins" not in h5
-        write.copy_metadata(h5_src=hin, h5_dst=h5)  # defaults to True
-        assert "basins" in h5
 
 
 def test_create_with_basins_absolute():
@@ -212,8 +210,7 @@ def test_create_with_basins_invalid_file():
     path = retrieve_data(
         "fmt-hdf5_cytoshot_full-features_legacy_allev_2023.zip")
     path_wrt = path.with_name("written.hdf5")
-    write.create_with_basins(path_out=path_wrt, basin_paths=[["fake.rtdc"
-                                                              ]])
+    write.create_with_basins(path_out=path_wrt, basin_paths=[["fake.rtdc"]])
     with h5py.File(path_wrt) as h5:
         assert not h5.attrs
         assert "basins" in h5

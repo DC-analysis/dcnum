@@ -1,5 +1,11 @@
 0.24.0
+ - feat: add support for internal basins
+ - feat: "image_bg" as internal basin for "sparsemed" background computer
  - enh: support numpy indexing for mapped basins
+ - enh: add new `write.copy_basins` method
+ - ref: return `h5py.Group` in `HDF5Data.get_basin_data` instead of
+   a basin `HDF5Data` instance
+ - ref: perform "plumbing" before "cleanup" in pipeline
 0.23.4
  - enh: run set_num_interop_threads(1) for torchmpo segmenter
 0.23.3

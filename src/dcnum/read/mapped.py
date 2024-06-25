@@ -40,6 +40,9 @@ class MappedHDF5Dataset:
             data = data_in[midx - start]
             return data
 
+    def __len__(self):
+        return self.shape[0]
+
 
 def get_mapping_indices(
         index_mapping: numbers.Integral | slice | list | np.ndarray

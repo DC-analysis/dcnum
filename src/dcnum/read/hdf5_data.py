@@ -119,9 +119,11 @@ class HDF5Data:
             else:
                 # Check the basins
                 for idx in range(len(self.basins)):
-                    bn, bn_features = self.get_basin_data(idx)
-                    if bn_features and feat in bn_features:
-                        return bn[feat]  # already index-mapped
+                    bn_grp, bn_feats, bn_map = self.get_basin_data(idx)
+                    if bn_feats and feat in bn_feats:
+                        mapped_ds = get_mapped_object(obj=bn_grp[feat],
+                                                      index_mapping=bn_map)
+                        return mapped_ds
         # If we got here, then the feature data does not exist.
         raise KeyError(f"Feature '{feat}' not found in {self}!")
 
@@ -202,17 +204,7 @@ class HDF5Data:
                             np.array(h5["tables"][tab][tkey]).reshape(-1)
                     self.tables[tab] = tabdict
                 # basins
-                basins = []
-                for bnkey in h5.get("basins", {}).keys():
-                    bn_data = "\n".join(
-                        [s.decode() for s in h5["basins"][bnkey][:].tolist()])
-                    bn_dict = json.loads(bn_data)
-                    if bn_dict["type"] == "file":
-                        # we only support file-based basins
-                        basins.append(bn_dict)
-                        # TODO:
-                        #  - support iterative mapped basins and catch
-                        #    circular basin definitions.
+                basins = self.extract_basin_dicts(h5)
                 self.basins = sorted(basins, key=lambda x: x["name"])
 
         if state["pixel_size"] is not None:
@@ -278,6 +270,30 @@ class HDF5Data:
         pixel_size = float(f"{pixel_size:.8f}")
         self.meta["imaging:pixel size"] = pixel_size
 
+    @staticmethod
+    def extract_basin_dicts(h5, check=True):
+        """Return list of basin dictionaries"""
+        # TODO:
+        #  - support iterative mapped basins and catch
+        #    circular basin definitions.
+        basins = []
+        for bnkey in h5.get("basins", {}).keys():
+            bn_data = "\n".join(
+                [s.decode() for s in h5["basins"][bnkey][:].tolist()])
+            bn_dict = json.loads(bn_data)
+            if check:
+                if bn_dict["type"] not in ["internal", "file"]:
+                    # we only support file-based and internal basins
+                    continue
+                basinmap = bn_dict.get("mapping")
+                if basinmap is not None and basinmap not in h5["events"]:
+                    # basinmap feature is missing
+                    continue
+            # Add the basin
+            basins.append(bn_dict)
+
+        return basins
+
     @property
     def features_scalar_frame(self):
         """Scalar features that apply to all events in a frame
@@ -296,9 +312,10 @@ class HDF5Data:
 
     def close(self):
         """Close the underlying HDF5 file"""
-        for bn, _ in self._basin_data.values():
-            if bn is not None:
-                bn.close()
+        for bn_group, _, _ in self._basin_data.values():
+            if bn_group is not None:
+                if bn_group.id.valid:
+                    bn_group.file.close()
         self._image_cache.clear()
         self._basin_data.clear()
         self.h5.close()
@@ -376,65 +393,109 @@ class HDF5Data:
                 raise ValueError(f"Invalid parameter '{var}'!")
         return kwargs
 
-    def get_basin_data(self, index):
+    def get_basin_data(self, index: int) -> (
+            h5py.Group,
+            List,
+            int | slice | List | np.ndarray,
+            ):
         """Return HDF5Data info for a basin index in `self.basins`
+
+        Parameters
+        ----------
+        index: int
+            index of the basin from which to get data
 
         Returns
         -------
-        data: HDF5Data
-            Data instance
+        group: h5py.Group
+            HDF5 group containing HDF5 Datasets with the names
+            listed in `features`
         features: list of str
-            List of features made available by this data instance
+            list of features made available by this basin
+        index_mapping:
+            a mapping (see `__init__`) that defines mapping from
+            the basin dataset to the referring dataset
         """
         if index not in self._basin_data:
             bn_dict = self.basins[index]
-            for ff in bn_dict["paths"]:
-                pp = pathlib.Path(ff)
-                if pp.is_absolute() and pp.exists():
-                    path = pp
-                    break
-                else:
-                    # try relative path
-                    prel = pathlib.Path(self.path).parent / pp
-                    if prel.exists():
-                        path = prel
-                        break
-            else:
-                path = None
-            if path is None:
-                self._basin_data[index] = (None, None)
-            else:
-                feat_basinmap = bn_dict.get("mapping", None)
-                if feat_basinmap is None:
-                    # This is NOT a mapped basin.
-                    index_mapping = self.index_mapping
-                else:
-                    # This is a mapped basin. Create an indexing list.
-                    if self.index_mapping is None:
-                        # The current dataset is not mapped.
-                        basinmap_idx = slice(None)
-                    else:
-                        # The current dataset is also mapped.
-                        basinmap_idx = get_mapping_indices(self.index_mapping)
-                    basinmap = self.h5[f"events/{feat_basinmap}"]
-                    index_mapping = basinmap[basinmap_idx]
 
-                h5dat = HDF5Data(path, index_mapping=index_mapping)
-                features = bn_dict.get("features")
-                if features is None:
-                    # Only get the features from the actual HDF5 file.
-                    # If this file has basins as well, the basin metadata
-                    # should have been copied over to the parent file. This
-                    # makes things a little cleaner, because basins are not
-                    # nested, but all basins are available in the top file.
-                    # See :func:`write.store_metadata` for copying metadata
-                    # between files.
-                    # The writer can still specify "features" in the basin
-                    # metadata, then these basins are indeed nested, and
-                    # we consider that ok as well.
-                    features = sorted(h5dat.h5["events"].keys())
-                self._basin_data[index] = (h5dat, features)
+            # HDF5 group containing the feature data
+            if bn_dict["type"] == "file":
+                h5group, features = self._get_basin_data_file(bn_dict)
+            elif bn_dict["type"] == "internal":
+                h5group, features = self._get_basin_data_internal(bn_dict)
+            else:
+                raise ValueError(f"Invalid basin type '{bn_dict['type']}'")
+
+            # index mapping
+            feat_basinmap = bn_dict.get("mapping", None)
+            if feat_basinmap is None:
+                # This is NOT a mapped basin.
+                index_mapping = self.index_mapping
+            else:
+                # This is a mapped basin. Create an indexing list.
+                if self.index_mapping is None:
+                    # The current dataset is not mapped.
+                    basinmap_idx = slice(None)
+                else:
+                    # The current dataset is also mapped.
+                    basinmap_idx = get_mapping_indices(self.index_mapping)
+                basinmap = self.h5[f"events/{feat_basinmap}"]
+                index_mapping = basinmap[basinmap_idx]
+
+            self._basin_data[index] = (h5group, features, index_mapping)
         return self._basin_data[index]
+
+    def _get_basin_data_file(self, bn_dict):
+        for ff in bn_dict["paths"]:
+            pp = pathlib.Path(ff)
+            if pp.is_absolute() and pp.exists():
+                path = pp
+                break
+            else:
+                # try relative path
+                prel = pathlib.Path(self.path).parent / pp
+                if prel.exists():
+                    path = prel
+                    break
+        else:
+            path = None
+        if path is None:
+            # Cannot get data from this basin / cannot find file
+            h5group = None
+            features = []
+        else:
+            h5 = h5py.File(path, "r")
+            h5group = h5["events"]
+            # features defined in the basin
+            features = bn_dict.get("features")
+            if features is None:
+                # Only get the features from the actual HDF5 file.
+                # If this file has basins as well, the basin metadata
+                # should have been copied over to the parent file. This
+                # makes things a little cleaner, because basins are not
+                # nested, but all basins are available in the top file.
+                # See :func:`write.store_metadata` for copying metadata
+                # between files.
+                # The writer can still specify "features" in the basin
+                # metadata, then these basins are indeed nested, and
+                # we consider that ok as well.
+                features = sorted(h5group.keys())
+        return h5group, features
+
+    def _get_basin_data_internal(self, bn_dict):
+        # The group name is normally "basin_events"
+        group_name = bn_dict["paths"][0]
+        if group_name != "basin_events":
+            warnings.warn(
+                f"Uncommon group name for basin features: {group_name}")
+        h5group = self.h5[group_name]
+        features = bn_dict.get("features")
+        if features is None:
+            raise ValueError(
+                f"Encountered invalid internal basin '{bn_dict}': "
+                f"'features' must be defined")
+        return h5group, features
 
     def get_image_cache(self, feat):
         """Create an HDF5ImageCache object for the current dataset
@@ -449,15 +510,15 @@ class HDF5Data:
                 idx_map = None
                 # search all basins
                 for idx in range(len(self.basins)):
-                    bn_dat, features = self.get_basin_data(idx)
-                    if features is not None:
-                        if feat in features:
+                    bn_grp, bn_feats, bn_map = self.get_basin_data(idx)
+                    if bn_feats is not None:
+                        if feat in bn_feats:
                             # HDF5 dataset
-                            ds = bn_dat.h5[f"events/{feat}"]
+                            ds = bn_grp[feat]
                             # Index mapping (taken from the basins which
                             # already includes the mapping from the current
                             # instance).
-                            idx_map = bn_dat.index_mapping
+                            idx_map = bn_map
                             break
                 else:
                     ds = None
@@ -478,9 +539,9 @@ class HDF5Data:
             features = sorted(self.h5["/events"].keys())
             # add basin features
             for ii in range(len(self.basins)):
-                _, bfeats = self.get_basin_data(ii)
-                if bfeats:
-                    features += bfeats
+                _, bn_feats, _ = self.get_basin_data(ii)
+                if bn_feats:
+                    features += bn_feats
             self._keys = sorted(set(features))
         return self._keys
 

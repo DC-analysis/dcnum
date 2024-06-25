@@ -80,8 +80,9 @@ def test_median_sparsemend_full_with_file(tmp_path):
 
     assert output_path.exists()
     with h5py.File(output_path) as h5:
-        assert "image_bg" in h5["/events"]
-        assert h5["/events/image_bg"].shape == (40, 80, 400)
+        assert "image_bg" not in h5["/events"]
+        assert "image_bg" in h5["/basin_events"]
+        assert h5["/basin_events/image_bg"].shape == (8, 80, 400)
 
 
 def test_median_sparsemend_full_with_file_no_time(tmp_path):
@@ -114,8 +115,9 @@ def test_median_sparsemend_full_with_file_no_time(tmp_path):
 
     assert output_path.exists()
     with h5py.File(output_path) as h5:
-        assert "image_bg" in h5["/events"]
-        assert h5["/events/image_bg"].shape == (40, 80, 400)
+        assert "image_bg" not in h5["/events"]
+        assert "image_bg" in h5["/basin_events"]
+        assert h5["/basin_events/image_bg"].shape == (57, 80, 400)
 
 
 def test_median_sparsemend_full_with_file_no_time_no_frame(tmp_path):
@@ -147,8 +149,9 @@ def test_median_sparsemend_full_with_file_no_time_no_frame(tmp_path):
 
     assert output_path.exists()
     with h5py.File(output_path) as h5:
-        assert "image_bg" in h5["/events"]
-        assert h5["/events/image_bg"].shape == (40, 80, 400)
+        assert "image_bg" not in h5["/events"]
+        assert "image_bg" in h5["/basin_events"]
+        assert h5["/basin_events/image_bg"].shape == (1, 80, 400)
 
 
 @pytest.mark.filterwarnings(
@@ -233,4 +236,4 @@ def test_median_sparsemend_worker(tmp_path):
 
     assert output_path.exists()
     with h5py.File(output_path) as h5:
-        assert len(h5["events/image_bg"]) == 34
+        assert len(h5["basin_events/image_bg"]) == 2

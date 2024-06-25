@@ -1,13 +1,14 @@
 import hashlib
 import json
 import pathlib
-from typing import Dict, List
+from typing import Dict, List, Tuple
 import warnings
 
 import h5py
 import hdf5plugin
 import numpy as np
 
+from ..read import HDF5Data
 from .._version import version
 
 
@@ -90,14 +91,42 @@ class HDF5Writer:
         chunk_size_int = max(10, int(np.floor(chunk_size)))
         return tuple([chunk_size_int] + list(item_shape))
 
-    def require_feature(self, feat, item_shape, feat_dtype, ds_kwds=None):
-        """Create a new feature in the "events" group"""
-        if feat not in self.events:
+    def require_feature(self,
+                        feat: str,
+                        item_shape: Tuple[int],
+                        feat_dtype: np.dtype,
+                        ds_kwds: Dict = None,
+                        group_name: str = "events"):
+        """Create a new feature in the "events" group
+
+        Parameters
+        ----------
+        feat: str
+            name of the feature
+        item_shape: Tuple[int]
+            shape for one event of this feature, e.g. for a scalar
+            event, the shape would be `(1,)` and for an image, the
+            shape could be `(80, 300)`.
+        feat_dtype: np.dtype
+            dtype of the feature
+        ds_kwds: Dict
+            HDF5 Dataset keyword arguments (e.g. compression, fletcher32)
+        group_name: str
+            name of the HDF5 group where the feature should be written to;
+            defaults to the "events" group, but a different group can be
+            specified for storing e.g. internal  basin features.
+        """
+        if group_name == "events":
+            egroup = self.events
+        else:
+            egroup = self.h5.require_group(group_name)
+
+        if feat not in egroup:
             if ds_kwds is None:
                 ds_kwds = {}
             for key in self.ds_kwds:
                 ds_kwds.setdefault(key, self.ds_kwds[key])
-            dset = self.events.create_dataset(
+            dset = egroup.create_dataset(
                 feat,
                 shape=tuple([0] + list(item_shape)),
                 dtype=feat_dtype,
@@ -112,16 +141,17 @@ class HDF5Writer:
                                   np.string_('IMAGE_GRAYSCALE'))
             offset = 0
         else:
-            dset = self.events[feat]
+            dset = egroup[feat]
             offset = dset.shape[0]
         return dset, offset
 
     def store_basin(self,
                     name: str,
-                    paths: List[str | pathlib.Path],
+                    paths: List[str | pathlib.Path] | None = None,
                     features: List[str] = None,
                     description: str | None = None,
-                    mapping: np.ndarray = None
+                    mapping: np.ndarray = None,
+                    internal_data: Dict | None = None,
                     ):
         """Write an HDF5-based file basin
 
@@ -129,8 +159,9 @@ class HDF5Writer:
         ----------
         name: str
             basin name; Names do not have to be unique.
-        paths: list of str or pathlib.Path
-            location(s) of the basin
+        paths: list of str or pathlib.Path or None
+            location(s) of the basin; must be None when storing internal
+            data, a list of paths otherwise
         features: list of str
             list of features provided by `paths`
         description: str
@@ -138,14 +169,39 @@ class HDF5Writer:
         mapping: 1D array
             integer array with indices that map the basin dataset
             to this dataset
+        internal_data: dict of ndarrays
+            internal basin data to store; If this is set, then `features`
+            and `paths` must be set to `None`.
         """
         bdat = {
             "description": description,
-            "format": "hdf5",
             "name": name,
-            "paths": [str(pp) for pp in paths],
-            "type": "file",
         }
+
+        if internal_data:
+            if features is not None:
+                raise ValueError("`features` must be set to None when storing "
+                                 "internal basin features")
+            if paths is not None:
+                raise ValueError("`paths` must be set to None when storing "
+                                 "internal basin features")
+            # store the internal basin information
+            for feat in internal_data:
+                if feat in self.h5.require_group("basin_events"):
+                    raise ValueError(f"Feature '{feat}' is already defined "
+                                     f"as an internal basin feature")
+                self.store_feature_chunk(feat=feat,
+                                         data=internal_data[feat],
+                                         group_name="basin_events")
+            features = sorted(internal_data.keys())
+            bdat["format"] = "h5dataset"
+            bdat["paths"] = ["basin_events"]
+            bdat["type"] = "internal"
+        else:
+            bdat["format"] = "hdf5"
+            bdat["paths"] = [str(pp) for pp in paths]
+            bdat["type"] = "file"
+
         # Explicit features stored in basin file
         if features is not None and len(features):
             bdat["features"] = features
@@ -195,7 +251,7 @@ class HDF5Writer:
                 chunks=True,
                 **self.ds_kwds)
 
-    def store_feature_chunk(self, feat, data):
+    def store_feature_chunk(self, feat, data, group_name="events"):
         """Store feature data
 
         The "chunk" implies that always chunks of data are stored,
@@ -205,7 +261,8 @@ class HDF5Writer:
             data = 255 * np.array(data, dtype=np.uint8)
         ds, offset = self.require_feature(feat=feat,
                                           item_shape=data.shape[1:],
-                                          feat_dtype=data.dtype)
+                                          feat_dtype=data.dtype,
+                                          group_name=group_name)
         dsize = data.shape[0]
         ds.resize(offset + dsize, axis=0)
         ds[offset:offset + dsize] = data
@@ -291,19 +348,59 @@ def create_with_basins(
                 # copy metadata
                 with h5py.File(prep, libver="latest") as h5:
                     copy_metadata(h5_src=h5, h5_dst=hw.h5)
+                    copy_basins(h5_src=h5, h5_dst=hw.h5)
                     # extract features
                     features = sorted(h5["events"].keys())
+                    features = [f for f in features if
+                                not f.startswith("basinmap")]
                 name = prep.name
             else:
                 features = None
                 name = bps[0]
 
-            # Finally, write the basin.
+            # Write the basin data
             hw.store_basin(name=name,
                            paths=bps,
                            features=features,
                            description=f"Created by dcnum {version}",
                            )
+
+
+def copy_basins(h5_src: h5py.File,
+                h5_dst: h5py.File,
+                internal_basins: bool = True
+                ):
+    """Reassemble basin data in the output file
+
+    This does not just copy the datasets defined in the "basins"
+    group, but it also loads the "basinmap?" features and stores
+    them as new "basinmap?" features in the output file.
+    """
+    basins = HDF5Data.extract_basin_dicts(h5_src, check=False)
+    hw = HDF5Writer(h5_dst)
+    for bn_dict in basins:
+        if bn_dict["type"] == "internal" and internal_basins:
+            internal_data = {}
+            for feat in bn_dict["features"]:
+                internal_data[feat] = h5_src["basin_events"][feat]
+            hw.store_basin(name=bn_dict["name"],
+                           description=bn_dict["description"],
+                           mapping=h5_src["events"][bn_dict["mapping"]][:],
+                           internal_data=internal_data,
+                           )
+        elif bn_dict["type"] == "file":
+            if bn_dict.get("mapping") is not None:
+                mapping = h5_src["events"][bn_dict["mapping"]][:]
+            else:
+                mapping = None
+            hw.store_basin(name=bn_dict["name"],
+                           description=bn_dict["description"],
+                           paths=bn_dict["paths"],
+                           features=bn_dict["features"],
+                           mapping=mapping,
+                           )
+        else:
+            warnings.warn(f"Ignored basin of type {bn_dict['type']}")
 
 
 def copy_features(h5_src: h5py.File,
@@ -370,9 +467,9 @@ def copy_features(h5_src: h5py.File,
 
 
 def copy_metadata(h5_src: h5py.File,
-                  h5_dst: h5py.File,
-                  copy_basins=True):
-    """Copy attributes, tables, logs, and basins from one H5File to another
+                  h5_dst: h5py.File
+                  ):
+    """Copy attributes, tables, and logs from one H5File to another
 
     Notes
     -----
@@ -386,8 +483,6 @@ def copy_metadata(h5_src: h5py.File,
     for kk in src_attrs:
         h5_dst.attrs.setdefault(kk, src_attrs[kk])
     copy_data = ["logs", "tables"]
-    if copy_basins:
-        copy_data.append("basins")
     # copy other metadata
     for topic in copy_data:
         if topic in h5_src:
