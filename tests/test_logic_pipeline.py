@@ -118,6 +118,45 @@ def test_basin_strategy_drain_mapped_input():
             assert len(ho["events"][feat]) == 7
 
 
+def test_basin_strategy_drain_mapped_input_rollmed():
+    """When basin strategy is "drain", features are mapped from the input
+
+    This test also makes sure that basin index mapping works for input files
+    that are opened with the "index_mapping" keyword argument of HDF5Data.
+    """
+    path_orig = retrieve_data("fmt-hdf5_cytoshot_full-features_2023.zip")
+    path = path_orig.with_name("input.rtdc")
+    path_out = path_orig.with_name("out.rtdc")
+    with read.concatenated_hdf5_data(5 * [path_orig], path_out=path):
+        pass
+
+    job = logic.DCNumPipelineJob(path_in=path,
+                                 path_out=path_out,
+                                 background_code="rollmed",
+                                 background_kwargs={"kernel_size": 80,
+                                                    "batch_size": 150},
+                                 data_kwargs={"index_mapping": slice(2, 5)},
+                                 basin_strategy="drain",
+                                 debug=True)
+    with logic.DCNumJobRunner(job=job) as runner:
+        runner.run()
+
+    with h5py.File(path_out) as ho, h5py.File(path) as hi:
+        assert "image_bg" in ho["events"]
+        assert "basin_events" not in ho, "rollmed does not do internal basins"
+        assert "bg_off" not in ho["events"], "rollmed does not do bg_off"
+        assert "image" in ho["events"]
+        assert "deform" in ho["events"]
+        assert "basinmap0" in ho["events"]
+        basinmap0 = np.array([2, 2, 3, 3, 4, 4, 4])
+        assert np.all(ho["events/basinmap0"][:] == basinmap0)
+        assert np.all(hi["events/frame"][:][basinmap0]
+                      == ho["events/frame"][:])
+
+        for feat in ho["events"]:
+            assert len(ho["events"][feat]) == 7
+
+
 def test_basin_strategy_tap():
     """When basin strategy is "tap", features are mapped from the input"""
     path_orig = retrieve_data("fmt-hdf5_cytoshot_full-features_2023.zip")
@@ -146,6 +185,41 @@ def test_basin_strategy_tap():
         assert "image" not in h5["events"]
         for feat in h5["events"]:
             assert len(h5["events"][feat]) == 275
+        # The other features are accessed via basins
+        hd = read.HDF5Data(h5)
+        assert "image" in hd
+
+
+def test_basin_strategy_tap_rollmed():
+    """When basin strategy is "tap", features are mapped from the input"""
+    path_orig = retrieve_data("fmt-hdf5_cytoshot_full-features_2023.zip")
+    path = path_orig.with_name("input.rtdc")
+    path_out = path_orig.with_name("out.rtdc")
+    with read.concatenated_hdf5_data(5 * [path_orig], path_out=path):
+        pass
+
+    job = logic.DCNumPipelineJob(path_in=path,
+                                 path_out=path_out,
+                                 background_code="rollmed",
+                                 background_kwargs={"kernel_size": 150,
+                                                    "batch_size": 200},
+                                 basin_strategy="tap",
+                                 debug=True)
+    with logic.DCNumJobRunner(job=job) as runner:
+        runner.run()
+
+    with h5py.File(path_out) as h5:
+        assert h5.attrs["pipeline:dcnum background"] \
+            == "rollmed:k=150^b=200"
+        assert "image_bg" in h5["events"]
+        assert "basin_events" not in h5, "rollmed does not do internal basins"
+        assert "bg_off" not in h5["events"], "rollmed does not do bg_off"
+        assert "deform" in h5["events"]
+        # the rest of the original features are basins!
+        assert "time" not in h5["events"]
+        assert "image" not in h5["events"]
+        for feat in h5["events"]:
+            assert len(h5["events"][feat]) == 280
         # The other features are accessed via basins
         hd = read.HDF5Data(h5)
         assert "image" in hd

@@ -6,6 +6,8 @@ import pytest
 
 from dcnum.feat.feat_background import bg_roll_median
 
+from helper_methods import retrieve_data
+
 
 def test_compute_median_for_slice():
     # events in shared arrays: 100
@@ -139,6 +141,35 @@ def test_median_process_full(tmp_path, event_count, chunk_count):
         assert np.all(ds[:90, 1, 0] == 7)
         assert np.all(ds[690:, 0, 0] == 0)
         assert np.all(ds[690:, 0, 1] == 1)
+
+
+def test_median_rollmed_full_with_file_no_time_no_frame(tmp_path):
+    path_in = retrieve_data("fmt-hdf5_cytoshot_full-features_2023.zip")
+
+    with h5py.File(path_in, "a") as h5:
+        del h5["/events/image_bg"]
+        del h5["/events/time"]
+        del h5["/events/frame"]
+        h5.attrs["imaging:frame rate"] = 5000
+        assert h5["events/deform"].size == 40
+
+    output_path = tmp_path / "test.h5"
+
+    with bg_roll_median.BackgroundRollMed(input_data=path_in,
+                                          output_path=output_path,
+                                          kernel_size=8,
+                                          batch_size=20,
+                                          ) as bic:
+        assert len(bic.shared_input_raw) == 28 * 80 * 400
+        assert bic.kernel_size == 8
+        # process the data
+        bic.process()
+
+    assert output_path.exists()
+    with h5py.File(output_path) as h5:
+        assert "image_bg" in h5["/events"]
+        assert "basin_events" not in h5
+        assert h5["events/image_bg"].shape == (40, 80, 400)
 
 
 @pytest.mark.filterwarnings(
