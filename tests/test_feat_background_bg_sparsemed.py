@@ -5,6 +5,7 @@ import numpy as np
 import pytest
 
 from dcnum.feat.feat_background import bg_sparse_median
+from dcnum import read
 
 from helper_methods import retrieve_data
 
@@ -152,6 +153,80 @@ def test_median_sparsemend_full_with_file_no_time_no_frame(tmp_path):
         assert "image_bg" not in h5["/events"]
         assert "image_bg" in h5["/basin_events"]
         assert h5["/basin_events/image_bg"].shape == (1, 80, 400)
+
+
+def test_median_sparsemed_internal_basin(tmp_path):
+    """Make sure the internal basin is computed correctly"""
+    path = retrieve_data("fmt-hdf5_cytoshot_full-features_2023.zip")
+    path_in = path.with_name("concatenated.rtdc")
+
+    dtime = np.linspace(0, 1, 400, endpoint=False)
+    with read.concatenated_hdf5_data([path] * 10, path_out=path_in) as hd:
+        pass
+    with h5py.File(path_in, "a") as h5:
+        # reset background
+        del h5["events/image_bg"]
+        # limit time to 1 second
+        h5["events/time"] = dtime
+        # rewrite the image data so that we have an artificial offset
+        image = h5["events/image"][:]
+        for ii in range(10):
+            image[40*ii:40*(ii+1)] += ii
+        del h5["events/image"]
+        h5["events/image"] = image
+
+    path_out = tmp_path / "test.h5"
+
+    with bg_sparse_median.BackgroundSparseMed(
+            input_data=path_in,
+            output_path=path_out,
+            # These parameters are chosen such that the background images
+            # stored in the internal basin will have an offset of 1.
+            kernel_size=20,
+            split_time=0.1,
+            thresh_cleansing=0,
+            frac_cleansing=.8,
+            ) as bic:
+        # sanity checks
+        assert len(bic.shared_input_raw) == 20 * 80 * 400
+        assert bic.kernel_size == 20
+        assert bic.duration == 0.9975
+        assert np.allclose(bic.time, dtime)
+        # process the data
+        bic.process()
+
+    assert path_out.exists()
+    with h5py.File(path) as h5:
+        imref = np.partition(h5["events/image"][:20], kth=10, axis=0)[10]
+
+    with h5py.File(path_out) as h5:
+        assert "image_bg" in h5["/basin_events"]
+        image_bg_internal = h5["/basin_events/image_bg"][:]
+        # The first image should be identical to what we expect from the
+        # regular background correction.
+        im0 = image_bg_internal[0]
+        assert np.all(im0 == imref)
+        # The other images should be the same with a constant offset.
+        for ii in range(10):
+            # We sometimes get spurious differences between the images,
+            # that's why there is a "4" and not a "0". But it shows that
+            # the background correction works in principle (If things did
+            # not work, we would have differences in the order of 80*320).
+            # The difference comes from the fact that the time is split
+            # using `split_time` which is a floating point value and there
+            # can be a small offset to the left or right when getting the
+            # array indices corresponding to that time.
+            assert np.sum(im0 + ii - image_bg_internal[ii]) < 4
+
+    # Now also make sure that the image_bg feature of the resulting
+    # dataset is mapped correctly.
+    with read.HDF5Data(path_out) as hd:
+        assert hd["basinmap0"][0] == 0
+        assert np.all(hd["image_bg"][0] == im0)
+        assert np.all(hd["image_bg"][10] == im0)
+        for ii in range(10):
+            assert np.all(hd["image_bg"][40 * ii] == image_bg_internal[ii])
+            assert np.all(hd["image_bg"][40 * ii + 5] == image_bg_internal[ii])
 
 
 @pytest.mark.filterwarnings(

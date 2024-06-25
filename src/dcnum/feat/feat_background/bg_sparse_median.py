@@ -328,7 +328,7 @@ class BackgroundSparseMed(Background):
         idx1 = None
         for ii in range(len(step_times)):
             t1 = step_times[ii]
-            idx1 = np.argmin(np.abs(self.time - t1 + self.split_time/2))
+            idx1 = np.argmin(np.abs(self.time - t1 - self.split_time/2))
             bg_idx[idx0:idx1] = ii
             idx0 = idx1
         if idx1 is not None:
