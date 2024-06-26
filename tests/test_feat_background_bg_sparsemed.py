@@ -53,7 +53,7 @@ def test_median_sparsemend_full(tmp_path, event_count, kernel_size,
 
 
 @pytest.mark.filterwarnings(
-    "ignore:dcnum.write.writer.CreatingFileWithoutBasinWarning")
+    "ignore::dcnum.write.writer.CreatingFileWithoutBasinWarning")
 def test_median_sparsemend_full_bg_off(tmp_path):
     """Test computation of bg_off"""
     event_count = 720
@@ -96,7 +96,7 @@ def test_median_sparsemend_full_bg_off(tmp_path):
 
 
 @pytest.mark.filterwarnings(
-    "ignore:dcnum.write.writer.CreatingFileWithoutBasinWarning")
+    "ignore::dcnum.write.writer.CreatingFileWithoutBasinWarning")
 def test_median_sparsemend_full_internal_image_bg(tmp_path):
     """Test computation of internal image_bg feature"""
     event_count = 720

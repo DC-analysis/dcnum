@@ -50,7 +50,7 @@ def test_copy_basins_simple():
 
 @pytest.mark.parametrize("store_internal", [True, False])
 @pytest.mark.filterwarnings(
-    "ignore:dcnum.write.writer.IgnoringBasinTypeWarning")
+    "ignore::dcnum.write.writer.IgnoringBasinTypeWarning")
 def test_copy_basins_internal(store_internal):
     path = retrieve_data(
         "fmt-hdf5_cytoshot_full-features_legacy_allev_2023.zip")
