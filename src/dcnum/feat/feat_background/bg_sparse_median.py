@@ -1,4 +1,3 @@
-import logging
 import queue
 import time
 
@@ -8,8 +7,6 @@ from scipy import ndimage
 from ...read import HDF5Data
 
 from .base import mp_spawn, Background
-
-logger = logging.getLogger(__name__)
 
 
 class BackgroundSparseMed(Background):
@@ -99,7 +96,7 @@ class BackgroundSparseMed(Background):
         )
 
         if kernel_size > len(self.input_data):
-            logger.warning(
+            self.logger.warning(
                 f"The kernel size {kernel_size} is too large for input data"
                 f"size {len(self.input_data)}. Setting it to input data size!")
             kernel_size = len(self.input_data)
@@ -132,13 +129,14 @@ class BackgroundSparseMed(Background):
                 else:
                     # compute time using frame rate (approximate)
                     dur = self.image_count / fr * 1.5
-                    logger.info(f"Approximating duration: {dur/60:.1f}min")
+                    self.logger.info(
+                        f"Approximating duration: {dur/60:.1f}min")
                     self.time = np.linspace(0, dur, self.image_count,
                                             endpoint=True)
         if self.time is None:
             # No HDF5 file or no information therein; Make an educated guess.
             dur = self.image_count / 3600 * 1.5
-            logger.info(f"Guessing duration: {dur/60:.1f}min")
+            self.logger.info(f"Guessing duration: {dur/60:.1f}min")
             self.time = np.linspace(0, dur, self.image_count,
                                     endpoint=True)
 
@@ -307,18 +305,18 @@ class BackgroundSparseMed(Background):
                 thresh = np.quantile(ref, self.frac_cleansing)
                 used = ref <= thresh
                 frac_remove = np.sum(~used) / used.size
-                logger.warning(
+                self.logger.warning(
                     f"{frac_remove_user:.1%} of the background images would "
                     f"be removed with the current settings, so we enforce "
                     f"`frac_cleansing`. To avoid this warning, try decreasing "
                     f"`thresh_cleansing` or `frac_cleansing`. The new "
                     f"threshold is {thresh_fact / thresh}.")
 
-            logger.info(f"Cleansed {frac_remove:.2%}")
+            self.logger.info(f"Cleansed {frac_remove:.2%}")
             step_times = self.step_times[used]
             bg_images = self.bg_images[used]
         else:
-            logger.info("Background series cleansing disabled")
+            self.logger.info("Background series cleansing disabled")
             step_times = self.step_times
             bg_images = self.bg_images
 
@@ -345,7 +343,7 @@ class BackgroundSparseMed(Background):
 
         # store the offset correction, if applicable
         if self.offset_correction:
-            logger.info("Computing background offset correction")
+            self.logger.info("Computing offset correction")
             # compute the mean at the top of all background images
             sh, sw = self.input_data.shape[1:]
             roi_full = (slice(None), slice(0, 20), slice(0, sw))

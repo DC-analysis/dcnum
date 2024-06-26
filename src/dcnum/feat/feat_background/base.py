@@ -1,8 +1,10 @@
 import abc
 import functools
 import inspect
+import logging
 import multiprocessing as mp
 import pathlib
+import time
 
 import h5py
 
@@ -41,6 +43,8 @@ class Background(abc.ABC):
         kwargs:
             Additional keyword arguments passed to the subclass.
         """
+        self.logger = logging.getLogger(
+            f"dcnum.feat.feat_background.{self.__class__.__name__}")
         # proper conversion to Path objects
         output_path = pathlib.Path(output_path)
         self.output_path = output_path
@@ -194,6 +198,7 @@ class Background(abc.ABC):
         This irreversibly removes/overrides any "image_bg" and
         "bg_off" features defined in the output file `self.h5out`.
         """
+        t0 = time.perf_counter()
         # Delete any old background data
         for ds_key in ["image_bg", "bg_off"]:
             for grp_key in ["events", "basin_events"]:
@@ -210,6 +215,8 @@ class Background(abc.ABC):
                         "dcnum ppid background"] = bg_ppid
                     self.h5out[F"{grp_key}/{ds_key}"].attrs[
                         "dcnum ppid generation"] = ppid.DCNUM_PPID_GENERATION
+        self.logger.info(
+            f"Background computation time: {time.perf_counter()-t0:.1f}s")
 
     @abc.abstractmethod
     def process_approach(self):
