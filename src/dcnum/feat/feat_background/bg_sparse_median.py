@@ -59,7 +59,7 @@ class BackgroundSparseMed(Background):
         offset_correction: bool
             The sparse median background correction produces one median
             image for multiple input frames (BTW this also leads to very
-            efficient data storage with HDF5 data compression filters). In
+            efficient data storage with internal HDF5 basins). In
             case the input frames are subject to frame-by-frame brightness
             variations (e.g. flickering of the illumination source), it
             is useful to have an offset value per frame that can then be
