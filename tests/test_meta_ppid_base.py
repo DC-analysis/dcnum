@@ -1,5 +1,7 @@
 import inspect
 
+import numpy as np
+
 import pytest
 
 from dcnum.meta import ppid
@@ -80,8 +82,14 @@ def test_unique_prefix_unordered(in_list, out_list):
      "tem=90^te=a^o=0^wit=1^a=1000^win=red^tes=1"),
     ({"temperature": 10.1},
      "tem=10.1^te=a^o=0^wit=1^a=1000^win=red^tes=1"),
+    ({"temperature": 10.0},
+     "tem=10^te=a^o=0^wit=1^a=1000^win=red^tes=1"),
+    ({"temperature": np.float128(9.0)},
+     "tem=9^te=a^o=0^wit=1^a=1000^win=red^tes=1"),
     ({"with_water": False, "wine_type": "blue"},
      "tem=90^te=a^o=0^wit=0^a=1000^win=blue^tes=1"),
+    ({"with_water": np.bool_(1), "wine_type": "blue"},
+     "tem=90^te=a^o=0^wit=1^a=1000^win=blue^tes=1"),
 ])
 def test_kwargs_to_ppid(kwargs, pid):
     ptest = ppid.kwargs_to_ppid(ExampleClass, "cook", kwargs)

@@ -7,6 +7,7 @@ import pathlib
 from typing import Dict, List, Protocol
 import warnings
 
+import numpy as np
 
 #: Increment this string if there are breaking changes that make
 #: previous pipelines unreproducible.
@@ -140,9 +141,9 @@ def kwargs_to_ppid(cls: ClassWithPPIDCapabilities,
                 path = pathlib.Path(val)
                 if path.exists():
                     val = path.name
-            if isinstance(val, bool):
+            if isinstance(val, (bool, np.bool_)):
                 val = int(val)  # do not print e.g. "True"
-            elif isinstance(val, float):
+            elif isinstance(val, (float, np.floating)):
                 if val == int(val):
                     val = int(val)  # omit the ".0" at the end
             concat_strings.append(f"{abr}={val}")
