@@ -1,4 +1,5 @@
 0.25.0
+ - feat: identify flickering in raw data via dcnum.read.detect_flickering
  - fix: np.bool_ and np.floating not recognized in PPID parsing
 0.24.0
  - feat: add support for internal basins
