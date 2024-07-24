@@ -84,7 +84,7 @@ def test_unique_prefix_unordered(in_list, out_list):
      "tem=10.1^te=a^o=0^wit=1^a=1000^win=red^tes=1"),
     ({"temperature": 10.0},
      "tem=10^te=a^o=0^wit=1^a=1000^win=red^tes=1"),
-    ({"temperature": np.float128(9.0)},
+    ({"temperature": np.float16(9.0)},
      "tem=9^te=a^o=0^wit=1^a=1000^win=red^tes=1"),
     ({"with_water": False, "wine_type": "blue"},
      "tem=90^te=a^o=0^wit=0^a=1000^win=blue^tes=1"),
