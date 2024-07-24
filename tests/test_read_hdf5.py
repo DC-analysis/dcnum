@@ -106,6 +106,19 @@ def test_image_cache(tmp_path):
         assert 2 in hic.cache
 
 
+def test_image_cache_slice_out_of_bounds(tmp_path):
+    path = tmp_path / "test.hdf5"
+    with h5py.File(path, "w") as hw:
+        hw["events/image"] = np.random.rand(210, 80, 180)
+
+    with h5py.File(path, "r") as h5:
+        hic = read.HDF5ImageCache(h5["events/image"],
+                                  chunk_size=100,
+                                  cache_size=2)
+        assert len(hic) == 210
+        assert len(hic[:300]) == 210
+
+
 def test_image_cache_index_out_of_range(tmp_path):
     path = tmp_path / "test.hdf5"
     size = 20

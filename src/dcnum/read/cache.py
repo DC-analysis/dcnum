@@ -36,9 +36,10 @@ class BaseImageChunkCache(abc.ABC):
     def __getitem__(self, index):
         if isinstance(index, (slice, list, np.ndarray)):
             if isinstance(index, slice):
-                indices = np.arange(index.start or 0,
-                                    index.stop or len(self),
-                                    index.step)
+                indices = np.arange(
+                    index.start or 0,
+                    min(index.stop, len(self)) if index.stop else len(self),
+                    index.step)
             else:
                 indices = index
             array_out = np.empty((len(indices),) + self.image_shape,
