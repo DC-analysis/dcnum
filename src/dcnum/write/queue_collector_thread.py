@@ -8,8 +8,6 @@ from typing import List
 
 import numpy as np
 
-from ..read import HDF5Data
-
 
 class EventStash:
     def __init__(self,
@@ -99,7 +97,6 @@ class EventStash:
 
 class QueueCollectorThread(threading.Thread):
     def __init__(self,
-                 data: HDF5Data,
                  event_queue: mp.Queue,
                  writer_dq: deque,
                  feat_nevents: mp.Array,
@@ -115,9 +112,6 @@ class QueueCollectorThread(threading.Thread):
 
         Parameters
         ----------
-        data:
-            Data source object. This is used for appending additional
-            information
         event_queue:
             A queue object to which other processes or threads write
             events as tuples `(frame_index, events_dict)`.
@@ -146,8 +140,6 @@ class QueueCollectorThread(threading.Thread):
         super(QueueCollectorThread, self).__init__(
               name="QueueCollector", *args, **kwargs)
         self.logger = logging.getLogger("dcnum.write.QueueCollector")
-        #: HDF5 data instance
-        self.data = data
         #: Event queue from which to collect event data
         self.event_queue = event_queue
         #: Writer deque to which event arrays are appended
@@ -169,7 +161,7 @@ class QueueCollectorThread(threading.Thread):
         # We are not writing to `event_queue` so we can safely cancel
         # our queue thread if we are told to stop.
         self.event_queue.cancel_join_thread()
-        # Indexes the current frame in `self.data`.
+        # Indexes the current frame in the input HDF5Data instance.
         last_idx = 0
         self.logger.debug("Started collector thread")
         while True:

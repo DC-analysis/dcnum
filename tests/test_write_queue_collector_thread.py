@@ -4,9 +4,8 @@ import pathlib
 
 import numpy as np
 
-from dcnum import read, write
+from dcnum import write
 
-from helper_methods import retrieve_data
 
 data_path = pathlib.Path(__file__).parent / "data"
 
@@ -44,15 +43,12 @@ def test_event_stash():
 
 def test_queue_collector_thread():
     # keyword arguments
-    data = read.HDF5Data(
-        retrieve_data("fmt-hdf5_cytoshot_full-features_2023.zip"))
     event_queue = mp.Queue()
     writer_dq = collections.deque()
     feat_nevents = np.array([1, 3, 1, 5])
     write_threshold = 2
     # queue collector thread
     qct = write.QueueCollectorThread(
-        data=data,
         event_queue=event_queue,
         writer_dq=writer_dq,
         feat_nevents=feat_nevents,
@@ -99,15 +95,12 @@ def test_queue_collector_thread():
 
 def test_queue_collector_thread_with_full_stash():
     # keyword arguments
-    data = read.HDF5Data(
-        retrieve_data("fmt-hdf5_cytoshot_full-features_2023.zip"))
     event_queue = mp.Queue()
     writer_dq = collections.deque()
     feat_nevents = np.array([1, 3, 1, 5])
     write_threshold = 2
     # queue collector thread
     qct = write.QueueCollectorThread(
-        data=data,
         event_queue=event_queue,
         writer_dq=writer_dq,
         feat_nevents=feat_nevents,

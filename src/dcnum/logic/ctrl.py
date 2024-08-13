@@ -776,7 +776,6 @@ class DCNumJobRunner(threading.Thread):
 
         # Start the data collection thread
         thr_coll = QueueCollectorThread(
-            data=self.dtin,
             event_queue=fe_kwargs["event_queue"],
             writer_dq=writer_dq,
             feat_nevents=fe_kwargs["feat_nevents"],
