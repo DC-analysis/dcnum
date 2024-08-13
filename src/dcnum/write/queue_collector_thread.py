@@ -147,7 +147,7 @@ class QueueCollectorThread(threading.Thread):
               name="QueueCollector", *args, **kwargs)
         self.logger = logging.getLogger("dcnum.write.QueueCollector")
         #: HDF5 data instance
-        self.data = None
+        self.data = data
         #: Event queue from which to collect event data
         self.event_queue = event_queue
         #: Writer deque to which event arrays are appended
