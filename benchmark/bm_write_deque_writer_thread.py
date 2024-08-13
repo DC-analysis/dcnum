@@ -1,5 +1,7 @@
+import atexit
 from collections import deque
 import pathlib
+import shutil
 import tempfile
 
 import multiprocessing as mp
@@ -30,8 +32,9 @@ def setup():
         writer_dq.append(("mask", rng.random((batch_size, 80, 320)) > .5))
         writer_dq.append(("temp", rng.normal(23, size=batch_size)))
 
-    path_out = pathlib.Path(
-        tempfile.mkdtemp(prefix=pathlib.Path(__file__).name)) / "out.rtdc"
+    temp_dir = tempfile.mkdtemp(prefix=pathlib.Path(__file__).name)
+    atexit.register(shutil.rmtree, temp_dir, ignore_errors=True, onerror=None)
+    path_out = pathlib.Path(temp_dir) / "out.rtdc"
 
 
 def main():
