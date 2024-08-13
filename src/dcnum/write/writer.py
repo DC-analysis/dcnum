@@ -140,10 +140,10 @@ class HDF5Writer:
                                                feat_dtype=feat_dtype),
                 **ds_kwds)
             if len(item_shape) == 2:
-                dset.attrs.create('CLASS', np.string_('IMAGE'))
-                dset.attrs.create('IMAGE_VERSION', np.string_('1.2'))
+                dset.attrs.create('CLASS', np.bytes_('IMAGE'))
+                dset.attrs.create('IMAGE_VERSION', np.bytes_('1.2'))
                 dset.attrs.create('IMAGE_SUBCLASS',
-                                  np.string_('IMAGE_GRAYSCALE'))
+                                  np.bytes_('IMAGE_GRAYSCALE'))
             offset = 0
         else:
             dset = egroup[feat]
