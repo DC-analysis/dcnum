@@ -1,6 +1,7 @@
 0.25.1
  - ref: replace np.string_ with np.bytes_
  - ref: remove unused `data` argument to QueueCollectorThread
+ - ref: minor speed-up for QueueCollectorThread
 0.25.0
  - feat: identify flickering in raw data via dcnum.read.detect_flickering
  - fix: handle out-of-bounds slice indexing for BaseImageChunkCache

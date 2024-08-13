@@ -59,11 +59,10 @@ class EventStash:
             Event dictionary
         """
         idx_loc = index - self.index_offset
-        idx_stop = self.nev_idx[idx_loc]
-        self._tracker[idx_loc] = True
 
         if events:
             slice_loc = None
+            idx_stop = self.nev_idx[idx_loc]
             for feat in events:
                 dev = events[feat]
                 if dev.size:
@@ -73,6 +72,8 @@ class EventStash:
                     darr[slice_loc] = dev
             if slice_loc:
                 self.indices_for_data[slice_loc] = index
+
+        self._tracker[idx_loc] = True
 
     def require_feature(self, feat, sample_data):
         """Create a new empty feature array in `self.events` and return it
@@ -85,10 +86,10 @@ class EventStash:
             Sample data for one event of the feature (used to determine
             shape and dtype of the feature array)
         """
-        sample_data = np.array(sample_data)
-        event_shape = sample_data.shape
-        dtype = sample_data.dtype
         if feat not in self.events:
+            sample_data = np.array(sample_data)
+            event_shape = sample_data.shape
+            dtype = sample_data.dtype
             darr = np.zeros((self.size,) + tuple(event_shape),
                             dtype=dtype)
             self.events[feat] = darr
