@@ -1,5 +1,6 @@
 from collections import deque
 import multiprocessing as mp
+
 import numpy as np
 
 from dcnum import write
@@ -8,9 +9,12 @@ from dcnum import write
 mp_spawn = mp.get_context('spawn')
 
 
-def main():
+def setup():
+    global event_queue
+    global writer_dq
+    global feat_nevents
     batch_size = 1000
-    num_batches = 5
+    num_batches = 3
     num_events = batch_size * num_batches
     event_queue = mp.Queue()
     writer_dq = deque()
@@ -30,6 +34,8 @@ def main():
         for idx in number_order:
             event_queue.put((ii*batch_size + idx, event))
 
+
+def main():
     thr_coll = write.QueueCollectorThread(
         event_queue=event_queue,
         writer_dq=writer_dq,

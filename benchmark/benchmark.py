@@ -16,15 +16,21 @@ def print_underline(msg):
     print("-" * len(msg))
 
 
-def run_benchmark(bm_path):
+def run_benchmark(bm_path, repeats=5):
     print_underline(f"Running {bm_path}")
     bm_path = pathlib.Path(bm_path).resolve()
     os.chdir(f"{bm_path.parent}")
     bm_mod = importlib.import_module(f"{bm_path.stem}")
-    t = timeit.Timer(bm_mod.main)
-    res = t.repeat(repeat=5, number=10)
-    print(f"best={min(res):.3g}, mean={np.mean(res):.3g}")
-    return res
+
+    reps = []
+    print("Running...", end="\r")
+    for ii in range(repeats):
+        t = timeit.timeit(bm_mod.main, setup=bm_mod.setup, number=1)
+        reps.append(t)
+        print(f"Running {ii + 1}/{repeats}", end="\r")
+    print(reps)
+    print(f"best={min(reps):.3g}, mean={np.mean(reps):.3g}")
+    return reps
 
 
 if __name__ == "__main__":
