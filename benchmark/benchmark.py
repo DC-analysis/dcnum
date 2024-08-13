@@ -23,7 +23,7 @@ def run_benchmark(bm_path):
     bm_mod = importlib.import_module(f"{bm_path.stem}")
     t = timeit.Timer(bm_mod.main)
     res = t.repeat(repeat=5, number=10)
-    print(f"best={max(res):.3g}, mean={np.mean(res):.3g}")
+    print(f"best={min(res):.3g}, mean={np.mean(res):.3g}")
     return res
 
 
