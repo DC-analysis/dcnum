@@ -29,8 +29,6 @@ jobs:
         python -m pip install coverage flake8 pytest
     - name: Install dcnum
       run: |
-        # mahotas 1.4.15 does not yet support numpy 2.0
-        pip install "numpy<2"
         pip install .[torch]
     - name: List installed packages
       run: |
@@ -42,4 +40,4 @@ jobs:
       run: |
         coverage run --source=dcnum -m pytest tests
     - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v3
+      uses: codecov/codecov-action@v4
