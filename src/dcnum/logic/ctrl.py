@@ -682,7 +682,7 @@ class DCNumJobRunner(threading.Thread):
                     paths = [pin]
                     pout = pathlib.Path(hout.filename).resolve().parent
                     try:
-                        paths.append(pout.relative_to(pin))
+                        paths.append(os.path.relpath(pin, pout))
                     except ValueError:
                         # This means it is impossible to compute a relative
                         # path (e.g. different drive letter on Windows).
