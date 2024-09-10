@@ -1,4 +1,5 @@
 0.25.1
+ - fix: catch ValueError when computing relative path on different anchors
  - ref: replace np.string_ with np.bytes_
  - ref: remove unused `data` argument to QueueCollectorThread
  - ref: minor speed-up for QueueCollectorThread

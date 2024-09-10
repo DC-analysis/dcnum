@@ -679,8 +679,14 @@ class DCNumJobRunner(threading.Thread):
                     self.logger.debug(f"Creating basin for {feats}")
                     # Relative and absolute paths.
                     pin = pathlib.Path(hin.filename).resolve()
+                    paths = [pin]
                     pout = pathlib.Path(hout.filename).resolve().parent
-                    paths = [pin, os.path.relpath(pin, pout)]
+                    try:
+                        paths.append(pout.relative_to(pin))
+                    except ValueError:
+                        # This means it is impossible to compute a relative
+                        # path (e.g. different drive letter on Windows).
+                        pass
                     hw.store_basin(name="dcnum basin",
                                    features=feats,
                                    mapping=basinmap0,
