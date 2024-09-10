@@ -25,14 +25,14 @@ classifiers = [
 ]
 license = {text = "MIT"}
 dependencies = [
-    "h5py>=3.0.0",  # BSD
-    "hdf5plugin>=3.3.1",  # MIT and others (per plugin)
-    "mahotas",  # MIT
-    "numba",  # BSD
-    "numpy>=1.21",  # BSD
-    "opencv-python-headless",  # Apache 2.0
-    "scikit-image",  # BSD
-    "scipy>=1.8.0",  # BSD
+    "h5py>=3.0.0, <4",  # BSD
+    "hdf5plugin>=3.3.1, <6",  # MIT and others (per plugin)
+    "mahotas>=1, <2",  # MIT
+    "numba>=0.60, <1",  # BSD
+    "numpy>=1.21, <3",  # BSD
+    "opencv-python-headless>=4, <5",  # Apache 2.0
+    "scikit-image>=0.24, <1",  # BSD
+    "scipy>=1.8.0, <2",  # BSD
 ]
 dynamic = ["version"]
 

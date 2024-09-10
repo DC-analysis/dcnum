@@ -1,3 +1,6 @@
+0.25.2
+ - setup: officially support numpy 2
+ - setup: pin dependencies
 0.25.1
  - fix: catch ValueError when computing relative path on different anchors
  - ref: replace np.string_ with np.bytes_
