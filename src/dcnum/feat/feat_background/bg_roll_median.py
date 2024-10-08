@@ -4,6 +4,8 @@ import time
 import numpy as np
 from scipy import ndimage
 
+from ...os_env_st import RequestSingleThreaded, confirm_single_threaded
+
 from .base import mp_spawn, Background
 
 
@@ -241,6 +243,8 @@ class WorkerRollMed(mp_spawn.Process):
 
     def run(self):
         """Main loop of worker process (breaks when `self.counter` <0)"""
+        # confirm single-threadedness (prints to log)
+        confirm_single_threaded()
         # Create the ctypes arrays here instead of during __init__, because
         # for some reason they are copied in __init__ and not mapped.
         shared_input = np.ctypeslib.as_array(
@@ -260,6 +264,12 @@ class WorkerRollMed(mp_spawn.Process):
                                          self.kernel_size, *args)
                 with self.counter.get_lock():
                     self.counter.value += 1
+
+    def start(self):
+        # Set all relevant os environment variables such libraries in the
+        # new process only use single-threaded computation.
+        with RequestSingleThreaded():
+            mp_spawn.Process.start(self)
 
 
 def compute_median_for_slice(shared_input, shared_output, kernel_size,

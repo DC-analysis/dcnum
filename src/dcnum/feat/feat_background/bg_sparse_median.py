@@ -6,6 +6,8 @@ from scipy import ndimage
 
 from ...read import HDF5Data
 
+from ...os_env_st import RequestSingleThreaded, confirm_single_threaded
+
 from .base import mp_spawn, Background
 
 
@@ -436,6 +438,8 @@ class WorkerSparseMed(mp_spawn.Process):
 
     def run(self):
         """Main loop of worker process (breaks when `self.counter` <0)"""
+        # confirm single-threadedness (prints to log)
+        confirm_single_threaded()
         # Create the ctypes arrays here instead of during __init__, because
         # for some reason they are copied in __init__ and not mapped.
         shared_input = np.ctypeslib.as_array(
@@ -468,3 +472,9 @@ class WorkerSparseMed(mp_spawn.Process):
                 #     overwrite_input=False)
                 with self.counter.get_lock():
                     self.counter.value += 1
+
+    def start(self):
+        # Set all relevant os environment variables such libraries in the
+        # new process only use single-threaded computation.
+        with RequestSingleThreaded():
+            mp_spawn.Process.start(self)

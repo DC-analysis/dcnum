@@ -1,3 +1,6 @@
+0.25.3
+ - enh: request single threaded operations when going into mp.Process (#17)
+ - enh: new module `dcnum.single_thread_osenv`
 0.25.2
  - setup: officially support numpy 2
  - setup: pin dependencies

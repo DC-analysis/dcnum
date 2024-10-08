@@ -7,6 +7,8 @@ from typing import Dict
 import numpy as np
 import scipy.ndimage as ndi
 
+from ..os_env_st import RequestSingleThreaded, confirm_single_threaded
+
 from .segmenter import Segmenter
 
 
@@ -325,7 +327,8 @@ class MPOSegmenterWorker:
         self.sl_stop = sl_stop
 
     def run(self):
-        # print(f"Running {self} in PID {os.getpid()}")
+        # confirm single-threadedness (prints to log)
+        confirm_single_threaded()
         # We have to create the numpy-versions of the mp.RawArrays here,
         # otherwise we only get some kind of copy in the new process
         # when we use "spawn" instead of "fork".
@@ -368,6 +371,12 @@ class MPOSegmenterWorker:
 class MPOSegmenterWorkerProcess(MPOSegmenterWorker, mp_spawn.Process):
     def __init__(self, *args, **kwargs):
         super(MPOSegmenterWorkerProcess, self).__init__(*args, **kwargs)
+
+    def start(self):
+        # Set all relevant os environment variables such libraries in the
+        # new process only use single-threaded computation.
+        with RequestSingleThreaded():
+            mp_spawn.Process.start(self)
 
 
 class MPOSegmenterWorkerThread(MPOSegmenterWorker, threading.Thread):

@@ -10,6 +10,7 @@ import traceback
 
 import numpy as np
 
+from ..os_env_st import RequestSingleThreaded, confirm_single_threaded
 from ..meta.ppid import kwargs_to_ppid, ppid_to_kwargs
 from ..read import HDF5Data
 
@@ -325,6 +326,7 @@ class QueueEventExtractor:
 
     def run(self):
         """Main loop of worker process"""
+        confirm_single_threaded()
         self.worker_monitor[self.worker_index] = 0
         # Don't wait for these two queues when joining workers
         self.raw_queue.cancel_join_thread()
@@ -398,6 +400,12 @@ class EventExtractorProcess(QueueEventExtractor, mp_spawn.Process):
     def __init__(self, *args, **kwargs):
         super(EventExtractorProcess, self).__init__(
             name="EventExtractorProcess", *args, **kwargs)
+
+    def start(self):
+        # Set all relevant os environment variables such libraries in the
+        # new process only use single-threaded computation.
+        with RequestSingleThreaded():
+            mp_spawn.Process.start(self)
 
 
 class EventExtractorThread(QueueEventExtractor, threading.Thread):
