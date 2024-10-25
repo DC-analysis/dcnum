@@ -593,8 +593,11 @@ def concatenated_hdf5_data(paths: List[pathlib.Path],
         raise ValueError(
             f"Invalid type for `path_out`: {type(path_out)} ({path_out}")
 
-    if len(paths) <= 1:
-        raise ValueError("Please specify at least two files in `paths`!")
+    if len(paths) == 0:
+        raise ValueError("Please specify at least one file in `paths`!")
+    elif len(paths) == 1:
+        warnings.warn("Only one file passed to `concatenated_hdf5_data`; this "
+                      "is equivalent to using `HDF5Data`, but slower.")
 
     frames = []
 

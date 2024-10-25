@@ -89,9 +89,15 @@ def test_concat_invalid_input_path():
 
 
 def test_concat_invalid_input_path_number():
+    with pytest.raises(ValueError, match="Please specify at least one"):
+        read.concatenated_hdf5_data([])
+
+
+def test_concat_invalid_input_path_number_warn():
     path = retrieve_data("fmt-hdf5_cytoshot_full-features_2023.zip")
-    with pytest.raises(ValueError, match="Please specify at least two"):
-        read.concatenated_hdf5_data([path])
+    with pytest.warns(UserWarning, match="is equivalent to using"):
+        hd = read.concatenated_hdf5_data([path])
+        assert len(hd) == 40
 
 
 def test_concat_specify_input_feature_number():
