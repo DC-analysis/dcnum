@@ -32,7 +32,8 @@ dependencies = [
     "numpy>=1.21, <3",  # BSD
     "opencv-python-headless>=4, <5",  # Apache 2.0
     "scikit-image>=0.24, <1",  # BSD
-    "scipy>=1.8.0, <2",  # BSD
+    # https://github.com/scipy/scipy/issues/22333
+    "scipy>=1.8.0, <1.15.0",  # BSD
 ]
 dynamic = ["version"]
 

@@ -1,5 +1,6 @@
 0.25.5
  - enh: support unnamed table data in `HDF5Data`
+ - setup: pin scipy<1.15 due to https://github.com/scipy/scipy/issues/22333
 0.25.4
  - enh: support passing a single file to `concatenated_hdf5_data`
 0.25.3
