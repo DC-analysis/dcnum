@@ -306,6 +306,30 @@ def test_pickling_state_tables():
                            h5d2.tables["sample_table"][lk])
 
 
+def test_pickling_state_tables_unnamed():
+    path = retrieve_data(
+        "fmt-hdf5_cytoshot_full-features_legacy_allev_2023.zip")
+    # The original file does not contain any tables, so we write
+    # generate a table
+    tab_data = np.random.random((400,200))
+
+    # add table to source file
+    with h5py.File(path, "a") as h5:
+        h5tab = h5.require_group("tables")
+        h5tab.create_dataset(name="unnamed_table",
+                             data=tab_data)
+
+    h5d1 = read.HDF5Data(path)
+    h5d1.pixel_size = 0.124
+    pstate = pickle.dumps(h5d1)
+    h5d2 = pickle.loads(pstate)
+    assert h5d1.tables
+    table = h5d1.tables["unnamed_table"]
+    table2 = h5d2.tables["unnamed_table"]
+    assert np.all(table[:] == tab_data)
+    assert np.all(table2[:] == tab_data)
+
+
 def test_read_empty_logs():
     path = retrieve_data(
         "fmt-hdf5_cytoshot_full-features_legacy_allev_2023.zip")

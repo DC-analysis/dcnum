@@ -198,11 +198,17 @@ class HDF5Data:
                         self.logs[key] = alog
                 # tables
                 for tab in sorted(h5.get("tables", {}).keys()):
-                    tabdict = {}
-                    for tkey in h5["tables"][tab].dtype.fields.keys():
-                        tabdict[tkey] = \
-                            np.array(h5["tables"][tab][tkey]).reshape(-1)
-                    self.tables[tab] = tabdict
+                    fields = h5["tables"][tab].dtype.fields
+                    if fields is None:
+                        # No individual curves, but an image array
+                        self.tables[tab] = h5["tables"][tab][:]
+                    else:
+                        # List of curves with predefined dtypes
+                        tabdict = {}
+                        for tkey in fields.keys():
+                            tabdict[tkey] = \
+                                np.array(h5["tables"][tab][tkey]).reshape(-1)
+                        self.tables[tab] = tabdict
                 # basins
                 basins = self.extract_basin_dicts(h5)
                 self.basins = sorted(basins, key=lambda x: x["name"])
