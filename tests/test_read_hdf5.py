@@ -311,7 +311,7 @@ def test_pickling_state_tables_unnamed():
         "fmt-hdf5_cytoshot_full-features_legacy_allev_2023.zip")
     # The original file does not contain any tables, so we write
     # generate a table
-    tab_data = np.random.random((400,200))
+    tab_data = np.random.random((400, 200))
 
     # add table to source file
     with h5py.File(path, "a") as h5:
