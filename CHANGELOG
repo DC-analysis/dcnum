@@ -1,3 +1,5 @@
+0.25.6
+ - maintenance release
 0.25.5
  - enh: support unnamed table data in `HDF5Data`
  - setup: pin scipy<1.15 due to https://github.com/scipy/scipy/issues/22333
