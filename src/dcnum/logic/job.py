@@ -90,8 +90,9 @@ class DCNumPipelineJob:
             else:
                 basin_strategy = "tap"
 
-        #: initialize keyword arguments for this job
         self.kwargs = {}
+        """initialize keyword arguments for this job"""
+
         spec = inspect.getfullargspec(DCNumPipelineJob.__init__)
         locs = locals()
         for arg in spec.args:

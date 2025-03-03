@@ -26,23 +26,31 @@ class EventStash:
             List that defines how many events there are for each input
             frame. If summed up, this defines `self.size`.
         """
-        #: Dictionary containing the event arrays
         self.events = {}
-        #: List containing the number of events per input frame
+        """Dictionary containing the event arrays"""
+
         self.feat_nevents = feat_nevents
-        #: Cumulative sum of `feat_nevents` for determining sorting offsets
+        """List containing the number of events per input frame"""
+
         self.nev_idx = np.cumsum(feat_nevents)
-        #: Number of events in this stash
+        """Cumulative sum of `feat_nevents` for determining sorting offsets"""
+
         self.size = int(np.sum(feat_nevents))
-        #: Number of frames in this stash
+        """Number of events in this stash"""
+
         self.num_frames = len(feat_nevents)
-        #: Global offset compared to the original data instance.
+        """Number of frames in this stash"""
+
         self.index_offset = index_offset
-        #: Array containing the indices in the original data instance
-        #: that correspond to the events in `events`.
+        """Global offset compared to the original data instance."""
+
         self.indices_for_data = np.zeros(self.size, dtype=np.uint32)
-        # Private array that tracks the progress.
+        """Array containing the indices in the original data instance.
+        These indices correspond to the events in `events`.
+        """
+
         self._tracker = np.zeros(self.num_frames, dtype=bool)
+        """Private array that tracks the progress."""
 
     def is_complete(self):
         """Determine whether the event stash is complete (all events added)"""
@@ -141,22 +149,31 @@ class QueueCollectorThread(threading.Thread):
         super(QueueCollectorThread, self).__init__(
               name="QueueCollector", *args, **kwargs)
         self.logger = logging.getLogger("dcnum.write.QueueCollector")
-        #: Event queue from which to collect event data
+
         self.event_queue = event_queue
-        #: Writer deque to which event arrays are appended
+        """Event queue from which to collect event data"""
+
         self.writer_dq = writer_dq
-        #: Buffer deque to which events are appended that do not belong
-        #: to the current chunk (chunk defined by `write_threshold`).
+        """Writer deque to which event arrays are appended"""
+
         self.buffer_dq = deque()
-        #: A shared array containing the number of events for each
-        #: frame in `data`.
+        """Buffer deque
+        Events that do not not belong to the current chunk
+        (chunk defined by `write_threshold`) go here.
+        """
+
         self.feat_nevents = feat_nevents
-        #: Number of frames to send to `writer_dq` at a time.
+        """shared array containing the number of events
+        for each frame in `data`."""
+
         self.write_threshold = write_threshold
-        #: Number of events sent to `writer_dq`
+        """Number of frames to send to `writer_dq` at a time."""
+
         self.written_events = 0
-        #: Number of frames from `data` written to `writer_dq`
+        """Number of events sent to `writer_dq`"""
+
         self.written_frames = 0
+        """Number of frames from `data` written to `writer_dq`"""
 
     def run(self):
         # We are not writing to `event_queue` so we can safely cancel

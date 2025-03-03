@@ -25,8 +25,10 @@ class BaseImageChunkCache(abc.ABC):
         self._dtype = None
         chunk_size = min(shape[0], chunk_size)
         self._len = self.shape[0]
-        #: This is a FILO cache for the chunks
+
         self.cache = collections.OrderedDict()
+        """This is a FILO cache for the chunks"""
+
         self.image_shape = self.shape[1:]
         self.chunk_shape = (chunk_size,) + self.shape[1:]
         self.chunk_size = chunk_size

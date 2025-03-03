@@ -84,41 +84,57 @@ class QueueEventExtractor:
             The index to increment values in `worker_monitor`
         """
         super(QueueEventExtractor, self).__init__(*args, **kwargs)
-        #: Worker index for populating
+
         self.worker_index = worker_index or 0
-        #: Data instance
+        """Worker index for populating"""
+
         self.data = data
-        #: Gating information
+        """Data instance"""
+
         self.gate = gate
-        #: queue containing sub-indices for `label_array`
+        """Gating information"""
+
         self.raw_queue = raw_queue
-        #: queue with event-wise feature dictionaries
+        """queue containing sub-indices for `label_array`"""
+
         self.event_queue = event_queue
-        #: queue for logging
+        """queue with event-wise feature dictionaries"""
+
         self.log_queue = log_queue
-        #: invalid mask counter
+        """queue for logging"""
+
         self.invalid_mask_counter = invalid_mask_counter
-        #: worker busy counter
+        """invalid mask counter"""
+
         self.worker_monitor = worker_monitor
+        """worker busy counter"""
+
         # Logging needs to be set up after `start` is called, otherwise
         # it looks like we have the same PID as the parent process. We
         # are setting up logging in `run`.
         self.logger = None
         self.log_level = log_level or logging.getLogger("dcnum").level
-        #: Shared array of length `len(data)` into which the number of
-        #: events per frame is written.
+
         self.feat_nevents = feat_nevents
-        #: Shared array containing the labels of one chunk from `data`.
+        """Number of events per frame
+        Shared array of length `len(data)` into which the number of
+        events per frame is written.
+        """
+
         self.label_array = label_array
-        #: Set to True to let worker join when `raw_queue` is empty.
+        """Shared array containing the labels of one chunk from `data`."""
+
         self.finalize_extraction = finalize_extraction
+        """Set to True to let worker join when `raw_queue` is empty."""
+
         # Keyword arguments for data extraction
         if extract_kwargs is None:
             extract_kwargs = {}
         extract_kwargs.setdefault("brightness", True)
         extract_kwargs.setdefault("haralick", True)
-        #: Feature extraction keyword arguments.
+
         self.extract_kwargs = extract_kwargs
+        """Feature extraction keyword arguments."""
 
     @staticmethod
     def get_init_kwargs(data: HDF5Data,
@@ -331,9 +347,11 @@ class QueueEventExtractor:
         self.worker_monitor[self.worker_index] = 0
         # Don't wait for these two queues when joining workers
         self.raw_queue.cancel_join_thread()
-        #: logger sends all logs to `self.log_queue`
+
         self.logger = logging.getLogger(
             f"dcnum.feat.EventExtractor.{os.getpid()}")
+        """logger that sends all logs to `self.log_queue`"""
+
         self.logger.setLevel(self.log_level)
         # Clear any handlers that might be set for this logger. This is
         # important for the case when we are an instance of

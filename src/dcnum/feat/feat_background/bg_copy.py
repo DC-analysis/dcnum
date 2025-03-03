@@ -4,6 +4,10 @@ from .base import Background
 
 
 class BackgroundCopy(Background):
+    def __init__(self, *args, **kwargs):
+        """Copy the input background data to the output file"""
+        super().__init__(*args, **kwargs)
+
     @staticmethod
     def check_user_kwargs():
         pass

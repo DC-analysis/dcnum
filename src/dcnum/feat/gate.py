@@ -9,8 +9,8 @@ from ..meta.ppid import kwargs_to_ppid, ppid_to_kwargs
 
 
 class Gate:
-    #: the default value for `size_thresh_mask` if not given as kwarg
     _default_size_thresh_mask = 10
+    """the default value for `size_thresh_mask` if not given as kwarg"""
 
     def __init__(self, data, *,
                  online_gates: bool = False,
@@ -33,8 +33,8 @@ class Gate:
             too large; defaults to 10 or the original value in case
             `online_gates` is set.
         """
-        #: box gating (value range for each feature)
         self.box_gates = {}
+        """box gating (value range for each feature)"""
 
         if online_gates:
             # Deal with online gates.
@@ -46,13 +46,13 @@ class Gate:
                 size_thresh_mask = data.meta_nest.get(
                     "online_contour", {}).get("bin area min")
 
-        #: gating keyword arguments
         self.kwargs = {
             "online_gates": online_gates,
             # Set the size threshold, defaulting to `_default_size_thresh_mask`
             "size_thresh_mask":
                 size_thresh_mask or self._default_size_thresh_mask
         }
+        """gating keyword arguments"""
 
     def _extract_online_gates(self, data):
         ogates = {}

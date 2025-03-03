@@ -82,5 +82,5 @@ numfig = True
 plot_include_source = True
 
 autoapi_dirs = ['../src/dcnum']
-autoapi_python_class_content = "both"
+autoapi_python_class_content = "init"
 autoapi_keep_files = True  # for debugging docstrings

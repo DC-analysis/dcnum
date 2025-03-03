@@ -21,7 +21,7 @@ mp_spawn = mp.get_context('spawn')
 class Background(abc.ABC):
     def __init__(self, input_data, output_path, compress=True, num_cpus=None,
                  **kwargs):
-        """
+        """Base class for background computation
 
         Parameters
         ----------
@@ -56,28 +56,35 @@ class Background(abc.ABC):
         # Using spec is not really necessary here, because kwargs are
         # fully populated for background computation, but this might change.
         spec = inspect.getfullargspec(self.check_user_kwargs)
-        #: background keyword arguments
+
         self.kwargs = spec.kwonlydefaults or {}
+        """background keyword arguments"""
         self.kwargs.update(kwargs)
 
         if num_cpus is None:
             num_cpus = mp_spawn.cpu_count()
-        #: number of CPUs used
+
         self.num_cpus = num_cpus
+        """number of CPUs used"""
 
-        #: number of images in the input data
         self.image_count = None
-        #: fraction images that have been processed
-        self.image_proc = mp_spawn.Value("d", 0)
+        """number of images in the input data"""
 
-        #: HDF5Data instance for input data
+        self.image_proc = mp_spawn.Value("d", 0)
+        """fraction images that have been processed"""
+
         self.hdin = None
-        #: input h5py.File
+        """HDF5Data instance for input data"""
+
         self.h5in = None
-        #: output h5py.File
+        """input h5py.File"""
+
         self.h5out = None
-        #: reference paths for logging to the output .rtdc file
+        """output h5py.File"""
+
         self.paths_ref = []
+        """reference paths for logging to the output .rtdc file"""
+
         # Check whether user passed an array or a path
         if isinstance(input_data, pathlib.Path):
             if str(input_data.resolve()) == str(output_path.resolve()):
@@ -96,10 +103,11 @@ class Background(abc.ABC):
         else:
             self.input_data = input_data
 
-        #: shape of event images
         self.image_shape = self.input_data[0].shape
-        #: total number of events
+        """shape of event images"""
+
         self.image_count = len(self.input_data)
+        """total number of events"""
 
         if self.h5out is None:
             if not output_path.exists():

@@ -64,39 +64,47 @@ class BackgroundRollMed(Background):
                              f"size {len(self.input_data)} is larger than the "
                              f"kernel size {kernel_size}!")
 
-        #: kernel size used for median filtering
         self.kernel_size = kernel_size
-        #: number of events processed at once
-        self.batch_size = batch_size
+        """kernel size used for median filtering"""
 
-        #: mp.RawArray for temporary batch input data
+        self.batch_size = batch_size
+        """number of events processed at once"""
+
         self.shared_input_raw = mp_spawn.RawArray(
             np.ctypeslib.ctypes.c_uint8,
             int(np.prod(self.image_shape)) * (batch_size + kernel_size))
-        #: mp.RawArray for temporary batch output data
+        """mp.RawArray for temporary batch input data"""
+
         self.shared_output_raw = mp_spawn.RawArray(
             np.ctypeslib.ctypes.c_uint8,
             int(np.prod(self.image_shape)) * batch_size)
+        """mp.RawArray for temporary batch output data"""
+
         # Convert the RawArray to something we can write to fast
         # (similar to memoryview, but without having to cast) using
         # np.ctypeslib.as_array. See discussion in
         # https://stackoverflow.com/questions/37705974
-        #: numpy array reshaped view on `self.shared_input_raw` with
-        #: first axis enumerating the events
         self.shared_input = np.ctypeslib.as_array(
             self.shared_input_raw).reshape(batch_size + kernel_size, -1)
-        #: numpy array reshaped view on `self.shared_output_raw` with
-        #: first axis enumerating the events
+        """numpy array reshaped view on `self.shared_input_raw`.
+        The first axis enumerating the events
+        """
+
         self.shared_output = np.ctypeslib.as_array(
             self.shared_output_raw).reshape(batch_size, -1)
-        #: current batch index (see `self.process` and `process_next_batch`)
-        self.current_batch = 0
+        """numpy array reshaped view on `self.shared_output_raw`.
+        The first axis enumerating the events
+        """
 
-        #: counter tracking process of workers
+        self.current_batch = 0
+        """current batch index (see `self.process` and `process_next_batch`)"""
+
         self.worker_counter = mp_spawn.Value("l", 0)
-        #: queue for median computation jobs
+        """counter tracking process of workers"""
+
         self.queue = mp_spawn.Queue()
-        #: list of workers (processes)
+        """queue for median computation jobs"""
+
         self.workers = [WorkerRollMed(self.queue,
                                       self.worker_counter,
                                       self.shared_input_raw,
@@ -104,6 +112,7 @@ class BackgroundRollMed(Background):
                                       self.batch_size,
                                       self.kernel_size)
                         for _ in range(self.num_cpus)]
+        """list of workers (processes)"""
         [w.start() for w in self.workers]
 
     def __enter__(self):

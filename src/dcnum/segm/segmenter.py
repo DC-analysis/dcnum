@@ -26,17 +26,23 @@ class SegmenterNotApplicableError(BaseException):
 
 
 class Segmenter(abc.ABC):
-    #: Required hardware ("cpu" or "gpu") defined in first-level subclass.
     hardware_processor = "none"
-    #: Whether to enable mask post-processing. If disabled, you should
-    #: make sure that your mask is properly defined and cleaned or you
-    #: have to call `process_mask` in your `segment_algorithm` implementation.
+    """Required hardware ("cpu" or "gpu") defined in first-level subclass."""
+
     mask_postprocessing = True
-    #: Default keyword arguments for mask post-processing. See `process_mask`
-    #: for available options.
+    """Whether to enable mask post-processing.
+    If disabled, you should make sure that your mask is properly defined
+    and cleaned or you have to call `process_mask` in your
+    `segment_algorithm` implementation.
+    """
+
     mask_default_kwargs = {}
-    #: If the segmenter requires a background-corrected image, set this to True
+    """Default keyword arguments for mask post-processing.
+    See `process_mask` for available options.
+    """
+
     requires_background_correction = False
+    """Whether the segmenter requires a background-corrected image"""
 
     def __init__(self,
                  *,
@@ -65,12 +71,15 @@ class Segmenter(abc.ABC):
         self.logger = logging.getLogger(__name__).getChild(
             self.__class__.__name__)
         spec = inspect.getfullargspec(self.segment_algorithm)
-        #: custom keyword arguments for the subclassing segmenter
+
         self.kwargs = spec.kwonlydefaults or {}
+        """custom keyword arguments for the subclassing segmenter"""
+
         self.kwargs.update(kwargs)
 
-        #: keyword arguments for mask post-processing
         self.kwargs_mask = {}
+        """keyword arguments for mask post-processing"""
+
         if self.mask_postprocessing:
             spec_mask = inspect.getfullargspec(self.process_mask)
             self.kwargs_mask.update(spec_mask.kwonlydefaults or {})

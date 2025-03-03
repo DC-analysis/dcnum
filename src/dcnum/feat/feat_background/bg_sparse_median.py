@@ -103,16 +103,20 @@ class BackgroundSparseMed(Background):
                 f"size {len(self.input_data)}. Setting it to input data size!")
             kernel_size = len(self.input_data)
 
-        #: kernel size used for median filtering
         self.kernel_size = kernel_size
-        #: time between background images in the background series
+        """kernel size used for median filtering"""
+
         self.split_time = split_time
-        #: cleansing threshold factor
+        """time between background images in the background series"""
+
         self.thresh_cleansing = thresh_cleansing
-        #: keep at least this many background images from the series
+        """cleansing threshold factor"""
+
         self.frac_cleansing = frac_cleansing
-        #: offset/flickering correction
+        """keep at least this many background images from the series"""
+
         self.offset_correction = offset_correction
+        """offset/flickering correction"""
 
         # time axis
         self.time = None
@@ -142,48 +146,59 @@ class BackgroundSparseMed(Background):
             self.time = np.linspace(0, dur, self.image_count,
                                     endpoint=True)
 
-        #: duration of the measurement
         self.duration = self.time[-1] - self.time[0]
+        """duration of the measurement"""
 
         self.step_times = np.arange(0, self.duration, self.split_time)
-        #: array containing all background images
+
         self.bg_images = np.zeros((self.step_times.size,
                                    self.image_shape[0],
                                    self.image_shape[1]),
                                   dtype=np.uint8)
+        """array containing all background images"""
 
-        #: mp.RawArray for temporary batch input data
         self.shared_input_raw = mp_spawn.RawArray(
             np.ctypeslib.ctypes.c_uint8,
             int(np.prod(self.image_shape)) * kernel_size)
-        #: mp.RawArray for the median background image
+        """mp.RawArray for temporary batch input data"""
+
         self.shared_output_raw = mp_spawn.RawArray(
             np.ctypeslib.ctypes.c_uint8,
             int(np.prod(self.image_shape)))
+        """mp.RawArray for the median background image"""
+
         # Convert the RawArray to something we can write to fast
         # (similar to memoryview, but without having to cast) using
         # np.ctypeslib.as_array. See discussion in
         # https://stackoverflow.com/questions/37705974
-        #: numpy array reshaped view on `self.shared_input_raw` with
-        #: first axis enumerating the events
         self.shared_input = np.ctypeslib.as_array(
             self.shared_input_raw).reshape(kernel_size, -1)
+        """numpy array reshaped view on `self.shared_input_raw`.
+        The First axis enumerating the events
+        """
+
         self.shared_output = np.ctypeslib.as_array(
             self.shared_output_raw).reshape(self.image_shape)
-        #: multiprocessing pool for parallel processing
-        self.pool = mp_spawn.Pool(processes=self.num_cpus)
+        """numpy array reshaped view on `self.shared_output_raw`.
+        The First axis enumerating the events
+        """
 
-        #: counter tracking process of workers
+        self.pool = mp_spawn.Pool(processes=self.num_cpus)
+        """multiprocessing pool for parallel processing"""
+
         self.worker_counter = mp_spawn.Value("l", 0)
-        #: queue for median computation jobs
+        """counter tracking process of workers"""
+
         self.queue = mp_spawn.Queue()
-        #: list of workers (processes)
+        """queue for median computation jobs"""
+
         self.workers = [WorkerSparseMed(self.queue,
                                         self.worker_counter,
                                         self.shared_input_raw,
                                         self.shared_output_raw,
                                         self.kernel_size)
                         for _ in range(self.num_cpus)]
+        """list of workers (processes)"""
         [w.start() for w in self.workers]
 
     def __enter__(self):

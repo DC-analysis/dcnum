@@ -53,30 +53,41 @@ class EventExtractorManagerThread(threading.Thread):
               name="EventExtractorManager", *args, **kwargs)
         self.logger = logging.getLogger(
             "dcnum.feat.EventExtractorManagerThread")
-        #: Keyword arguments for class:`.EventExtractor`
+
         self.fe_kwargs = fe_kwargs
-        #: Data instance
+        """Keyword arguments for class:`.EventExtractor`"""
+
         self.data = fe_kwargs["data"]
-        #: States of the segmenter-extractor pipeline slots
+        """Data instance"""
+
         self.slot_states = slot_states
-        #: Chunks indices corresponding to `slot_states`
+        """States of the segmenter-extractor pipeline slots"""
+
         self.slot_chunks = slot_chunks
-        #: Number of workers
+        """Chunks indices corresponding to `slot_states`"""
+
         self.num_workers = 1 if debug else num_workers
-        #: Queue for sending chunks and label indices to the workers
+        """Number of workers"""
+
         self.raw_queue = self.fe_kwargs["raw_queue"]
-        #: List of chunk labels corresponding to `slot_states`
+        """Queue for sending chunks and label indices to the workers"""
+
         self.labels_list = labels_list
-        #: Shared labeling array
+        """List of chunk labels corresponding to `slot_states`"""
+
         self.label_array = np.ctypeslib.as_array(
             self.fe_kwargs["label_array"]).reshape(
             self.data.image.chunk_shape)
-        #: Writer deque to monitor
+        """Shared labeling array"""
+
         self.writer_dq = writer_dq
-        #: Time counter for feature extraction
+        """Writer deque to monitor"""
+
         self.t_count = 0
-        #: Whether debugging is enabled
+        """Time counter for feature extraction"""
+
         self.debug = debug
+        """Whether debugging is enabled"""
 
     def run(self):
         # Initialize all workers

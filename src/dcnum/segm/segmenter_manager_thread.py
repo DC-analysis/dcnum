@@ -61,21 +61,28 @@ class SegmenterManagerThread(threading.Thread):
         super(SegmenterManagerThread, self).__init__(
               name="SegmenterManager", *args, **kwargs)
         self.logger = logging.getLogger("dcnum.segm.SegmenterManagerThread")
-        #: Segmenter instance
+
         self.segmenter = segmenter
-        #: Image data which is being segmented
+        """Segmenter instance"""
+
         self.image_data = image_data
-        #: Additional, optional background offset
+        """Image data which is being segmented"""
+
         self.bg_off = (
             bg_off if self.segmenter.requires_background_correction else None)
-        #: Slot states
+        """Additional, optional background offset"""
+
         self.slot_states = slot_states
-        #: Current slot chunk index for the slot states
+        """Slot states"""
+
         self.slot_chunks = slot_chunks
-        #: List containing the segmented labels of each slot
+        """Current slot chunk index for the slot states"""
+
         self.labels_list = [None] * len(self.slot_states)
-        #: Time counter for segmentation
+        """List containing the segmented labels of each slot"""
+
         self.t_count = 0
+        """Time counter for segmentation"""
 
     def run(self):
         num_slots = len(self.slot_states)
