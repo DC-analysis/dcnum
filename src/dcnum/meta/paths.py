@@ -1,6 +1,7 @@
 import pathlib
 
 search_path_registry = {}
+"""Dictionary keeping track of user-defined search paths"""
 
 
 def register_search_path(topic: str,

@@ -4,7 +4,6 @@ import os
 
 logger = logging.getLogger(__name__)
 
-#: environment variables that set number of threads
 os_env_threading = [
     "MKL_NUM_THREADS",
     "NUMBA_NUM_THREADS",
@@ -14,6 +13,7 @@ os_env_threading = [
     "OPENBLAS_NUM_THREADS",
     "VECLIB_MAXIMUM_THREADS",
 ]
+"""environment variables that define number of threads libraries will use"""
 
 
 class RequestSingleThreaded:

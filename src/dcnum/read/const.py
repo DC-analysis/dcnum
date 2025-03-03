@@ -1,5 +1,3 @@
-#: Scalar features that apply to all events in a frame and which are
-#: not computed for individual events.
 PROTECTED_FEATURES = [
     "bg_off",
     "flow_rate",
@@ -10,6 +8,11 @@ PROTECTED_FEATURES = [
     "temp_amb",
     "time",
 ]
+"""Frame-defined scalar features.
+Scalar features that apply to all events in a frame and which are
+not computed for individual events
+"""
+
 
 # User-defined features may be anything, but if the user needs something
 # very specific for the pipeline, having them protected is a nice feature.

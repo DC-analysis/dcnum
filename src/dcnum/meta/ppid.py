@@ -9,9 +9,11 @@ import warnings
 
 import numpy as np
 
-#: Increment this string if there are breaking changes that make
-#: previous pipelines unreproducible.
 DCNUM_PPID_GENERATION = "11"
+"""The dcnum pipeline generation.
+Increment this string if there are breaking changes that make
+previous pipelines unreproducible.
+"""
 
 
 class ClassWithPPIDCapabilities(Protocol):

@@ -39,8 +39,6 @@ from .json_encoder import ExtendedJSONEncoder
 # queues and threads and would end up with race conditions otherwise.
 mp_spawn = mp.get_context("spawn")
 
-#: valid states for a job runnter. The states must be in logical ordern,
-#: not in alphabetical order.
 valid_states = [
     "created",
     "init",
@@ -52,6 +50,9 @@ valid_states = [
     "done",
     "error",
 ]
+"""Valid states for a `DCNumJobRunner`.
+The states must be in logical order, not in alphabetical order.
+"""
 
 
 class DCNumJobRunner(threading.Thread):
