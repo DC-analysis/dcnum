@@ -85,4 +85,4 @@ The following happens when you run the above code snippet:
 6. A :class:`write.queue_collector_thread.QueueCollectorThread` puts the
    events in the right order and stages them for writing in chunks.
 7. A :class:`write.dequeue_writer_thread.DequeWriterThread` writes the
-   the chunks to the output file.
+   chunks to the output file.
