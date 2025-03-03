@@ -11,6 +11,7 @@ def postprocess_masks(masks,
     """Postprocess mask images from ML segmenters
 
     The transformation includes:
+
     - Revert the cropping and padding operations done in
       :func:`.preprocess_images` by padding with zeros and cropping.
     - If the original image shape is larger than the mask image shape,

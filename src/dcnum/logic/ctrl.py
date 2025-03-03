@@ -59,11 +59,11 @@ class DCNumJobRunner(threading.Thread):
                  job: DCNumPipelineJob,
                  tmp_suffix: str = None,
                  *args, **kwargs):
-        """Run a pipeline as defined by a :class:`DCNumPipelineJob` instance
+        """Run a pipeline as defined by a :class:`.job.DCNumPipelineJob`
 
         Parameters
         ----------
-        job: DCNumPipelineJob
+        job: .job.DCNumPipelineJob
             pipeline job to run
         tmp_suffix: str
             optional unique string for creating temporary files

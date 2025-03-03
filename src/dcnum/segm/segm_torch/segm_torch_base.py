@@ -52,9 +52,10 @@ class TorchSegmenterBase(Segmenter):
         segmenter_kwargs: dict
             Keyword arguments for the segmenter
         meta: dict
-            Dictionary of metadata from an :class:`HDF5Data` instance
+            Dictionary of metadata from an :class:`.hdf5_data.HDF5Data`
+             instance
         logs: dict
-            Dictionary of logs from an :class:`HDF5Data` instance
+            Dictionary of logs from an :class:`.hdf5_data.HDF5Data` instance
 
         Returns
         -------

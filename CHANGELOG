@@ -1,3 +1,5 @@
+0.25.7
+ - docs: add code raference using apidoc
 0.25.6
  - maintenance release
 0.25.5
@@ -220,7 +222,7 @@
  - ref: increment DCNUM_PPID_GENERATION to 6
 0.13.3
  - fix: correctly raise KeyError for missing image-based feature from
-   HDF5Data._image_cache
+   `HDF5Data._image_cache`
 0.13.2
  - fix: properly convert variable-length string logs in `copy_metadata`
 0.13.1

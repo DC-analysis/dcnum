@@ -46,10 +46,11 @@ class Segmenter(abc.ABC):
         """Base segmenter class
 
         This is the base segmenter class for the multiprocessing operation
-        segmenter :class:`.MPOSegmenter` (multiple subprocesses are spawned
-        and each of them works on a queue of images) and the single-threaded
-        operation segmenter :class:`.STOSegmenter` (e.g. for batch
-        segmentation on a GPU).
+        segmenter :class:`.segmenter_mpo.MPOSegmenter` (multiple
+        subprocesses are spawned and each of them works on a queue of images)
+        and the single-threaded operation segmenter
+        :class:`.segmenter_sto.STOSegmenter` (e.g. for batch segmentation on
+        a GPU).
 
         Parameters
         ----------
@@ -364,9 +365,10 @@ class Segmenter(abc.ABC):
         segmenter_kwargs: dict
             Keyword arguments for the segmenter
         meta: dict
-            Dictionary of metadata from an :class:`HDF5Data` instance
+            Dictionary of metadata from an :class:`.hdf5_data.HDF5Data`
+            instance
         logs: dict
-            Dictionary of logs from an :class:`HDF5Data` instance
+            Dictionary of logs from an :class:`.hdf5_data.HDF5Data` instance
 
         Returns
         -------

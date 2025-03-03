@@ -67,6 +67,7 @@ class DCNumPipelineJob:
             strategy on how to handle event data; In principle, not all
             events have to be stored in the output file if basins are
             defined, linking back to the original file.
+
             - You can "drain" all basins which means that the output file
               will contain all features, but will also be very big.
             - You can "tap" the basins, including the input file, which means

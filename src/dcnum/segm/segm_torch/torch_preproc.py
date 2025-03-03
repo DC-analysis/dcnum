@@ -11,6 +11,7 @@ def preprocess_images(images: np.ndarray,
     """Transform image data to something torch models expect
 
     The transformation includes:
+
     - normalization (division by 255, subtraction of mean, division by std)
     - cropping and padding of the input images to `image_shape`. For padding,
       the median of each *individual* image is used.

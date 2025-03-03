@@ -33,7 +33,7 @@ author = 'Paul Müller'
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = ['sphinx.ext.autodoc',
-              'sphinx.ext.autosummary',
+              'autoapi.extension',
               'sphinx.ext.intersphinx',
               'sphinx.ext.mathjax',
               'sphinx.ext.viewcode',
@@ -63,7 +63,7 @@ html_theme = 'sphinx_rtd_theme'
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = ['_static']
+html_static_path = []
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -81,7 +81,6 @@ numfig = True
 # include source of matplotlib plots
 plot_include_source = True
 
-# http://www.sphinx-doc.org/en/stable/ext/autodoc.html#confval-autodoc_member_order
-# Order class attributes and functions in separate blocks
-autodoc_member_order = 'groupwise'
-autoclass_content = 'both'
+autoapi_dirs = ['../src/dcnum']
+autoapi_python_class_content = "both"
+autoapi_keep_files = True  # for debugging docstrings

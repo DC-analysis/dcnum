@@ -12,7 +12,7 @@ import numpy as np
 
 from ..os_env_st import RequestSingleThreaded, confirm_single_threaded
 from ..meta.ppid import kwargs_to_ppid, ppid_to_kwargs
-from ..read import HDF5Data
+from ..read.hdf5_data import HDF5Data
 
 from .feat_brightness import brightness_features
 from .feat_contour import moments_based_features, volume_from_contours
@@ -48,9 +48,9 @@ class QueueEventExtractor:
 
         Parameters
         ----------
-        data: HDF5Data
+        data: .hdf5_data.HDF5Data
             Data source.
-        gate: Gate
+        gate: .gate.Gate
             Gating rules.
         raw_queue:
             Queue from which the worker obtains the chunks and
@@ -127,18 +127,19 @@ class QueueEventExtractor:
                         log_queue: mp.Queue,
                         log_level: int = None,
                         ):
-        """Get initialization arguments for :cass:`.QueueEventExtractor`
+        """Get initialization arguments for :class:`.QueueEventExtractor`
 
         This method was created for convenience reasons:
+
         - It makes sure that the order of arguments is correct, since it
           is implemented in the same class.
         - It simplifies testing.
 
         Parameters
         ----------
-        data: HDF5Data
+        data: .hdf5_data.HDF5Data
             Input data
-        gate: HDF5Data
+        gate: .gate.Gate
             Gating class to use
         num_extractors: int
             Number of extractors that will be used

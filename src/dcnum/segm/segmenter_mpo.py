@@ -296,7 +296,7 @@ class MPOSegmenterWorker:
 
         Parameters
         ----------
-        segmenter: MPOSegmenter
+        segmenter: .segmenter_mpo.MPOSegmenter
             The segmentation instance
         sl_start: int
             Start of slice of input array to process

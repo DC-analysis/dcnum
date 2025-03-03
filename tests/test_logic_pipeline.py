@@ -11,7 +11,7 @@ from dcnum.meta import ppid
 from helper_methods import retrieve_data
 
 
-def get_log(hd: read.HDF5Data,
+def get_log(hd: read.hdf5_data.HDF5Data,
             startswith: str):
     """Return log entry that starts with `startswith`"""
     for key in hd.logs:

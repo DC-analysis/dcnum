@@ -7,6 +7,15 @@ import numpy as np
 
 class ExtendedJSONEncoder(json.JSONEncoder):
     def default(self, obj):
+        """Extended JSON encoder for the **dcnum** logic
+
+        This JSON encoder can handle the following additional objects:
+
+        - ``pathlib.Path``
+        - integer numbers
+        - ``numpy`` boolean
+        - slices (via "PYTHON-SLICE" identifier)
+        """
         if isinstance(obj, pathlib.Path):
             return str(obj)
         elif isinstance(obj, numbers.Integral):

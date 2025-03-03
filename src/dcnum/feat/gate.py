@@ -19,7 +19,7 @@ class Gate:
 
         Parameters
         ----------
-        data: .HDF5Data
+        data: .hdf5_data.HDF5Data
             dcnum data instance
         online_gates: bool
             set to True to enable gating with "online" gates stored
