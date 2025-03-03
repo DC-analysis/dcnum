@@ -281,7 +281,7 @@ class HDF5Writer:
         Store the log data under the key `log`. The `data`
         kwarg must be a list of strings. If the log entry
         already exists, `ValueError` is raised unless
-        `override` is set to True.
+        ``override`` is set to True.
         """
         logs = self.h5.require_group("logs")
         if log in logs:

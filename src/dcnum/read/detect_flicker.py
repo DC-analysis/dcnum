@@ -17,7 +17,7 @@ def detect_flickering(image_data: np.ndarray | HDF5Data,
     triggering signal.
 
     If flickering is detected, you should use the "sparsemed" background
-    computation with `offset_correction` set to True.
+    computation with ``offset_correction`` set to True.
 
     Parameters
     ----------

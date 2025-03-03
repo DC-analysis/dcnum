@@ -35,8 +35,8 @@ class EventExtractorManagerThread(threading.Thread):
             with segmenter"), so that the segmenter can compute a new
             chunk of labels.
         slot_chunks:
-            For each slot in `slot_states`, this shared array defines
-            on which chunk in `image_data` the segmentation took place.
+            For each slot in ``slot_states``, this shared array defines
+            on which chunk in ``image_data`` the segmentation took place.
         fe_kwargs:
             Feature extraction keyword arguments. See
             :func:`.EventExtractor.get_init_kwargs` for more information.
@@ -47,7 +47,7 @@ class EventExtractorManagerThread(threading.Thread):
             fills up, we take a break.
         debug:
             Whether to run in debugging mode which means only one
-            event extraction thread (`num_workers` has no effect).
+            event extraction thread (``num_workers`` has no effect).
         """
         super(EventExtractorManagerThread, self).__init__(
               name="EventExtractorManager", *args, **kwargs)
@@ -55,7 +55,9 @@ class EventExtractorManagerThread(threading.Thread):
             "dcnum.feat.EventExtractorManagerThread")
 
         self.fe_kwargs = fe_kwargs
-        """Keyword arguments for class:`.EventExtractor`"""
+        """Keyword arguments
+        for :class:`event_extractor_manager_thread.py.QueueEventExtractor`
+        instances"""
 
         self.data = fe_kwargs["data"]
         """Data instance"""
@@ -64,7 +66,8 @@ class EventExtractorManagerThread(threading.Thread):
         """States of the segmenter-extractor pipeline slots"""
 
         self.slot_chunks = slot_chunks
-        """Chunks indices corresponding to `slot_states`"""
+        """Chunk indices corresponding to ``slot_states``
+        """
 
         self.num_workers = 1 if debug else num_workers
         """Number of workers"""
@@ -73,7 +76,8 @@ class EventExtractorManagerThread(threading.Thread):
         """Queue for sending chunks and label indices to the workers"""
 
         self.labels_list = labels_list
-        """List of chunk labels corresponding to `slot_states`"""
+        """List of chunk labels corresponding to ``slot_states``
+        """
 
         self.label_array = np.ctypeslib.as_array(
             self.fe_kwargs["label_array"]).reshape(

@@ -27,11 +27,11 @@ class Gate:
             deformability cytometry before writing data to disk during
             a measurement
         size_thresh_mask: int
-            Only masks with more pixels than `size_thresh_mask` are
+            Only masks with more pixels than ``size_thresh_mask`` are
             considered to be a valid event; Originally, the
-            `bin area min`/`trig_thresh` value defaulted to 200 which is
+            ``bin area min / trig_thresh`` value defaulted to 200 which is
             too large; defaults to 10 or the original value in case
-            `online_gates` is set.
+            ``online_gates`` is set.
         """
         self.box_gates = {}
         """box gating (value range for each feature)"""
@@ -168,10 +168,10 @@ class Gate:
                      data: numbers.Number | np.ndarray):
         """Return boolean indicating whether `data` value is in box gate
 
-        `data` may be a number or an array. If no box filter is defined
-        for `feat`, `True` is always returned. Otherwise, either a boolean
-        or a boolean array is returned, depending on the type of `data`.
-        Not that `np.logical_and` can deal with mixed argument types
+        ``data`` may be a number or an array. If no box filter is defined
+        for ``feat``, True is always returned. Otherwise, either a boolean
+        or a boolean array is returned, depending on the type of ``data``.
+        Not that ``np.logical_and`` can deal with mixed argument types
         (scalar and array).
         """
         bound_lo, bound_up = self.box_gates[feat]

@@ -21,8 +21,8 @@ class BackgroundSparseMed(Background):
 
         In contrast to the rolling median background correction,
         this algorithm only computes the background image every
-        `split_time` seconds, but with a larger window (default kernel size is
-        200 frames instead of 100 frames).
+        ``split_time`` seconds, but with a larger window (default kernel
+        size is 200 frames instead of 100 frames).
 
         1. At time stamps every `split_time` seconds, a background image is
            computed, resulting in a background series.

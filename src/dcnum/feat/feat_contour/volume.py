@@ -35,7 +35,7 @@ def volume_from_contours(
     average is then used.
 
     The volume is computed radially from the center position
-    given by (`pos_x`, `pos_y`). For sufficiently smooth contours,
+    given by (``pos_x``, ``pos_y``). For sufficiently smooth contours,
     such as densely sampled ellipses, the center position does not
     play an important role. For contours that are given on a coarse
     grid, as is the case for deformability cytometry, the center position
@@ -111,7 +111,7 @@ def vol_revolve(r, z, point_scale=1.):
       V = \frac{h \cdot \pi}{3} \cdot (R^2 + R \cdot r + r^2)
 
     Where :math:`h` is the height of the cone and :math:`r` and
-    `R` are the smaller and larger radii of the truncated cone.
+    ``R`` are the smaller and larger radii of the truncated cone.
 
     Each line segment of the contour resembles one truncated cone. If
     the z-step is positive (counter-clockwise contour), then the

@@ -42,7 +42,7 @@ class BackgroundRollMed(Background):
         batch_size: int
             Number of events to process at the same time. Increasing this
             number much more than two orders of magnitude larger than
-            `kernel_size` will not increase computation speed. Larger
+            ``kernel_size`` will not increase computation speed. Larger
             values lead to a higher memory consumption.
         compress: bool
             Whether to compress background data. Set this to False
@@ -140,7 +140,7 @@ class BackgroundRollMed(Background):
         batch_size: int
             Number of events to process at the same time. Increasing this
             number much more than two orders of magnitude larger than
-            `kernel_size` will not increase computation speed. Larger
+            ``kernel_size`` will not increase computation speed. Larger
             values lead to a higher memory consumption.
         """
         assert kernel_size > 0, "kernel size must be positive number"
@@ -292,7 +292,7 @@ def compute_median_for_slice(shared_input, shared_output, kernel_size,
         in the original image, batch_size + kernel_size events are
         stored in this array one after another in a row.
         The total size of this array is
-        `batch_size` * `kernel_size` * `number_of_pixels_in_the_image`.
+        ``batch_size * kernel_size * number_of_pixels_in_the_image``.
     shared_output: multiprocessing.RawArray
         Used for storing the result. Note that the last `kernel_size`
         elements for each pixel in this output array are junk data

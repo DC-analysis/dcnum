@@ -36,8 +36,8 @@ class SegmenterManagerThread(threading.Thread):
             its job for a slot, the slot value will be set to "e" (for
             "task is with feature extractor").
         slot_chunks:
-            For each slot in `slot_states`, this shared array defines
-            on which chunk in `image_data` the segmentation took place.
+            For each slot in ``slot_states``, this shared array defines
+            on which chunk in ``image_data`` the segmentation took place.
         bg_off:
             1d array containing additional background image offset values
             that are added to each background image before subtraction
@@ -45,10 +45,10 @@ class SegmenterManagerThread(threading.Thread):
 
         Notes
         -----
-        This manager keeps a list `labels_list` which enumerates the
-        slots just like `slot_states` and `slot_chunks` do. For each
+        This manager keeps a list ``labels_list`` which enumerates the
+        slots just like ``slot_states` and ``slot_chunks`` do. For each
         slot, this list contains the labeled image data (integer-valued)
-        for the input `image_data` chunks.
+        for the input ``image_data`` chunks.
 
         The working principle of this `SegmenterManagerThread` allows
         the user to define a fixed number of slots on which the segmenter

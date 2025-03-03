@@ -33,7 +33,7 @@ class Segmenter(abc.ABC):
     """Whether to enable mask post-processing.
     If disabled, you should make sure that your mask is properly defined
     and cleaned or you have to call `process_mask` in your
-    `segment_algorithm` implementation.
+    ``segment_algorithm`` implementation.
     """
 
     mask_default_kwargs = {}
@@ -118,7 +118,7 @@ class Segmenter(abc.ABC):
             KEY:KW_APPROACH:KW_MASK
 
         Where KEY is e.g. "legacy" or "watershed", and KW_APPROACH is a
-        list of keyword arguments for `segment_algorithm`, e.g.::
+        list of keyword arguments for ``segment_algorithm``, e.g.::
 
             thresh=-6^blur=0
 
@@ -306,10 +306,10 @@ class Segmenter(abc.ABC):
 
     @functools.cache
     def segment_algorithm_wrapper(self):
-        """Wraps `self.segment_algorithm` to only accept an image
+        """Wraps ``self.segment_algorithm`` to only accept an image
 
-        The static method `self.segment_algorithm` may optionally accept
-        keyword arguments `self.kwargs`. This wrapper returns the
+        The static method ``self.segment_algorithm`` may optionally accept
+        keyword arguments ``self.kwargs``. This wrapper returns the
         wrapped method that only accepts the image as an argument. This
         makes sense if you want to unify
         """
@@ -346,7 +346,7 @@ class Segmenter(abc.ABC):
             additional background offset values that should be subtracted
             from the image data before segmentation. Should only be
             used in combination with segmenters that have
-            `requires_background_correction` set to True.
+            ``requires_background_correction`` set to True.
         """
         images = image_data.get_chunk(chunk)
         if bg_off is not None:

@@ -95,7 +95,7 @@ class QueueEventExtractor:
         """Gating information"""
 
         self.raw_queue = raw_queue
-        """queue containing sub-indices for `label_array`"""
+        """queue containing sub-indices for ``label_array``"""
 
         self.event_queue = event_queue
         """queue with event-wise feature dictionaries"""

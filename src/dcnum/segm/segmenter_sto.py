@@ -27,7 +27,7 @@ class STOSegmenter(Segmenter, abc.ABC):
         debug: bool
             Debugging parameters
         kwargs:
-            Additional, optional keyword arguments for `segment_algorithm`
+            Additional, optional keyword arguments for ``segment_algorithm``
             defined in the subclass.
         """
         if num_workers not in [None, 1]:
@@ -46,7 +46,7 @@ class STOSegmenter(Segmenter, abc.ABC):
         """Perform batch segmentation of `images`
 
         Before segmentation, an optional background offset correction with
-        `bg_off` is performed. After segmentation, mask postprocessing is
+        ``bg_off`` is performed. After segmentation, mask postprocessing is
         performed according to the class definition.
 
         Parameters

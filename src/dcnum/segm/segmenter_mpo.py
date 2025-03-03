@@ -35,7 +35,7 @@ class MPOSegmenter(Segmenter, abc.ABC):
         debug: bool
             Debugging parameters
         kwargs:
-            Additional, optional keyword arguments for `segment_algorithm`
+            Additional, optional keyword arguments for ``segment_algorithm``
             defined in the subclass.
         """
         super(MPOSegmenter, self).__init__(kwargs_mask=kwargs_mask,
@@ -145,7 +145,7 @@ class MPOSegmenter(Segmenter, abc.ABC):
         """Perform batch segmentation of `images`
 
         Before segmentation, an optional background offset correction with
-        `bg_off` is performed. After segmentation, mask postprocessing is
+        ``bg_off`` is performed. After segmentation, mask postprocessing is
         performed according to the class definition.
 
         Parameters
@@ -264,7 +264,7 @@ class MPOSegmenter(Segmenter, abc.ABC):
         """Return the integer label image for an input image
 
         Before segmentation, an optional background offset correction with
-        `bg_off` is performed. After segmentation, mask postprocessing is
+        ``bg_off`` is performed. After segmentation, mask postprocessing is
         performed according to the class definition.
         """
         segm_wrap = self.segment_algorithm_wrapper()

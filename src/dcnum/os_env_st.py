@@ -20,7 +20,7 @@ class RequestSingleThreaded:
     """Context manager for starting a process with specific environment
 
     When entering the context, the environment variables defined in
-    `os_env_threading` are all set to "1", telling the relevant libraries
+    ``os_env_threading`` are all set to "1", telling the relevant libraries
     that they should work in single-threaded mode.
     When exiting the context, these environment variables are reset to
     their original values (or unset if applicable).
