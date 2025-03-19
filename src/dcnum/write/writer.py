@@ -275,7 +275,7 @@ class HDF5Writer:
     def store_log(self,
                   log: str,
                   data: List[str],
-                  override: bool = False):
+                  override: bool = False) -> h5py.Dataset:
         """Store log data
 
         Store the log data under the key `log`. The `data`
@@ -290,7 +290,7 @@ class HDF5Writer:
             else:
                 raise ValueError(
                     f"Log '{log}' already exists in {self.h5.filename}!")
-        logs.create_dataset(
+        log_ds = logs.create_dataset(
             name=log,
             data=data,
             shape=(len(data),),
@@ -298,6 +298,7 @@ class HDF5Writer:
             dtype=f"S{max([len(ll) for ll in data])}",
             chunks=True,
             **self.ds_kwds)
+        return log_ds
 
 
 def create_with_basins(

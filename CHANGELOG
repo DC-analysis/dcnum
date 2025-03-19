@@ -1,4 +1,5 @@
 0.25.7
+ - enh: `HDF5Writer.store_log` returns created dataset
  - docs: add code raference using apidoc
 0.25.6
  - maintenance release
