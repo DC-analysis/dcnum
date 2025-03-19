@@ -462,7 +462,8 @@ def test_writer_logs(tmp_path):
     path_test = tmp_path / "test.h5"
     # We basically create a file that consists only of the metadata.
     with write.HDF5Writer(path_test) as hw:
-        hw.store_log("peter", ["McNulty", "Freamon", "Omar"])
+        ds_logs = hw.store_log("peter", ["McNulty", "Freamon", "Omar"])
+        assert np.all(ds_logs == hw.h5["logs/peter"])
 
     with read.HDF5Data(path_test) as hd:
         assert hd.logs["peter"] == ["McNulty", "Freamon", "Omar"]
