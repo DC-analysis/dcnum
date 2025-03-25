@@ -23,7 +23,7 @@ classifiers = [
     'Topic :: Scientific/Engineering :: Visualization',
     'Intended Audience :: Science/Research',
 ]
-license = {text = "MIT"}
+license = "MIT"
 dependencies = [
     "h5py>=3.0.0, <4",  # BSD
     "hdf5plugin>=3.3.1, <6",  # MIT and others (per plugin)

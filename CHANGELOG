@@ -1,3 +1,5 @@
+0.25.8
+ - docs: properly employ license MIT
 0.25.7
  - enh: `HDF5Writer.store_log` returns created dataset
  - docs: add code reference using apidoc
