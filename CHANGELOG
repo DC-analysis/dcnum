@@ -1,3 +1,5 @@
+0.25.9
+ - fix: md5 sum caused PermissionError on Windows for background computation
 0.25.8
  - fix: invalid type definition for `concatenated_hdf5_data`
  - enh: make sure `HDF5Data.path` is converted to `pathlib.Path` if it is `str`

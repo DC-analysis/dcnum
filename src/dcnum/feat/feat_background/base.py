@@ -9,7 +9,7 @@ import time
 import h5py
 
 from ...meta import ppid
-from ...read import HDF5Data
+from ...read import HDF5Data, md5sum
 from ...write import HDF5Writer, create_with_basins, set_default_filter_kwargs
 
 
@@ -87,6 +87,9 @@ class Background(abc.ABC):
 
         # Check whether user passed an array or a path
         if isinstance(input_data, pathlib.Path):
+            # Compute MD5 sum before opening the file so that we don't
+            # get a file-locking issue (PermissionError) on Windows.
+            md5_5m = md5sum(input_data, blocksize=65536, count=80)
             if str(input_data.resolve()) == str(output_path.resolve()):
                 self.h5in = h5py.File(input_data, "a", libver="latest")
                 self.h5out = self.h5in
@@ -98,7 +101,7 @@ class Background(abc.ABC):
             #       the ImageCache. We have to go via the ImageCache route,
             #       because HDF5Data properly resolves basins and the image
             #       feature might be in a basin.
-            self.hdin = HDF5Data(self.h5in)
+            self.hdin = HDF5Data(self.h5in, md5_5m=md5_5m)
             self.input_data = self.hdin.image.h5ds
         else:
             self.input_data = input_data
