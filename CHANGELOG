@@ -1,5 +1,8 @@
 0.25.8
+ - fix: invalid type definition for `concatenated_hdf5_data`
+ - enh: make sure `HDF5Data.path` is converted to `pathlib.Path` if it is `str`
  - docs: properly employ license MIT
+ - ref: move `concatenated_hdf5_data` to `read.hdf5_concat` submodule
 0.25.7
  - enh: `HDF5Writer.store_log` returns created dataset
  - docs: add code reference using apidoc
