@@ -1,58 +1,36 @@
 import logging
 from collections import deque
-import queue
 import multiprocessing as mp
-import threading
+import queue
 import time
+from typing import List
 import numpy as np
 
 from dcnum.write import EventStash
 
-class QueueCollectorThread(threading.Thread):
+
+class QueueCollectorProcess(mp.Process):
     def __init__(self,
                  event_queue: mp.Queue,
-                 writer_dq: deque,
+                 writer_dq: mp.Queue,
                  feat_nevents: mp.Array,
                  write_threshold: int = 500,
-                 *args, **kwargs
-                 ):
-        """Convenience class for events from queues
-
-        Events coming from a queue cannot be guaranteed to be in order.
-        The :class:`.QueueCollectorThread` uses a :class:`.EventStash`
-        to sort events into the correct order before sending them to
-        the :class:`DequeWriterThread` for storage.
+                 *args, **kwargs):
+        """Prozessbasierte Version des QueueCollectors
 
         Parameters
         ----------
         event_queue:
-            A queue object to which other processes or threads write
-            events as tuples `(frame_index, events_dict)`.
+            Eine `multiprocessing.Queue`, in die andere Prozesse Ereignisse schreiben.
         writer_dq:
-            A :class:`DequeWriterThread` should be attached to the
-            other end of this :class:`collections.deque`.
+            Eine `multiprocessing.Queue`, in die die sortierten Ereignisse geschrieben werden.
         feat_nevents:
-            This 1D array contains the number of events for each frame
-            in the input data. This serves two purposes: (1) it allows
-            us to determine how many events we are writing when we are
-            writing data from `write_threshold` frames, and (2) it
-            allows us to keep track how many frames have actually been
-            processed (and thus we can expect entries in `event_queue`
-            for). If an entry in this array is -1, this means that there
-            is no event in `event_queue`. See `write_threshold` below.
+            Gemeinsames Array, das die Anzahl der Ereignisse pro Frame enthält.
         write_threshold:
-            This integer defines how many frames should be collected at
-            once and put into `writer_dq`. For instance, with a value of
-            500, at least 500 items are taken from the `event_queue`
-            (they should match the expected frame index, frame indices
-            that do not match are kept in a :class:`.EventStash`). Then,
-            for each frame, we may have multiple or None events, so the
-            output size could be 513 which is computed via
-            `np.sum(feat_nevents[idx:idx+write_threshold])`.
+            Anzahl der Frames, die gesammelt werden, bevor sie in die `writer_dq` geschrieben werden.
         """
-        super(QueueCollectorThread, self).__init__(
-              name="QueueCollector", *args, **kwargs)
-        self.logger = logging.getLogger("dcnum.write.QueueCollector")
+        super(QueueCollectorProcess, self).__init__(name="QueueCollector", *args, **kwargs)
+        self.logger = logging.getLogger("dcnum.write.QueueCollectorProcess")
 
         self.event_queue = event_queue
         """Event queue from which to collect event data"""
@@ -82,10 +60,10 @@ class QueueCollectorThread(threading.Thread):
     def run(self):
         # We are not writing to `event_queue` so we can safely cancel
         # our queue thread if we are told to stop.
-        self.event_queue.cancel_join_thread()
+        # self.event_queue.cancel_join_thread()
         # Indexes the current frame in the input HDF5Data instance.
         last_idx = 0
-        self.logger.debug("Started collector thread")
+        self.logger.debug("Started collector process")
         while True:
             # Slice of the shared nevents array. If it contains -1 values,
             # this means that some of the frames have not yet been processed.
