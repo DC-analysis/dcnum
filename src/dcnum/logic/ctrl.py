@@ -752,24 +752,14 @@ class DCNumJobRunner(threading.Thread):
             debug=self.job["debug"])
         thr_feat.start()
 
-        if self.job["debug"]:
-            # Start the data collection thread
-            thr_coll = QueueCollectorThread(
-                event_queue=fe_kwargs["event_queue"],
-                writer_dq=writer_dq,
-                feat_nevents=fe_kwargs["feat_nevents"],
-                write_threshold=500,
-            )
-            thr_coll.start()
-        else:
-            pro_coll = QueueCollectorProcess(
-                event_queue=fe_kwargs["event_queue"],
-                writer_dq=writer_dq,
-                feat_nevents=fe_kwargs["feat_nevents"],
-                write_threshold=500,
-            )
-            pro_coll.start()
-            pro_coll.join()
+        # Start the data collection thread
+        thr_coll = QueueCollectorThread(
+            event_queue=fe_kwargs["event_queue"],
+            writer_dq=writer_dq,
+            feat_nevents=fe_kwargs["feat_nevents"],
+            write_threshold=500,
+        )
+        thr_coll.start()
 
         data_size = len(self.dtin)
         t0 = time.monotonic()
