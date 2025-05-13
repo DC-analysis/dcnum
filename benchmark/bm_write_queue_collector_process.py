@@ -34,6 +34,7 @@ def setup():
         for idx in number_order:
             event_queue.put((ii*batch_size + idx, event))
 
+
 def main():
     collector_process = write.QueueCollectorProcess(
         event_queue=event_queue,

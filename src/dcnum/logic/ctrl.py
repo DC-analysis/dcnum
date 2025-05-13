@@ -26,11 +26,9 @@ from ..segm import SegmenterManagerThread, get_available_segmenters
 from ..meta import ppid
 from ..read import HDF5Data, get_mapping_indices
 from .._version import version, version_tuple
-from ..write import (
-    DequeWriterThread, HDF5Writer, QueueCollectorThread, copy_features,
-    copy_metadata, create_with_basins, set_default_filter_kwargs
-)
-
+from dcnum.write import (DequeWriterThread, HDF5Writer, QueueCollectorThread,
+                         QueueCollectorProcess, copy_features, copy_metadata,
+                         create_with_basins, set_default_filter_kwargs)
 from .job import DCNumPipelineJob
 from .json_encoder import ExtendedJSONEncoder
 
@@ -754,14 +752,24 @@ class DCNumJobRunner(threading.Thread):
             debug=self.job["debug"])
         thr_feat.start()
 
-        # Start the data collection thread
-        thr_coll = QueueCollectorThread(
-            event_queue=fe_kwargs["event_queue"],
-            writer_dq=writer_dq,
-            feat_nevents=fe_kwargs["feat_nevents"],
-            write_threshold=500,
-        )
-        thr_coll.start()
+        if self.job["debug"]:
+            # Start the data collection thread
+            thr_coll = QueueCollectorThread(
+                event_queue=fe_kwargs["event_queue"],
+                writer_dq=writer_dq,
+                feat_nevents=fe_kwargs["feat_nevents"],
+                write_threshold=500,
+            )
+            thr_coll.start()
+        else:
+            pro_coll = QueueCollectorProcess(
+                event_queue=fe_kwargs["event_queue"],
+                writer_dq=writer_dq,
+                feat_nevents=fe_kwargs["feat_nevents"],
+                write_threshold=500,
+            )
+            pro_coll.start()
+            pro_coll.join()
 
         data_size = len(self.dtin)
         t0 = time.monotonic()
