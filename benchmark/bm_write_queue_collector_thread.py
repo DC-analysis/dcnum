@@ -34,6 +34,7 @@ def setup():
         for idx in number_order:
             event_queue.put((ii*batch_size + idx, event))
 
+
 def main():
     thr_coll = write.QueueCollectorThread(
         event_queue=event_queue,
