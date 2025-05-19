@@ -14,6 +14,8 @@ from ..meta.ppid import compute_pipeline_hash, DCNUM_PPID_GENERATION
 from ..read import HDF5Data
 from ..segm import get_available_segmenters
 
+from dcnum.write import (QueueCollectorThread, QueueCollectorProcess)
+
 
 class DCNumPipelineJob:
     def __init__(self,
@@ -82,6 +84,27 @@ class DCNumPipelineJob:
             Whether to set logging level to "DEBUG" and
             use threads instead of processes
         """
+
+        def run(self):
+            if self.use_process:
+                # Prozessbasierte Implementierung
+                wor_coll = QueueCollectorProcess(
+                    event_queue=self.event_queue,
+                    writer_dq=self.writer_dq,
+                    feat_nevents=self.feat_nevents,
+                    write_threshold=500,
+                )
+            else:
+                # Threadbasierte Implementierung
+                wor_coll = QueueCollectorThread(
+                    event_queue=self.event_queue,
+                    writer_dq=self.writer_dq,
+                    feat_nevents=self.feat_nevents,
+                    write_threshold=500,
+                )
+            wor_coll.start()
+            wor_coll.join()
+
         if no_basins_in_output is not None:
             warnings.warn("The `no_basins_in_output` keyword argument is "
                           "deprecated. Please use `basin_strategy` instead.")
