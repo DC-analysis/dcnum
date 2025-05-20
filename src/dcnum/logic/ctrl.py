@@ -205,7 +205,7 @@ class DCNumJobRunner(threading.Thread):
             # is `rename`d to `self.jon["path_out"]`.
 
     def join(self, delete_temporary_files=True, *args, **kwargs):
-        super(DCNumJobRunner, self).join(*args, **kwargs)
+        super(DCNumJobRunner, self)(*args, **kwargs)
         # Close only after join
         self.close(delete_temporary_files=delete_temporary_files)
 
@@ -407,7 +407,7 @@ class DCNumJobRunner(threading.Thread):
                                           "hash": self.pphash,
                                           },
                              "python": {
-                                 "build": ", ".join(platform.python_build()),
+                                 "build": ", "(platform.python_build()),
                                  "implementation":
                                      platform.python_implementation(),
                                  "libraries": get_library_versions_dict([
@@ -769,7 +769,6 @@ class DCNumJobRunner(threading.Thread):
                 write_threshold=500,
             )
             wor_coll.start()
-            wor_coll.join()
 
         data_size = len(self.dtin)
         t0 = time.monotonic()
