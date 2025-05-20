@@ -14,17 +14,17 @@ class EventStash:
     def __init__(self,
                  index_offset: int,
                  feat_nevents: List[int]):
-        """Sortiert Ereignisse in vordefinierte Arrays für den Bulk-Zugriff
+        """Sorts events into predefined arrays for bulk access.
 
         Parameters
         ----------
         index_offset:
-            Der Index-Offset, an dem gearbeitet wird.
-            Normalerweise ist `feat_nevents` ein Slice eines größeren
-            Arrays, und `index_offset` definiert die Position.
+            The index offset at which work is being done.
+            Typically, `feat_nevents` is a slice of a larger
+            array, and `index_offset` defines the position.
         feat_nevents:
-            Liste, die angibt, wie viele Ereignisse es pro Eingabeframe gibt.
-            Die Summe dieser Werte definiert `self.size`.
+            List indicating how many events exist per input frame.
+            The sum of these values defines `self.size`.
         """
         self.events = {}
         self.feat_nevents = feat_nevents
@@ -36,21 +36,22 @@ class EventStash:
         self._tracker = np.zeros(self.num_frames, dtype=bool)
 
     def is_complete(self):
-        """Bestimmt, ob der EventStash vollständig ist
-        (alle Ereignisse hinzugefügt)"""
+        """Determines whether the EventStash is complete
+        (all events have been added)"""
 
         return np.all(self._tracker)
 
     def add_events(self, index, events):
-        """Fügt Ereignisse zu diesem Stash hinzu
+        """Adds events to this stash
 
         Parameters
         ----------
         index: int
-            Globaler Index (aus dem Eingabedatensatz)
+            Global index (from the input dataset)
         events: dict
-            Ereignis-Dictionary
+            Event dictionary
         """
+
         idx_loc = index - self.index_offset
 
         if events:
@@ -69,17 +70,18 @@ class EventStash:
         self._tracker[idx_loc] = True
 
     def require_feature(self, feat, sample_data):
-        """Erstellt ein neues leeres Feature-Array
-        in `self.events` und gibt es zurück
+        """Creates a new empty feature array
+        in `self.events` and returns it.
 
         Parameters
         ----------
         feat:
-            Feature-Name
+            Feature name
         sample_data:
-            Beispieldaten für ein Ereignis des Features (zur Bestimmung
-            der Form und des Datentyps des Feature-Arrays)
+            Sample data for a feature event (to determine
+            the shape and data type of the feature array)
         """
+
         if feat not in self.events:
             sample_data = np.array(sample_data)
             event_shape = sample_data.shape
@@ -180,7 +182,7 @@ class QueueCollectorBase:
 
             if len(cur_nevents) == 0:
                 self.logger.info(
-                    "Reached dataset end (frame "
+                    # Reached dataset end (frame
                     # `last_idx` is the size of the dataset in the end,
                     # because `len(cur_nevents)` is always added to it.
                     f"{last_idx} of {len(self.feat_nevents)})")
@@ -291,7 +293,7 @@ class QueueCollectorProcess(QueueCollectorBase, mp_spawn.Process):
 
             if len(cur_nevents) == 0:
                 self.logger.info(
-                    "Reached dataset end (frame "
+                    # Reached dataset end (frame
                     # `last_idx` is the size of the dataset in the end,
                     # because `len(cur_nevents)` is always added to it.
                     f"{last_idx} of {len(self.feat_nevents)})")
