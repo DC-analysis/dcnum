@@ -27,7 +27,7 @@ from ..meta import ppid
 from ..read import HDF5Data, get_mapping_indices
 from .._version import version, version_tuple
 from ..write import (
-    DequeWriterThread, HDF5Writer, QueueCollectorThread, copy_features,
+    DequeWriterThread, HDF5Writer, QueueCollectorThread, QueueCollectorProcess, copy_features,
     copy_metadata, create_with_basins, set_default_filter_kwargs
 )
 
@@ -754,14 +754,23 @@ class DCNumJobRunner(threading.Thread):
             debug=self.job["debug"])
         thr_feat.start()
 
-        # Start the data collection thread
-        thr_coll = QueueCollectorThread(
-            event_queue=fe_kwargs["event_queue"],
-            writer_dq=writer_dq,
-            feat_nevents=fe_kwargs["feat_nevents"],
-            write_threshold=500,
-        )
-        thr_coll.start()
+        if self.job["debug"]:
+            # Start the data collection thread
+            wor_coll = QueueCollectorThread(
+                event_queue=fe_kwargs["event_queue"],
+                writer_dq=writer_dq,
+                feat_nevents=fe_kwargs["feat_nevents"],
+                write_threshold=500,
+            )
+            wor_coll.start()
+        else:
+            wor_coll = QueueCollectorProcess(
+                event_queue=fe_kwargs["event_queue"],
+                writer_dq=writer_dq,
+                feat_nevents=fe_kwargs["feat_nevents"],
+                write_threshold=500,
+            )
+            wor_coll.start()
 
         data_size = len(self.dtin)
         t0 = time.monotonic()
@@ -769,8 +778,8 @@ class DCNumJobRunner(threading.Thread):
         # So in principle we are done here. We do not have to do anything
         # besides monitoring the progress.
         while True:
-            counted_frames = thr_coll.written_frames
-            self.event_count = thr_coll.written_events
+            counted_frames = wor_coll.written_frames
+            self.event_count = wor_coll.written_events
             td = time.monotonic() - t0
             # set the current status
             self._progress_ex = counted_frames / data_size
@@ -790,7 +799,7 @@ class DCNumJobRunner(threading.Thread):
         # Join the collector thread before the feature extractors. On
         # compute clusters, we had problems with joining the feature
         # extractors, maybe because the event_queue was not depleted.
-        join_thread_helper(thr=thr_coll,
+        join_thread_helper(thr=wor_coll,
                            timeout=600,
                            retries=10,
                            logger=self.logger,
@@ -807,7 +816,7 @@ class DCNumJobRunner(threading.Thread):
                            logger=self.logger,
                            name="writer")
 
-        self.event_count = thr_coll.written_events
+        self.event_count = wor_coll.written_events
         if self.event_count == 0:
             self.logger.error(
                 f"No events found in {self.draw.path}! Please check the "
