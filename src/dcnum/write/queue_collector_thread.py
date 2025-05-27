@@ -8,8 +8,6 @@ from typing import List
 
 import numpy as np
 
-mp_spawn = mp.get_context("spawn")
-
 
 class EventStash:
     def __init__(self,
@@ -106,7 +104,7 @@ class EventStash:
         return self.events[feat]
 
 
-class QueueCollectorBase:
+class QueueCollectorThread(threading.Thread):
     def __init__(self,
                  event_queue: mp.Queue,
                  writer_dq: deque,
@@ -117,7 +115,7 @@ class QueueCollectorBase:
         """Convenience class for events from queues
 
         Events coming from a queue cannot be guaranteed to be in order.
-        The :class:`.QueueCollectorBase` uses a :class:`.EventStash`
+        The :class:`.QueueCollectorThread` uses a :class:`.EventStash`
         to sort events into the correct order before sending them to
         the :class:`DequeWriterThread` for storage.
 
@@ -148,7 +146,7 @@ class QueueCollectorBase:
             output size could be 513 which is computed via
             `np.sum(feat_nevents[idx:idx+write_threshold])`.
         """
-        super(QueueCollectorBase, self).__init__(
+        super(QueueCollectorThread, self).__init__(
               name="QueueCollector", *args, **kwargs)
         self.logger = logging.getLogger("dcnum.write.QueueCollector")
 
@@ -282,13 +280,3 @@ class QueueCollectorBase:
 
         self.logger.info(f"Counted {self.written_events} events")
         self.logger.debug(f"Counted {self.written_frames} frames")
-
-
-class QueueCollectorProcess(QueueCollectorBase, mp_spawn.Process):
-    def __init__(self, *args, **kwargs):
-        super(QueueCollectorProcess, self).__init__(*args, **kwargs)
-
-
-class QueueCollectorThread(QueueCollectorBase, threading.Thread):
-    def __init__(self, *args, **kwargs):
-        super(QueueCollectorThread, self).__init__(*args, **kwargs)
