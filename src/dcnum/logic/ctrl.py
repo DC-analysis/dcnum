@@ -755,22 +755,17 @@ class DCNumJobRunner(threading.Thread):
         thr_feat.start()
 
         if self.job["debug"]:
-            # Start the data collection thread
-            wor_coll = QueueCollectorThread(
-                event_queue=fe_kwargs["event_queue"],
-                writer_dq=writer_dq,
-                feat_nevents=fe_kwargs["feat_nevents"],
-                write_threshold=500,
-            )
-            wor_coll.start()
+            queue_collector_class = QueueCollectorThread
         else:
-            wor_coll = QueueCollectorProcess(
-                event_queue=fe_kwargs["event_queue"],
-                writer_dq=writer_dq,
-                feat_nevents=fe_kwargs["feat_nevents"],
-                write_threshold=500,
-            )
-            wor_coll.start()
+            queue_collector_class = QueueCollectorProcess
+
+        wor_coll = queue_collector_class(
+            event_queue=fe_kwargs["event_queue"],
+            writer_dq=writer_dq,
+            feat_nevents=fe_kwargs["feat_nevents"],
+            write_threshold=500,
+        )
+        wor_coll.start()
 
         data_size = len(self.dtin)
         t0 = time.monotonic()
