@@ -10,6 +10,7 @@ import numpy as np
 
 mp_spawn = mp.get_context("spawn")
 
+
 class EventStash:
     def __init__(self,
                  index_offset: int,

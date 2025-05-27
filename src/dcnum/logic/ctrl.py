@@ -27,8 +27,8 @@ from ..meta import ppid
 from ..read import HDF5Data, get_mapping_indices
 from .._version import version, version_tuple
 from ..write import (
-    DequeWriterThread, HDF5Writer, QueueCollectorThread, QueueCollectorProcess, copy_features,
-    copy_metadata, create_with_basins, set_default_filter_kwargs
+    DequeWriterThread, HDF5Writer, QueueCollectorThread, QueueCollectorProcess,
+    copy_features, copy_metadata, create_with_basins, set_default_filter_kwargs
 )
 
 from .job import DCNumPipelineJob
