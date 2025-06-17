@@ -54,6 +54,43 @@ def test_segm_torch_validate_model_file_logs():
             )
 
 
+def test_segm_torch_validate_model_file_logs_negate():
+    """Test whether model validation fails for invalid logs"""
+    model_file = retrieve_model(
+        "segm-torch-model_unet-dcnum-test_g2_17ec6.zip")
+    sm = segm.segm_torch.SegmentTorchMPO
+
+    # Creating a specific log file will mak the model invalid
+    path = retrieve_data(
+        "fmt-hdf5_cytoshot_full-features_2024.zip")
+
+    with read.HDF5Data(path) as hd:
+        # sanity check
+        assert "dclab-compress" in hd.logs
+        with pytest.raises(
+                segm_torch_base.SegmenterNotApplicableError,
+                match="must not be compressed 2024-05-07"):
+            sm.validate_applicability(
+                segmenter_kwargs={"model_file": model_file},
+                meta=hd.meta,
+                logs=hd.logs
+            )
+
+    # Remove the offending log
+    with h5py.File(path, "a") as h5:
+        del h5["logs/dclab-compress"]
+
+    # Try again, this should work now.
+    with read.HDF5Data(path) as hd:
+        # sanity check
+        assert "dclab-compress" not in hd.logs
+        sm.validate_applicability(
+            segmenter_kwargs={"model_file": model_file},
+            meta=hd.meta,
+            logs=hd.logs
+        )
+
+
 def test_segm_torch_validate_model_file_meta():
     """Test whether model validation fails for invalid metadata"""
     model_file = retrieve_model(
@@ -94,6 +131,45 @@ def test_segm_torch_validate_model_file_meta():
                 meta=hd.meta,
                 logs=hd.logs
             )
+
+
+def test_segm_torch_validate_model_file_meta_value():
+    """Test whether model validation fails for invalid metadata"""
+    model_file = retrieve_model(
+        "segm-torch-model_unet-dcnum-test_g2_17ec6.zip")
+    sm = segm.segm_torch.SegmentTorchMPO
+
+    # Create a test dataset with metadata that will make the model invalid
+    path = retrieve_data(
+        "fmt-hdf5_cytoshot_full-features_2023.zip")
+
+    with h5py.File(path, "a") as h5:
+        h5.attrs["setup:channel width"] = 30.
+
+    with read.HDF5Data(path) as hd:
+        # sanity check
+        assert hd.meta["setup:channel width"] == 30
+        with pytest.raises(
+                segm_torch_base.SegmenterNotApplicableError,
+                match="channel width must be 20 micrometers"):
+            sm.validate_applicability(
+                segmenter_kwargs={"model_file": model_file},
+                meta=hd.meta,
+                logs=hd.logs
+            )
+
+    # Repeat the same thing, this time fixing the attribute
+    with h5py.File(path, "a") as h5:
+        h5.attrs["setup:channel width"] = 20.
+
+    with read.HDF5Data(path) as hd:
+        # sanity check
+        assert hd.meta["setup:channel width"] == 20
+        sm.validate_applicability(
+            segmenter_kwargs={"model_file": model_file},
+            meta=hd.meta,
+            logs=hd.logs
+        )
 
 
 def test_segm_torch_mpo():
