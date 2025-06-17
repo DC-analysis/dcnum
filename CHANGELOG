@@ -1,3 +1,6 @@
+0.25.10
+ - fix: search for validation strings in logs did not use re.MULTILINE
+ - enh: allow to validate torch model applicability based on meta values
 0.25.9
  - fix: md5 sum caused PermissionError on Windows for background computation
 0.25.8

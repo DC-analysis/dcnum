@@ -3,6 +3,8 @@ import pathlib
 import re
 from typing import Dict
 
+import numpy as np
+
 from ...meta import paths
 
 from ..segmenter import Segmenter, SegmenterNotApplicableError
@@ -116,10 +118,15 @@ class TorchSegmenterBase(Segmenter):
         """
         key = item["key"]
         if key in data_dict:
-            regexp = re.compile(item["regexp"])
-            matched = bool(regexp.match(data_dict[key]))
-            negate = item.get("regexp-negate", False)
-            valid = matched if not negate else not matched
+            valid = True
+            if "regexp" in item:
+                re_match = bool(re.search(item["regexp"], data_dict[key],
+                                          re.MULTILINE))
+                negate = item.get("regexp-negate", False)
+                valid = valid and (re_match if not negate else not re_match)
+            if "value" in item:
+                valid = valid and np.allclose(item["value"], data_dict[key],
+                                              atol=0, rtol=0.01)
             if not valid:
                 reasons_list.append(item.get("reason", "unknown reason"))
         elif not item.get("allow-missing-key", False):
