@@ -36,11 +36,12 @@ def setup():
 
 
 def main():
-    thr_coll = write.QueueCollectorThread(
+    collector_process = write.QueueCollectorProcess(
         event_queue=event_queue,
         writer_dq=writer_dq,
         writer_queue_length=mp_spawn.Value,
         feat_nevents=feat_nevents,
         write_threshold=500,
     )
-    thr_coll.run()
+    collector_process.start()
+    collector_process.join()

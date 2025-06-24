@@ -19,6 +19,7 @@ class EventExtractorManagerThread(threading.Thread):
                  fe_kwargs: Dict,
                  num_workers: int,
                  writer_dq: collections.deque,
+                 writer_queue_length: mp.Value,
                  debug: bool = False,
                  *args, **kwargs):
         """Manage event extraction threads or precesses
@@ -87,6 +88,8 @@ class EventExtractorManagerThread(threading.Thread):
         self.writer_dq = writer_dq
         """Writer deque to monitor"""
 
+        self.writer_queue_length = mp.Value("i", 0)
+
         self.t_count = 0
         """Time counter for feature extraction"""
 
@@ -110,10 +113,10 @@ class EventExtractorManagerThread(threading.Thread):
         while True:
             # If the writer_dq starts filling up, then this could lead to
             # an oom-kill signal. Stall for the writer to prevent this.
-            if (ldq := len(self.writer_dq)) > 1000:
+            if (ldq := self.writer_queue_length.value) > 1000:
                 stalled_sec = 0.
                 for ii in range(60):
-                    if len(self.writer_dq) > 200:
+                    if self.writer_queue_length.value > 200:
                         time.sleep(.5)
                         stalled_sec += .5
                 self.logger.warning(
