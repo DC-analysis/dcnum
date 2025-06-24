@@ -51,6 +51,7 @@ def test_event_extractor_manager_thread():
         num_workers=1,
         labels_list=thr_segm.labels_list,
         writer_dq=collections.deque(),
+        writer_queue_length=mp.Value,
         debug=True)
     thr_feat.run()
     thr_segm.join()
