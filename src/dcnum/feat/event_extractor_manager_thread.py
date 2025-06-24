@@ -88,7 +88,7 @@ class EventExtractorManagerThread(threading.Thread):
         self.writer_dq = writer_dq
         """Writer deque to monitor"""
 
-        self.writer_queue_length = mp.Value("i", 0)
+        self.writer_queue_length = writer_queue_length
 
         self.t_count = 0
         """Time counter for feature extraction"""
