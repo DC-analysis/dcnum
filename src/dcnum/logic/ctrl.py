@@ -751,6 +751,7 @@ class DCNumJobRunner(threading.Thread):
             num_workers=num_extractors,
             labels_list=thr_segm.labels_list,
             writer_dq=writer_dq,
+            writer_queue_length=mp.Value,
             debug=self.job["debug"])
         thr_feat.start()
 
@@ -762,6 +763,7 @@ class DCNumJobRunner(threading.Thread):
         wor_coll = queue_collector_class(
             event_queue=fe_kwargs["event_queue"],
             writer_dq=writer_dq,
+            writer_queue_length=mp.Value,
             feat_nevents=fe_kwargs["feat_nevents"],
             write_threshold=500,
         )

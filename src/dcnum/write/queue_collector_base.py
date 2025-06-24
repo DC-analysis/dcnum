@@ -110,6 +110,7 @@ class QueueCollectorBase:
     def __init__(self,
                  event_queue: mp.Queue,
                  writer_dq: deque,
+                 writer_queue_length: mp.Value,
                  feat_nevents: mp.Array,
                  write_threshold: int = 500,
                  *args, **kwargs
@@ -157,6 +158,8 @@ class QueueCollectorBase:
 
         self.writer_dq = writer_dq
         """Writer deque to which event arrays are appended"""
+
+        self.writer_queue_length = mp.Value
 
         self.buffer_dq = deque()
         """Buffer deque
