@@ -41,6 +41,7 @@ def main():
     thr_drw = write.DequeWriterThread(
         path_out=path_out,
         dq=writer_dq,
+        writer_queue_length= mp_spawn.Value("i", 0),
     )
     thr_drw.may_stop_loop = True
     thr_drw.run()
