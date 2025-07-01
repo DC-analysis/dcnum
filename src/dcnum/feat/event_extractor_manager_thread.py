@@ -1,5 +1,4 @@
 """Feature computation: managing event extraction threads"""
-import collections
 import logging
 import multiprocessing as mp
 import threading
@@ -18,7 +17,6 @@ class EventExtractorManagerThread(threading.Thread):
                  labels_list: List,
                  fe_kwargs: Dict,
                  num_workers: int,
-                 writer_dq: collections.deque,
                  writer_queue_length: mp.Value,
                  debug: bool = False,
                  *args, **kwargs):
@@ -43,9 +41,6 @@ class EventExtractorManagerThread(threading.Thread):
             :func:`.EventExtractor.get_init_kwargs` for more information.
         num_workers:
             Number of child threads or worker processes to use.
-        writer_dq:
-            The queue the writer uses. We monitor this queue. If it
-            fills up, we take a break.
         debug:
             Whether to run in debugging mode which means only one
             event extraction thread (``num_workers`` has no effect).
@@ -84,9 +79,6 @@ class EventExtractorManagerThread(threading.Thread):
             self.fe_kwargs["label_array"]).reshape(
             self.data.image.chunk_shape)
         """Shared labeling array"""
-
-        self.writer_dq = writer_dq
-        """Writer deque to monitor"""
 
         self.writer_queue_length = writer_queue_length
 
