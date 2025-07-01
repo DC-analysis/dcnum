@@ -1,4 +1,5 @@
 import collections
+import multiprocessing as mp
 import logging
 import pathlib
 import threading
@@ -13,6 +14,7 @@ class DequeWriterThread(threading.Thread):
     def __init__(self,
                  path_out: pathlib.Path | h5py.File,
                  dq: collections.deque,
+                 writer_queue_length: mp.Value,
                  ds_kwds: dict = None,
                  mode: str = "a",
                  *args, **kwargs):
@@ -32,6 +34,7 @@ class DequeWriterThread(threading.Thread):
             path_out.unlink(missing_ok=True)
         self.writer = HDF5Writer(path_out, mode=mode, ds_kwds=ds_kwds)
         self.dq = dq
+        self.writer_queue_length = writer_queue_length
         self.may_stop_loop = False
         self.must_stop_loop = False
 
@@ -46,13 +49,14 @@ class DequeWriterThread(threading.Thread):
     def run(self):
         time_tot = 0
         while True:
-            ldq = len(self.dq)
+            ldq = self.writer_queue_length.value
             if self.must_stop_loop:
                 break
             elif ldq:
                 t0 = time.perf_counter()
                 for _ in range(ldq):
                     feat, data = self.dq.popleft()
+                    self.writer_queue_length.value = len(self.dq)
                     self.writer.store_feature_chunk(feat=feat, data=data)
                 time_tot += time.perf_counter() - t0
             elif self.may_stop_loop:
