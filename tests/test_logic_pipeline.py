@@ -41,11 +41,10 @@ def get_log(hd: read.hdf5_data.HDF5Data,
       },
      ["experiment:run identifier"],
      "f0cfdc6f-93c7-c093-d135-a20f3e5bdbfa"],
-    # delete everything, this is the hash of none-none-none
+    # delete everything, this should yield only the pipeline ID
     [{},
-     ["setup:identifier", "experiment:time", "experiment:run identifier",
-      "setup:identifier"],
-     "07d18822-3045-4e6b-da0b-f1a16c80132a"],
+     ["setup:identifier", "experiment:time", "experiment:run identifier"],
+     None],
 ])
 def test_basin_experiment_identifier_correct(
         override_attrs, delete_keys, meas_id):
@@ -77,7 +76,10 @@ def test_basin_experiment_identifier_correct(
 
     with h5py.File(path_out) as hout:
         appid = hout.attrs["pipeline:dcnum hash"]
-        eri_exp = f"{meas_id}_dcn-{appid[:7]}"
+        if meas_id is not None:
+            eri_exp = f"{meas_id}_dcn-{appid[:7]}"
+        else:
+            eri_exp = f"dcn-{appid[:7]}"
         # this is the actual test
         assert hout.attrs["experiment:run identifier"] == eri_exp
 
