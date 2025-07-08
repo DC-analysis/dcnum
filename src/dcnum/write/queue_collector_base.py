@@ -110,7 +110,7 @@ class QueueCollectorBase:
     def __init__(self,
                  event_queue: mp.Queue,
                  writer_dq: deque,
-                 writer_queue_length: mp.Value("i", 0),
+                 writer_queue_length: mp.Value,
                  feat_nevents: mp.Array,
                  write_threshold: int = 500,
                  *args, **kwargs
@@ -269,6 +269,7 @@ class QueueCollectorBase:
             # (see `DCNumJobRunner.task_enforce_basin_strategy`)
             self.writer_dq.append(("index_unmapped",
                                    np.array(indices, dtype=np.uint32)))
+            self.writer_queue_length.value = len(self.writer_dq)
 
             # Write the number of events.
             self.writer_dq.append(("nevents",
@@ -277,6 +278,7 @@ class QueueCollectorBase:
                                    np.array(stash.feat_nevents)[
                                        indices - stash.index_offset]
                                    ))
+            self.writer_queue_length.value = len(self.writer_dq)
 
             # Update events/frames written (used for monitoring)
             self.written_events += stash.size

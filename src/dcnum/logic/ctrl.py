@@ -676,7 +676,7 @@ class DCNumJobRunner(threading.Thread):
         # Start writer thread
         writer_dq = collections.deque()
         ds_kwds = set_default_filter_kwargs()
-        writer_queue_length = mp.Value("i", 0)
+        writer_queue_length = mp.Value("i", len(writer_dq))
         thr_write = DequeWriterThread(
             path_out=self.path_temp_out,
             dq=writer_dq,
@@ -745,7 +745,7 @@ class DCNumJobRunner(threading.Thread):
             log_level=self.logger.level,
             )
         fe_kwargs["extract_kwargs"] = self.job["feature_kwargs"]
-        writer_queue_length = mp.Value("i", 0)
+        writer_queue_length = mp.Value("i", len(writer_dq))
         thr_feat = EventExtractorManagerThread(
             slot_chunks=slot_chunks,
             slot_states=slot_states,

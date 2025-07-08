@@ -39,7 +39,7 @@ def main():
     thr_coll = write.QueueCollectorThread(
         event_queue=event_queue,
         writer_dq=writer_dq,
-        writer_queue_length=mp_spawn.Value,
+        writer_queue_length=mp_spawn.Value("i", len(writer_dq)),
         feat_nevents=feat_nevents,
         write_threshold=500,
     )
