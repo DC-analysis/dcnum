@@ -76,6 +76,67 @@ def test_basin_features_path_absolute_mapped():
         assert np.allclose(hd["image"][:], hd_src["image"][4:10])
 
 
+def test_basin_identifier_mismatch(tmp_path):
+    path = retrieve_data(
+        "fmt-hdf5_cytoshot_full-features_legacy_allev_2023.zip")
+    path_test = path.parent / "test.h5"
+
+    with h5py.File(path, "a") as h5:
+        rid = read.get_measurement_identifier(h5)
+        area_um = h5["events/area_um"][:]
+        del h5["events/area_um"]
+        assert rid == "d5a40aed-0b6c-0412-e87c-59789fdd28d0"
+
+    # We basically create a file that consists only of the metadata.
+    with write.HDF5Writer(path_test) as hw:
+        hw.store_basin(name="pidemon",
+                       paths=[path],
+                       features=["deform"],
+                       description="Wrong basin identifier specified",
+                       identifier=rid + "-wrong",
+                       )
+        hw.store_feature_chunk("area_um", area_um)
+
+    with h5py.File(path_test) as hb:
+        basins = read.HDF5Data.extract_basin_dicts(hb)
+        assert len(basins) == 1
+
+    with read.HDF5Data(path_test) as hd:
+        # Accessing data in the new file works
+        assert hd["area_um"][0]
+        with pytest.raises(read.BasinIdentifierMismatchError,
+                           match="does not match"):
+            hd["deform"][0]
+
+
+def test_basin_identifier_normal_use_case(tmp_path):
+    path = retrieve_data(
+        "fmt-hdf5_cytoshot_full-features_legacy_allev_2023.zip")
+    path_test = path.parent / "test.h5"
+
+    with h5py.File(path) as h5:
+        rid = read.get_measurement_identifier(h5)
+        assert rid == "d5a40aed-0b6c-0412-e87c-59789fdd28d0"
+
+    # We basically create a file that consists only of the metadata.
+    with write.HDF5Writer(path_test) as hw:
+        hw.store_basin(name="pidemon",
+                       paths=[path],
+                       description="Basin identifier specified",
+                       identifier=rid,
+                       )
+
+    with h5py.File(path_test) as hb:
+        basins = read.HDF5Data.extract_basin_dicts(hb)
+        assert len(basins) == 1
+        bn = basins[0]
+        assert bn["identifier"] == rid
+
+    with read.HDF5Data(path_test) as hd:
+        # Accessing data in the new file works
+        assert hd["deform"][0]
+
+
 def test_basin_mapped_with_mapped_dataset():
     """You can have a mapped dataset opening a mapped basin"""
     path_src = retrieve_data(

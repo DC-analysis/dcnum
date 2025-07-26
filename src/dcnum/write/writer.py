@@ -8,7 +8,7 @@ import h5py
 import hdf5plugin
 import numpy as np
 
-from ..read import HDF5Data
+from ..read import HDF5Data, get_measurement_identifier
 from .._version import version
 
 
@@ -157,6 +157,7 @@ class HDF5Writer:
                     description: str | None = None,
                     mapping: np.ndarray = None,
                     internal_data: Dict | None = None,
+                    identifier: str | None = None,
                     ):
         """Write an HDF5-based file basin
 
@@ -177,6 +178,10 @@ class HDF5Writer:
         internal_data: dict of ndarrays
             internal basin data to store; If this is set, then `features`
             and `paths` must be set to `None`.
+        identifier: str
+            the measurement identifier of the basin as computed by
+            the :func:`~dcnum.read.hdf5_data.get_measurement_identifier`
+            function.
         """
         bdat = {
             "description": description,
@@ -190,6 +195,9 @@ class HDF5Writer:
             if paths is not None:
                 raise ValueError("`paths` must be set to None when storing "
                                  "internal basin features")
+            if identifier is not None:
+                warnings.warn(f"Not storing identifier for internal "
+                              f"basin '{name}' (got '{identifier}')")
             # store the internal basin information
             for feat in internal_data:
                 if feat in self.h5.require_group("basin_events"):
@@ -206,6 +214,8 @@ class HDF5Writer:
             bdat["format"] = "hdf5"
             bdat["paths"] = [str(pp) for pp in paths]
             bdat["type"] = "file"
+            # identifier only makes sense here (not for internal basins)
+            bdat["identifier"] = identifier
 
         # Explicit features stored in basin file
         if features is not None and len(features):
@@ -322,6 +332,7 @@ def create_with_basins(
         warnings.warn(f"Creating basin-based file '{path_out}' without any "
                       f"basins, since the list `basin_paths' is empty!",
                       CreatingFileWithoutBasinWarning)
+        basin_paths = []
     with HDF5Writer(path_out, mode="w") as hw:
         # Get the metadata from the first available basin path
 
@@ -359,16 +370,19 @@ def create_with_basins(
                     features = sorted(h5["events"].keys())
                     features = [f for f in features if
                                 not f.startswith("basinmap")]
+                    basin_identifier = get_measurement_identifier(h5)
                 name = prep.name
             else:
                 features = None
                 name = bps[0]
+                basin_identifier = None
 
             # Write the basin data
             hw.store_basin(name=name,
                            paths=bps,
                            features=features,
                            description=f"Created by dcnum {version}",
+                           identifier=basin_identifier,
                            )
 
 
@@ -404,6 +418,7 @@ def copy_basins(h5_src: h5py.File,
                            paths=bn_dict["paths"],
                            features=bn_dict["features"],
                            mapping=mapping,
+                           identifier=bn_dict.get("identifier"),
                            )
         else:
             warnings.warn(f"Ignored basin of type '{bn_dict['type']}'",

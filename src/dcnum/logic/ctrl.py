@@ -1,6 +1,5 @@
 import collections
 import datetime
-import hashlib
 import importlib
 import json
 import logging
@@ -24,7 +23,7 @@ from ..feat import gate
 from ..feat import EventExtractorManagerThread
 from ..segm import SegmenterManagerThread, get_available_segmenters
 from ..meta import ppid
-from ..read import HDF5Data, get_mapping_indices
+from ..read import HDF5Data, get_measurement_identifier, get_mapping_indices
 from .._version import version, version_tuple
 from ..write import (
     DequeWriterThread, HDF5Writer, QueueCollectorThread, copy_features,
@@ -453,18 +452,7 @@ class DCNumJobRunner(threading.Thread):
                 # segmentation did actually take place.
                 mid_ap = f"dcn-{self.pphash[:7]}"
                 # This is the current measurement identifier
-                mid_cur = hw.h5.attrs.get("experiment:run identifier")
-                if not mid_cur:
-                    # Compute a measurement identifier from the metadata
-                    m_time = hw.h5.attrs.get("experiment:time", None) or None
-                    m_date = hw.h5.attrs.get("experiment:date", None) or None
-                    m_sid = hw.h5.attrs.get("setup:identifier", None) or None
-                    if None not in [m_time, m_date, m_sid]:
-                        # Only compute an identifier if all of the above
-                        # are defined.
-                        hasher = hashlib.md5(
-                            f"{m_time}_{m_date}_{m_sid}".encode("utf-8"))
-                        mid_cur = str(uuid.UUID(hex=hasher.hexdigest()))
+                mid_cur = get_measurement_identifier(hw.h5)
                 # The new measurement identifier is a combination of both.
                 mid_new = f"{mid_cur}_{mid_ap}" if mid_cur else mid_ap
                 hw.h5.attrs["experiment:run identifier"] = mid_new
@@ -669,6 +657,7 @@ class DCNumJobRunner(threading.Thread):
                                    mapping=basinmap0,
                                    paths=paths,
                                    description=f"Created with dcnum {version}",
+                                   identifier=get_measurement_identifier(hin),
                                    )
                 self._progress_bn += 1 / len(feats_raw)
         t_tot = time.perf_counter() - t0

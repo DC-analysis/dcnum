@@ -187,9 +187,24 @@ def test_basin_strategy_tap():
         assert "image" not in h5["events"]
         for feat in h5["events"]:
             assert len(h5["events"][feat]) == 275
+        # Make sure the correct basin identifier is stored
+        # (must be the original identifier plus a dcn pipeline hash tag)
+        assert h5.attrs["experiment:run identifier"] \
+            == "d5a40aed-0b6c-0412-e87c-59789fdd28d0_dcn-17decbe"
+
         # The other features are accessed via basins
         hd = read.HDF5Data(h5)
         assert "image" in hd
+        # Check whether the basin identifier is set correctly.
+        for bn in hd.basins:
+            print(bn)
+            if bn["type"] == "file":
+                assert bn["identifier"] \
+                   == "d5a40aed-0b6c-0412-e87c-59789fdd28d0"
+                break
+        else:
+            assert False, "Something went wrong, the basin is missing"
+
 
 
 def test_basin_strategy_tap_rollmed():

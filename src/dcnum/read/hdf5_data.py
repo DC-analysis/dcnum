@@ -16,6 +16,10 @@ from .const import PROTECTED_FEATURES
 from .mapped import get_mapped_object, get_mapping_indices
 
 
+class BasinIdentifierMismatchError(BaseException):
+    """Used when basin identifiers do not match"""
+
+
 class HDF5Data:
     """HDF5 (.rtdc) input file data instance"""
     def __init__(self,
@@ -473,6 +477,12 @@ class HDF5Data:
             features = []
         else:
             h5 = h5py.File(path, "r")
+            # verify that the basin was identified correctly
+            if ((id_exp := bn_dict.get("identifier")) is not None
+                    and (id_act := get_measurement_identifier(h5)) != id_exp):
+                raise BasinIdentifierMismatchError(
+                    f"The basin '{path}' with identifier '{id_act}' "
+                    f"does not match the expected identifier '{id_exp}'")
             h5group = h5["events"]
             # features defined in the basin
             features = bn_dict.get("features")
@@ -560,3 +570,30 @@ def concatenated_hdf5_data(*args, **kwargs):
         DeprecationWarning)
     from . import hdf5_concat
     return hdf5_concat.concatenated_hdf5_data(*args, **kwargs)
+
+
+def get_measurement_identifier(h5: h5py.Group) -> str | None:
+    """Return the measurement identifier for the given H5File object
+
+    The basin identifier is taken from the HDF5 attributes. If the
+    "experiment:run identifier" attribute is not set, it is
+    computed from the HDF5 attributes "experiment:time",
+    "experiment:date", and "setup:identifier".
+
+    If the measurement identifier cannot be found or computed,
+    return None.
+    """
+    # This is the current measurement identifier
+    mid = h5.attrs.get("experiment:run identifier")
+    if not mid:
+        # Compute a measurement identifier from the metadata
+        m_time = h5.attrs.get("experiment:time", None) or None
+        m_date = h5.attrs.get("experiment:date", None) or None
+        m_sid = h5.attrs.get("setup:identifier", None) or None
+        if None not in [m_time, m_date, m_sid]:
+            # Only compute an identifier if all of the above
+            # are defined.
+            hasher = hashlib.md5(
+                f"{m_time}_{m_date}_{m_sid}".encode("utf-8"))
+            mid = str(uuid.UUID(hex=hasher.hexdigest()))
+    return mid
