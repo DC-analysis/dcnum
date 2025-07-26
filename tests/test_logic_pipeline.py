@@ -206,7 +206,6 @@ def test_basin_strategy_tap():
             assert False, "Something went wrong, the basin is missing"
 
 
-
 def test_basin_strategy_tap_rollmed():
     """When basin strategy is "tap", features are mapped from the input"""
     path_orig = retrieve_data("fmt-hdf5_cytoshot_full-features_2023.zip")
