@@ -24,12 +24,12 @@ For more options, please check out the `documentation
 
 
 
-.. |dcnum| image:: https://raw.github.com/DC-analysis/dcnum/master/docs/logo/dcnum.png
+.. |dcnum| image:: https://raw.github.com/DC-analysis/dcnum/main/docs/logo/dcnum.png
 .. |PyPI Version| image:: https://img.shields.io/pypi/v/dcnum.svg
    :target: https://pypi.python.org/pypi/dcnum
 .. |Build Status| image:: https://img.shields.io/github/actions/workflow/status/DC-analysis/dcnum/check.yml
    :target: https://github.com/DC-analysis/dcnum/actions?query=workflow%3AChecks
-.. |Coverage Status| image:: https://img.shields.io/codecov/c/github/DC-analysis/dcnum/master.svg
+.. |Coverage Status| image:: https://img.shields.io/codecov/c/github/DC-analysis/dcnum/main.svg
    :target: https://codecov.io/gh/DC-analysis/dcnum
 .. |Docs Status| image:: https://readthedocs.org/projects/dcnum/badge/?version=latest
    :target: https://readthedocs.org/projects/dcnum/builds/
