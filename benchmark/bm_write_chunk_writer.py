@@ -6,6 +6,7 @@ import tempfile
 
 import multiprocessing as mp
 
+import h5py
 import numpy as np
 
 from dcnum import write
@@ -33,14 +34,18 @@ def setup():
         writer_dq.append(("temp", rng.normal(23, size=batch_size)))
 
     temp_dir = tempfile.mkdtemp(prefix=pathlib.Path(__file__).name)
-    atexit.register(shutil.rmtree, temp_dir, ignore_errors=True, onerror=None)
+    atexit.register(shutil.rmtree, temp_dir, ignore_errors=True)
     path_out = pathlib.Path(temp_dir) / "out.rtdc"
 
 
 def main():
-    thr_drw = write.DequeWriterThread(
+    thr_drw = write.ChunkWriter(
         path_out=path_out,
         dq=writer_dq,
+        write_queue_size=mp_spawn.Value("L", 0)
     )
     thr_drw.may_stop_loop = True
     thr_drw.run()
+    with h5py.File(path_out) as h5:
+        assert h5["events/mask"].shape == (3000, 80, 320)
+        assert h5["events/temp"].shape == (3000,)
