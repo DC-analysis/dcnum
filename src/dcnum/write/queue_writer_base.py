@@ -1,20 +1,26 @@
+import collections
 import logging
 from collections import deque
 import queue
 import multiprocessing as mp
+import pathlib
 import time
 
 import numpy as np
 
+from ..common import join_thread_helper
 
+from .chunk_writer import ChunkWriter
 from .event_stash import EventStash
+from .writer import set_default_filter_kwargs
 
 
 class QueueWriterBase:
     def __init__(self,
                  event_queue: mp.Queue,
-                 writer_dq: deque,
+                 write_queue_size: deque,
                  feat_nevents: mp.Array,
+                 path_out: pathlib.Path,
                  write_threshold: int = 500,
                  *args, **kwargs
                  ):
@@ -30,9 +36,10 @@ class QueueWriterBase:
         event_queue:
             A queue object to which other processes or threads write
             events as tuples `(frame_index, events_dict)`.
-        writer_dq:
-            A :class:`ChunkWriter` should be attached to the
-            other end of this :class:`collections.deque`.
+        write_queue_size:
+            A `mp.Value` that is populated with the number of event
+            chunks waiting to be written to the output file by
+            the `ChunkWriter`.
         feat_nevents:
             This 1D array contains the number of events for each frame
             in the input data. This serves two purposes: (1) it allows
@@ -42,6 +49,8 @@ class QueueWriterBase:
             processed (and thus we can expect entries in `event_queue`
             for). If an entry in this array is -1, this means that there
             is no event in `event_queue`. See `write_threshold` below.
+        path_out:
+            Output path for writer
         write_threshold:
             This integer defines how many frames should be collected at
             once and put into `writer_dq`. For instance, with a value of
@@ -60,18 +69,15 @@ class QueueWriterBase:
         self.event_queue = event_queue
         """Event queue from which to collect event data"""
 
-        self.writer_dq = writer_dq
-        """Writer deque to which event arrays are appended"""
-
-        self.buffer_dq = deque()
-        """Buffer deque
-        Events that do not not belong to the current chunk
-        (chunk defined by `write_threshold`) go here.
-        """
+        self.write_queue_size = write_queue_size
+        """Number of event chunks waiting to be written to the output file"""
 
         self.feat_nevents = feat_nevents
         """shared array containing the number of events
         for each frame in `data`."""
+
+        self.path_out = path_out
+        """HDF5 output path"""
 
         self.write_threshold = write_threshold
         """Number of frames to send to `writer_dq` at a time."""
@@ -82,10 +88,34 @@ class QueueWriterBase:
         self.written_frames = 0
         """Number of frames from `data` written to `writer_dq`"""
 
-    def run(self):
+    def run(self, buffer_dq=None, writer_dq=None):
+        """Start the writing process
+
+        This method is intended to be run in a thread or process.
+
+        `buffer_dq` and `writer_dq` are used for testing.
+        """
         # We are not writing to `event_queue` so we can safely cancel
         # our queue thread if we are told to stop.
         self.event_queue.cancel_join_thread()
+
+        # Start chunk writer thread
+        if writer_dq is None:
+            writer_dq = collections.deque()
+        thr_write = ChunkWriter(
+            path_out=self.path_out,
+            dq=writer_dq,
+            mode="w",
+            ds_kwds=set_default_filter_kwargs(),
+            write_queue_size=self.write_queue_size,
+        )
+        thr_write.start()
+
+        # Events that do not belong to the current chunk
+        # (chunk defined by `write_threshold`) go here.
+        if buffer_dq is None:
+            buffer_dq = deque()
+
         # Indexes the current frame in the input HDF5Data instance.
         last_idx = 0
         self.logger.debug("Started collector thread")
@@ -119,15 +149,15 @@ class QueueWriterBase:
 
             # First check whether there is a matching event from the buffer
             # that we possibly populated earlier.
-            for ii in range(len(self.buffer_dq)):
-                idx, events = self.buffer_dq.popleft()
+            for ii in range(len(buffer_dq)):
+                idx, events = buffer_dq.popleft()
                 if last_idx <= idx < last_idx + self.write_threshold:
                     stash.add_events(index=idx, events=events)
                 else:
                     # Put it back into the buffer (this should not happen
                     # more than once unless you have many workers adding
                     # or some of the workers being slower/faster).
-                    self.buffer_dq.append((idx, events))
+                    buffer_dq.append((idx, events))
 
             if not stash.is_complete():
                 # Now, get the data from the queue until we have everything
@@ -146,14 +176,14 @@ class QueueWriterBase:
                         # Goes onto the buffer stack (might happen if a
                         # segmentation process was fast and got an event
                         # from the next slice (context: write_threshold))
-                        self.buffer_dq.append((idx, events))
+                        buffer_dq.append((idx, events))
                     if stash.is_complete():
                         break
 
             # Send the data from the stash to the writer. The stash has
             # already put everything into the correct order.
             for feat in stash.events:
-                self.writer_dq.append((feat, stash.events[feat]))
+                writer_dq.append((feat, stash.events[feat]))
 
             # Now we also would like to add all the other information
             # that were not in the events dictionaries.
@@ -168,22 +198,30 @@ class QueueWriterBase:
             # the underlying HDF5 file. Later on, we will have to convert this
             # to the correct "basinmap0" feature
             # (see `DCNumJobRunner.task_enforce_basin_strategy`)
-            self.writer_dq.append(("index_unmapped",
-                                   np.array(indices, dtype=np.uint32)))
+            writer_dq.append(("index_unmapped",
+                              np.array(indices, dtype=np.uint32)))
 
             # Write the number of events.
-            self.writer_dq.append(("nevents",
-                                   # Get nevents for each event from the
-                                   # frame-based cur_nevents array.
-                                   np.array(stash.feat_nevents)[
-                                       indices - stash.index_offset]
-                                   ))
+            writer_dq.append(("nevents",
+                              # Get nevents for each event from the
+                              # frame-based cur_nevents array.
+                              np.array(stash.feat_nevents)[
+                                  indices - stash.index_offset]
+                              ))
             # Update events/frames written (used for monitoring)
             self.written_events += stash.size
             self.written_frames += stash.num_frames
 
             # Increment current frame index.
             last_idx += len(cur_nevents)
+
+        # Close chunk writer
+        thr_write.finished_when_queue_empty()
+        join_thread_helper(thr=thr_write,
+                           timeout=600,
+                           retries=10,
+                           logger=self.logger,
+                           name="writer")
 
         self.logger.info(f"Counted {self.written_events} events")
         self.logger.debug(f"Counted {self.written_frames} frames")

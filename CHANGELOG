@@ -4,6 +4,8 @@
  - ref: rename `QueueCollectorThread` to `QueueWriterThread`
  - ref: use `multiprocessing.Value` `write_queue_size` to communicate
    writer queue size to `EventExtractorManagerThread`
+ - ref: instantiate `ChunkWriter` in `QueueWriterBase.run`
+ - ref: add `common` submodule
 0.25.11
  - enh: align measurement identifier computation with that of dclab
  - enh: new `get_measurement_identifier` method

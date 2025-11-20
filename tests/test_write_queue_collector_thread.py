@@ -2,6 +2,7 @@ import collections
 import multiprocessing as mp
 import pathlib
 
+import h5py
 import numpy as np
 
 from dcnum import write
@@ -41,17 +42,19 @@ def test_event_stash():
                   == [100, 100, 120, 150, 100, 100, 110, 120, 130, 140])
 
 
-def test_queue_writer_thread():
+def test_queue_writer_thread(tmp_path):
     # keyword arguments
     event_queue = mp.Queue()
-    writer_dq = collections.deque()
+    write_queue_size = mp.Value("L", 0)
     feat_nevents = np.array([1, 3, 1, 5])
     write_threshold = 2
+    path_out = pathlib.Path(tmp_path / "test.rtdc")
     # queue collector thread
     qct = write.QueueWriterThread(
         event_queue=event_queue,
-        writer_dq=writer_dq,
+        write_queue_size=write_queue_size,
         feat_nevents=feat_nevents,
+        path_out=path_out,
         write_threshold=write_threshold
     )
     # put data into queue
@@ -70,40 +73,31 @@ def test_queue_writer_thread():
     # We have a write threshold of 2, so there should data in batches of two
     # frames stored n the writer_dq.
 
-    # BATCH 1
-    feat, deform1 = writer_dq.popleft()
-    assert feat == "deform"
-    assert np.all(deform1 == [.1, .1, .2, .3])
-    feat, _ = writer_dq.popleft()
-    assert feat == "area_um"
-    for fexp in ["index_unmapped", "nevents"]:
-        fact, _ = writer_dq.popleft()
-        assert fexp == fact
+    with h5py.File(path_out) as h5:
+        # BATCH 1
+        assert np.all(h5["events/deform"][:4] == [.1, .1, .2, .3])
+        assert "index_unmapped" in h5["events"]
+        assert "nevents" in h5["events"]
 
-    # BATCH 2
-    feat, deform1 = writer_dq.popleft()
-    assert feat == "deform"
-    assert np.all(deform1 == [.1, .1, .2, .3, .4, .5])
-    feat, _ = writer_dq.popleft()
-    assert feat == "area_um"
-    for fexp in ["index_unmapped", "nevents"]:
-        fact, _ = writer_dq.popleft()
-        assert fexp == fact
+        # BATCH 2
+        assert np.all(h5["events/deform"][4:10] == [.1, .1, .2, .3, .4, .5])
 
-    assert len(writer_dq) == 0
+    assert write_queue_size.value == 0
 
 
-def test_queue_writer_thread_with_full_stash():
+def test_queue_writer_thread_with_full_stash(tmp_path):
     # keyword arguments
     event_queue = mp.Queue()
-    writer_dq = collections.deque()
+    write_queue_size = mp.Value("L", 0)
     feat_nevents = np.array([1, 3, 1, 5])
     write_threshold = 2
+    path_out = pathlib.Path(tmp_path / "test.rtdc")
     # queue collector thread
     qct = write.QueueWriterThread(
         event_queue=event_queue,
-        writer_dq=writer_dq,
+        write_queue_size=write_queue_size,
         feat_nevents=feat_nevents,
+        path_out=path_out,
         write_threshold=write_threshold
     )
 
@@ -117,41 +111,31 @@ def test_queue_writer_thread_with_full_stash():
     # the other workers that filled up the event_queue for next slice before
     # that worker".
     # What we do is filling up the buffer_dq instead of the event_queue.
-    qct.buffer_dq.append((0, {"deform": np.array([.1]),
-                              "area_um": np.array([100])}))
-    qct.buffer_dq.append((1, {"deform": np.array([.1, .2, .3]),
-                              "area_um": np.array([100, 120, 150])}))
-    qct.buffer_dq.append((2, {"deform": np.array([.1]),
-                              "area_um": np.array([100])}))
-    qct.buffer_dq.append((3, {"deform": np.array([.1, .2, .3, .4, .5]),
-                              "area_um": np.array([100, 110, 120, 130, 140])}))
+    buffer_dq = collections.deque()
+    buffer_dq.append((0, {"deform": np.array([.1]),
+                          "area_um": np.array([100])}))
+    buffer_dq.append((1, {"deform": np.array([.1, .2, .3]),
+                          "area_um": np.array([100, 120, 150])}))
+    buffer_dq.append((2, {"deform": np.array([.1]),
+                          "area_um": np.array([100])}))
+    buffer_dq.append((3, {"deform": np.array([.1, .2, .3, .4, .5]),
+                          "area_um": np.array([100, 110, 120, 130, 140])}))
 
     # The following call will hang indefinitely, if the buffer_dq is not
     # emptied prior to the while loop that polls event_queue.
-    qct.run()
+    qct.run(buffer_dq=buffer_dq)
 
     # Test whether everything is in order.
     # We have a write threshold of 2, so there should data in batches of two
     # frames stored n the writer_dq.
 
-    # BATCH 1
-    feat, deform1 = writer_dq.popleft()
-    assert feat == "deform"
-    assert np.all(deform1 == [.1, .1, .2, .3])
-    feat, _ = writer_dq.popleft()
-    assert feat == "area_um"
-    for fexp in ["index_unmapped", "nevents"]:
-        fact, _ = writer_dq.popleft()
-        assert fexp == fact
+    with h5py.File(path_out) as h5:
+        # BATCH 1
+        assert np.all(h5["events/deform"][:4] == [.1, .1, .2, .3])
+        assert "index_unmapped" in h5["events"]
+        assert "nevents" in h5["events"]
 
-    # BATCH 2
-    feat, deform1 = writer_dq.popleft()
-    assert feat == "deform"
-    assert np.all(deform1 == [.1, .1, .2, .3, .4, .5])
-    feat, _ = writer_dq.popleft()
-    assert feat == "area_um"
-    for fexp in ["index_unmapped", "nevents"]:
-        fact, _ = writer_dq.popleft()
-        assert fexp == fact
+        # BATCH 2
+        assert np.all(h5["events/deform"][4:10] == [.1, .1, .2, .3, .4, .5])
 
-    assert len(writer_dq) == 0
+    assert write_queue_size.value == 0

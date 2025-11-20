@@ -1,4 +1,3 @@
-import collections
 import datetime
 import importlib
 import json
@@ -17,6 +16,7 @@ import uuid
 import h5py
 import numpy as np
 
+from ..common import join_thread_helper
 from ..feat.feat_background.base import get_available_background_methods
 from ..feat.queue_event_extractor import QueueEventExtractor
 from ..feat import gate
@@ -26,8 +26,8 @@ from ..meta import ppid
 from ..read import HDF5Data, get_measurement_identifier, get_mapping_indices
 from .._version import version, version_tuple
 from ..write import (
-    ChunkWriter, HDF5Writer, QueueWriterThread, copy_features,
-    copy_metadata, create_with_basins, set_default_filter_kwargs
+    HDF5Writer, QueueWriterThread, copy_features,
+    copy_metadata, create_with_basins,
 )
 
 from .job import DCNumPipelineJob
@@ -668,17 +668,6 @@ class DCNumJobRunner(threading.Thread):
 
     def task_segment_extract(self):
         self.logger.info("Starting segmentation and feature extraction")
-        # Start writer thread
-        writer_dq = collections.deque()
-        ds_kwds = set_default_filter_kwargs()
-        thr_write = ChunkWriter(
-            path_out=self.path_temp_out,
-            dq=writer_dq,
-            mode="w",
-            ds_kwds=ds_kwds,
-            write_queue_size=self.write_queue_size,
-        )
-        thr_write.start()
 
         # Start segmentation thread
         seg_cls = get_available_segmenters()[self.job["segmenter_code"]]
@@ -753,8 +742,9 @@ class DCNumJobRunner(threading.Thread):
         # Start the data collection thread
         thr_coll = QueueWriterThread(
             event_queue=fe_kwargs["event_queue"],
-            writer_dq=writer_dq,
+            write_queue_size=self.write_queue_size,
             feat_nevents=fe_kwargs["feat_nevents"],
+            path_out=self.path_temp_out,
             write_threshold=500,
         )
         thr_coll.start()
@@ -796,12 +786,6 @@ class DCNumJobRunner(threading.Thread):
                            retries=10,
                            logger=self.logger,
                            name="feature extraction")
-        thr_write.finished_when_queue_empty()
-        join_thread_helper(thr=thr_write,
-                           timeout=600,
-                           retries=10,
-                           logger=self.logger,
-                           name="writer")
 
         self.event_count = thr_coll.written_events
         if self.event_count == 0:
@@ -823,17 +807,3 @@ def get_library_versions_dict(library_name_list):
             version = lib.__version__
         version_dict[library_name] = version
     return version_dict
-
-
-def join_thread_helper(thr, timeout, retries, logger, name):
-    for _ in range(retries):
-        thr.join(timeout=timeout)
-        if thr.is_alive():
-            logger.info(f"Waiting for '{name}' ({thr}")
-        else:
-            logger.debug(f"Joined thread '{name}'")
-            break
-    else:
-        logger.error(f"Failed to join thread '{name}'")
-        raise ValueError(f"Thread '{name}' ({thr}) did not join"
-                         f"within {timeout * retries}s!")
