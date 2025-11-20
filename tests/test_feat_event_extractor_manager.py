@@ -1,4 +1,3 @@
-import collections
 import logging
 import multiprocessing as mp
 import queue
@@ -25,6 +24,7 @@ def test_event_extractor_manager_thread():
 
     slot_chunks = mp_spawn.Array("i", 1)
     slot_states = mp_spawn.Array("u", 1)
+    write_queue_size = mp_spawn.Value("L", 0)
 
     thr_segm = SegmenterManagerThread(
         segmenter=SegmentThresh(
@@ -50,7 +50,7 @@ def test_event_extractor_manager_thread():
         fe_kwargs=fe_kwargs,
         num_workers=1,
         labels_list=thr_segm.labels_list,
-        writer_dq=collections.deque(),
+        write_queue_size=write_queue_size,
         debug=True)
     thr_feat.run()
     thr_segm.join()

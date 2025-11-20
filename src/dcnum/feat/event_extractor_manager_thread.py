@@ -1,5 +1,4 @@
 """Feature computation: managing event extraction threads"""
-import collections
 import logging
 import multiprocessing as mp
 import threading
@@ -18,7 +17,7 @@ class EventExtractorManagerThread(threading.Thread):
                  labels_list: List,
                  fe_kwargs: Dict,
                  num_workers: int,
-                 writer_dq: collections.deque,
+                 write_queue_size: mp.Value,
                  debug: bool = False,
                  *args, **kwargs):
         """Manage event extraction threads or precesses
@@ -42,9 +41,10 @@ class EventExtractorManagerThread(threading.Thread):
             :func:`.EventExtractor.get_init_kwargs` for more information.
         num_workers:
             Number of child threads or worker processes to use.
-        writer_dq:
-            The queue the writer uses. We monitor this queue. If it
-            fills up, we take a break.
+        write_queue_size:
+            Multiprocessing value holding the number of event chunks
+            waiting to be written to the output file; used for preventing
+            OOM events by stalling data processing when the writer is slow
         debug:
             Whether to run in debugging mode which means only one
             event extraction thread (``num_workers`` has no effect).
@@ -84,8 +84,8 @@ class EventExtractorManagerThread(threading.Thread):
             self.data.image.chunk_shape)
         """Shared labeling array"""
 
-        self.writer_dq = writer_dq
-        """Writer deque to monitor"""
+        self.write_queue_size = write_queue_size
+        """Number of event chunks waiting to be written to the output file"""
 
         self.t_count = 0
         """Time counter for feature extraction"""
@@ -110,10 +110,10 @@ class EventExtractorManagerThread(threading.Thread):
         while True:
             # If the writer_dq starts filling up, then this could lead to
             # an oom-kill signal. Stall for the writer to prevent this.
-            if (ldq := len(self.writer_dq)) > 1000:
+            if (ldq := self.write_queue_size.value) > 1000:
                 stalled_sec = 0.
                 for ii in range(60):
-                    if len(self.writer_dq) > 200:
+                    if self.write_queue_size.value > 200:
                         time.sleep(.5)
                         stalled_sec += .5
                 self.logger.warning(

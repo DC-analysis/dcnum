@@ -90,6 +90,9 @@ class DCNumJobRunner(threading.Thread):
         # segmentation frame rate
         self._segm_rate = 0
 
+        self.write_queue_size = mp_spawn.Value("L", 0)
+        """Number of event chunks waiting to be written to the output file"""
+
         # Set up logging
         # General logger for this job
         self.main_logger = logging.getLogger("dcnum")
@@ -673,6 +676,7 @@ class DCNumJobRunner(threading.Thread):
             dq=writer_dq,
             mode="w",
             ds_kwds=ds_kwds,
+            write_queue_size=self.write_queue_size,
         )
         thr_write.start()
 
@@ -742,7 +746,7 @@ class DCNumJobRunner(threading.Thread):
             fe_kwargs=fe_kwargs,
             num_workers=num_extractors,
             labels_list=thr_segm.labels_list,
-            writer_dq=writer_dq,
+            write_queue_size=self.write_queue_size,
             debug=self.job["debug"])
         thr_feat.start()
 
