@@ -20,12 +20,22 @@ def run_benchmark(bm_path, repeats=5):
     print_underline(f"Running {bm_path}")
     bm_path = pathlib.Path(bm_path).resolve()
     os.chdir(f"{bm_path.parent}")
-    bm_mod = importlib.import_module(f"{bm_path.stem}")
+    bm_cls = importlib.import_module(f"{bm_path.stem}").Benchmark
 
     reps = []
     print("Running...", end="\r")
     for ii in range(repeats):
-        t = timeit.timeit(bm_mod.main, setup=bm_mod.setup, number=1)
+        # initialize benchmarker
+        bm = bm_cls()
+        # run the benchmark
+        t = timeit.timeit(bm.benchmark,
+                          number=1)
+        # optionally verify the benchmark output
+        if hasattr(bm, "verify"):
+            bm.verify()
+        # optionally clean up after the benchmark
+        if hasattr(bm, "teardown"):
+            bm.teardown()
         reps.append(t)
         print(f"Running {ii + 1}/{repeats}", end="\r")
     print(reps)
