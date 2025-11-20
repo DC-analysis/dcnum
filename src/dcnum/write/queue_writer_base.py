@@ -18,7 +18,7 @@ from .writer import set_default_filter_kwargs
 class QueueWriterBase:
     def __init__(self,
                  event_queue: mp.Queue,
-                 write_queue_size: deque,
+                 write_queue_size: mp.Value,
                  feat_nevents: mp.Array,
                  path_out: pathlib.Path,
                  write_threshold: int = 500,
