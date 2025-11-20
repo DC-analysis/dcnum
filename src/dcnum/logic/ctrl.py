@@ -26,7 +26,7 @@ from ..meta import ppid
 from ..read import HDF5Data, get_measurement_identifier, get_mapping_indices
 from .._version import version, version_tuple
 from ..write import (
-    ChunkWriter, HDF5Writer, QueueCollectorThread, copy_features,
+    ChunkWriter, HDF5Writer, QueueWriterThread, copy_features,
     copy_metadata, create_with_basins, set_default_filter_kwargs
 )
 
@@ -522,7 +522,7 @@ class DCNumJobRunner(threading.Thread):
         with HDF5Writer(self.path_temp_out) as hw:
             hout = hw.h5
             # First, we have to determine the basin mapping from input to
-            # output. This information is stored by the QueueCollectorThread
+            # output. This information is stored by the QueueWriterThread
             # in the "basinmap0" feature, ready to be used by us.
             if "index_unmapped" in hout["events"]:
                 # The unmapped indices enumerate the events in the output file
@@ -747,7 +747,7 @@ class DCNumJobRunner(threading.Thread):
         thr_feat.start()
 
         # Start the data collection thread
-        thr_coll = QueueCollectorThread(
+        thr_coll = QueueWriterThread(
             event_queue=fe_kwargs["event_queue"],
             writer_dq=writer_dq,
             feat_nevents=fe_kwargs["feat_nevents"],

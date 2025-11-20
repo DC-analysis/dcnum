@@ -10,7 +10,7 @@ import numpy as np
 from .event_stash import EventStash
 
 
-class QueueCollectorBase:
+class QueueWriterBase:
     def __init__(self,
                  event_queue: mp.Queue,
                  writer_dq: deque,
@@ -18,10 +18,10 @@ class QueueCollectorBase:
                  write_threshold: int = 500,
                  *args, **kwargs
                  ):
-        """Convenience class for events from queues
+        """Write events from a queue to an .rtdc file
 
         Events coming from a queue cannot be guaranteed to be in order.
-        The :class:`.QueueCollectorThread` uses a :class:`.EventStash`
+        The :class:`.QueueWriterThread` uses a :class:`.EventStash`
         to sort events into the correct order before sending them to
         the :class:`ChunkWriter` for storage.
 
@@ -53,7 +53,7 @@ class QueueCollectorBase:
             `np.sum(feat_nevents[idx:idx+write_threshold])`.
         """
         # Must call super init, otherwise Thread or Process are not initialized
-        super(QueueCollectorBase, self).__init__()
+        super(QueueWriterBase, self).__init__()
 
         self.logger = logging.getLogger("dcnum.write.QueueCollector")
 

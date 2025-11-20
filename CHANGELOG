@@ -1,6 +1,7 @@
 0.26.0
  - ref: migrate classes in `write` module to individual files
  - ref: rename `DequeueWriterThread` to `ChunkWriter`
+ - ref: rename `QueueCollectorThread` to `QueueWriterThread`
 0.25.11
  - enh: align measurement identifier computation with that of dclab
  - enh: new `get_measurement_identifier` method

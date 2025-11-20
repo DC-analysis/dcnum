@@ -41,14 +41,14 @@ def test_event_stash():
                   == [100, 100, 120, 150, 100, 100, 110, 120, 130, 140])
 
 
-def test_queue_collector_thread():
+def test_queue_writer_thread():
     # keyword arguments
     event_queue = mp.Queue()
     writer_dq = collections.deque()
     feat_nevents = np.array([1, 3, 1, 5])
     write_threshold = 2
     # queue collector thread
-    qct = write.QueueCollectorThread(
+    qct = write.QueueWriterThread(
         event_queue=event_queue,
         writer_dq=writer_dq,
         feat_nevents=feat_nevents,
@@ -93,14 +93,14 @@ def test_queue_collector_thread():
     assert len(writer_dq) == 0
 
 
-def test_queue_collector_thread_with_full_stash():
+def test_queue_writer_thread_with_full_stash():
     # keyword arguments
     event_queue = mp.Queue()
     writer_dq = collections.deque()
     feat_nevents = np.array([1, 3, 1, 5])
     write_threshold = 2
     # queue collector thread
-    qct = write.QueueCollectorThread(
+    qct = write.QueueWriterThread(
         event_queue=event_queue,
         writer_dq=writer_dq,
         feat_nevents=feat_nevents,
