@@ -54,13 +54,22 @@ class HDF5Writer:
             self.h5 = obj
             self.h5_owned = False
         else:
-            self.h5 = h5py.File(obj,
-                                mode=mode,
-                                libver="latest",
-                                # Set chunk cache size to 3 MiB for each
-                                # dataset to allow partial writes.
-                                rdcc_nbytes=3145728,
-                                )
+            self.h5 = h5py.File(
+                obj,
+                mode=mode,
+                libver="latest",
+                # https://support.hdfgroup.org/documentation/hdf5-docs/advanced_topics/chunking_in_hdf5.html
+                # https://docs.h5py.org/en/stable/high/file.html#chunk-cache
+                # Set chunk cache size to for each
+                # dataset to allow partial writes.
+                rdcc_nbytes=10 * 1024**2,
+                # If the value is set to 1, the library will
+                # always evict the least recently used chunk
+                # which has been fully read or written
+                rdcc_w0=1,
+                # The number of chunk slots in the cache for each dataset.
+                rdcc_nslots=1000,
+                )
             self.h5_owned = True
         self.events = self.h5.require_group("events")
         ds_kwds = set_default_filter_kwargs(ds_kwds)
