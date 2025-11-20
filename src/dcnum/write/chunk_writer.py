@@ -9,7 +9,7 @@ import h5py
 from .writer import HDF5Writer
 
 
-class DequeWriterThread(threading.Thread):
+class ChunkWriter(threading.Thread):
     def __init__(self,
                  path_out: pathlib.Path | h5py.File,
                  dq: collections.deque,
@@ -17,6 +17,8 @@ class DequeWriterThread(threading.Thread):
                  mode: str = "a",
                  *args, **kwargs):
         """Convenience class for writing to data outside the main loop
+
+        Data are numpy arrays collected from a `dequeue` object
 
         Parameters
         ----------
@@ -26,8 +28,8 @@ class DequeWriterThread(threading.Thread):
             `collections.deque` object from which data are taken
             using `popleft()`.
         """
-        super(DequeWriterThread, self).__init__(*args, **kwargs)
-        self.logger = logging.getLogger("dcnum.write.DequeWriterThread")
+        super(ChunkWriter, self).__init__(*args, **kwargs)
+        self.logger = logging.getLogger("dcnum.write.ChunkWriter")
         if mode == "w":
             path_out.unlink(missing_ok=True)
         self.writer = HDF5Writer(path_out, mode=mode, ds_kwds=ds_kwds)

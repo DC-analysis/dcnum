@@ -1,5 +1,5 @@
 # flake8: noqa: F401
-from .deque_writer_thread import DequeWriterThread
+from .chunk_writer import ChunkWriter
 from .event_stash import EventStash
 from .queue_collector_thread import QueueCollectorThread
 from .writer import (

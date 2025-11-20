@@ -26,7 +26,7 @@ from ..meta import ppid
 from ..read import HDF5Data, get_measurement_identifier, get_mapping_indices
 from .._version import version, version_tuple
 from ..write import (
-    DequeWriterThread, HDF5Writer, QueueCollectorThread, copy_features,
+    ChunkWriter, HDF5Writer, QueueCollectorThread, copy_features,
     copy_metadata, create_with_basins, set_default_filter_kwargs
 )
 
@@ -668,7 +668,7 @@ class DCNumJobRunner(threading.Thread):
         # Start writer thread
         writer_dq = collections.deque()
         ds_kwds = set_default_filter_kwargs()
-        thr_write = DequeWriterThread(
+        thr_write = ChunkWriter(
             path_out=self.path_temp_out,
             dq=writer_dq,
             mode="w",

@@ -12,7 +12,7 @@ def test_writer_thread_basic():
     path_wrt = path.with_name("written.hdf5")
     dq = collections.deque()
 
-    wrthr = write.DequeWriterThread(path_out=path_wrt, dq=dq)
+    wrthr = write.ChunkWriter(path_out=path_wrt, dq=dq)
     wrthr.start()
 
     with h5py.File(path) as h5:

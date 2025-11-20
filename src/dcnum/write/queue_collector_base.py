@@ -23,7 +23,7 @@ class QueueCollectorBase:
         Events coming from a queue cannot be guaranteed to be in order.
         The :class:`.QueueCollectorThread` uses a :class:`.EventStash`
         to sort events into the correct order before sending them to
-        the :class:`DequeWriterThread` for storage.
+        the :class:`ChunkWriter` for storage.
 
         Parameters
         ----------
@@ -31,7 +31,7 @@ class QueueCollectorBase:
             A queue object to which other processes or threads write
             events as tuples `(frame_index, events_dict)`.
         writer_dq:
-            A :class:`DequeWriterThread` should be attached to the
+            A :class:`ChunkWriter` should be attached to the
             other end of this :class:`collections.deque`.
         feat_nevents:
             This 1D array contains the number of events for each frame
