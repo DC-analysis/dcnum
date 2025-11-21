@@ -12,7 +12,6 @@ from ..common import join_thread_helper
 
 from .chunk_writer import ChunkWriter
 from .event_stash import EventStash
-from .writer import set_default_filter_kwargs
 
 
 mp_spawn = mp.get_context("spawn")
@@ -24,6 +23,7 @@ class QueueWriterBase:
                  write_queue_size: mp.Value,
                  feat_nevents: mp.Array,
                  path_out: pathlib.Path,
+                 hdf5_dataset_kwargs: dict = None,
                  write_threshold: int = 500,
                  *args, **kwargs
                  ):
@@ -54,6 +54,9 @@ class QueueWriterBase:
             is no event in `event_queue`. See `write_threshold` below.
         path_out:
             Output path for writer
+        hdf5_dataset_kwargs:
+            Dictionary of keyword arguments (e.g. "compression") for
+            HDF5 dataset creation.
         write_threshold:
             This integer defines how many frames should be collected at
             once and put into `writer_dq`. For instance, with a value of
@@ -82,6 +85,9 @@ class QueueWriterBase:
 
         self.path_out = path_out
         """HDF5 output path"""
+
+        self.hdf5_dataset_kwargs = hdf5_dataset_kwargs
+        """HDF5 dataset creation keyword arguments"""
 
         self.write_threshold = write_threshold
         """Number of frames to send to `writer_dq` at a time."""
@@ -120,7 +126,7 @@ class QueueWriterBase:
             path_out=self.path_out,
             dq=writer_dq,
             mode="w",
-            ds_kwds=set_default_filter_kwargs(),
+            ds_kwds=self.hdf5_dataset_kwargs,
             write_queue_size=self.write_queue_size,
             parent_logger=logger,
         )

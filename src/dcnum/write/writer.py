@@ -539,13 +539,19 @@ def copy_metadata(h5_src: h5py.File,
                         ds.attrs["software"] = " | ".join(soft_strgs)
 
 
-def set_default_filter_kwargs(ds_kwds=None, compression=True):
+def set_default_filter_kwargs(ds_kwds: dict = None,
+                              compression: bool = True):
     if ds_kwds is None:
         ds_kwds = {}
-    if compression:
-        # compression
+    if compression and "compression" not in ds_kwds:
+        # Zstandard compression
         for key, val in dict(hdf5plugin.Zstd(clevel=5)).items():
             ds_kwds.setdefault(key, val)
+    else:
+        # No compression
+        ds_kwds.setdefault("compression", None)
+        ds_kwds.setdefault("compression_opts", None)
+
     # checksums
     ds_kwds.setdefault("fletcher32", True)
     return ds_kwds

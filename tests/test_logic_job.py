@@ -17,6 +17,37 @@ def test_basic_job():
     assert not job["debug"]
 
 
+def test_compression_options_default():
+    path = retrieve_data("fmt-hdf5_cytoshot_full-features_2023.zip")
+    job = logic.DCNumPipelineJob(path_in=path)
+    assert job.get_hdf5_dataset_kwargs() == {"fletcher32": True,
+                                             "compression": 32015,
+                                             "compression_opts": (5,)}
+
+
+def test_compression_options_none():
+    path = retrieve_data("fmt-hdf5_cytoshot_full-features_2023.zip")
+    job = logic.DCNumPipelineJob(path_in=path, compression="none")
+    assert job.get_hdf5_dataset_kwargs() == {"fletcher32": True,
+                                             "compression": None,
+                                             "compression_opts": None}
+
+
+def test_compression_options_zstd_high():
+    path = retrieve_data("fmt-hdf5_cytoshot_full-features_2023.zip")
+    job = logic.DCNumPipelineJob(path_in=path, compression="zstd-9")
+    assert job.get_hdf5_dataset_kwargs() == {"fletcher32": True,
+                                             "compression": 32015,
+                                             "compression_opts": (9,)}
+
+
+def test_compression_options_zstd_invalid():
+    path = retrieve_data("fmt-hdf5_cytoshot_full-features_2023.zip")
+    job = logic.DCNumPipelineJob(path_in=path, compression="foobar-9")
+    with pytest.raises(ValueError, match="Unsupported compression"):
+        job.get_hdf5_dataset_kwargs()
+
+
 def test_copied_data():
     path = retrieve_data("fmt-hdf5_cytoshot_full-features_2023.zip")
     job = logic.DCNumPipelineJob(path_in=path,

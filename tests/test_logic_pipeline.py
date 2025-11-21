@@ -328,6 +328,29 @@ def test_chained_pipeline():
             assert len(h5["events"][feat]) == 285
 
 
+def test_compression():
+    path_orig = retrieve_data("fmt-hdf5_cytoshot_full-features_2023.zip")
+    path = path_orig.with_name("input.rtdc")
+    with read.concatenated_hdf5_data(5 * [path_orig], path_out=path):
+        pass
+
+    with read.HDF5Data(path) as hd:
+        assert len(hd) == 200, "sanity check"
+
+    job = logic.DCNumPipelineJob(
+        path_in=path,
+        compression="zstd-3",
+    )
+    with logic.DCNumJobRunner(job=job) as runner:
+        runner.run()
+
+    with h5py.File(job.kwargs["path_out"]) as h5:
+        ds = h5["events/deform"]
+        create_plist = ds.id.get_create_plist()
+        filter_args = create_plist.get_filter_by_id(32015)
+        assert filter_args[1] == (3,)
+
+
 def test_duplicate_pipeline():
     """Test running the same pipeline twice
 

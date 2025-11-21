@@ -746,6 +746,7 @@ class DCNumJobRunner(threading.Thread):
                 write_queue_size=self.write_queue_size,
                 feat_nevents=fe_kwargs["feat_nevents"],
                 path_out=self.path_temp_out,
+                hdf5_dataset_kwargs=self.job.get_hdf5_dataset_kwargs(),
                 write_threshold=500,
                 )
         else:
@@ -754,6 +755,7 @@ class DCNumJobRunner(threading.Thread):
                 write_queue_size=self.write_queue_size,
                 feat_nevents=fe_kwargs["feat_nevents"],
                 path_out=self.path_temp_out,
+                hdf5_dataset_kwargs=self.job.get_hdf5_dataset_kwargs(),
                 write_threshold=500,
                 log_queue=self.log_queue,
                 )

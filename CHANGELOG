@@ -1,5 +1,6 @@
 0.26.0
  - feat: data writing is now done in a separate process (#32)
+ - enh: allow passing compression options via `DCNumPipelineJob`
  - ref: migrate classes in `write` module to individual files
  - ref: rename `DequeueWriterThread` to `ChunkWriter`
  - ref: rename `QueueCollectorThread` to `QueueWriterThread`
