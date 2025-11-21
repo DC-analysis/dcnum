@@ -9,6 +9,8 @@ import warnings
 import h5py
 import numpy as np
 
+from .mapped import MappedHDF5Dataset
+
 
 class EmptyDatasetWarning(UserWarning):
     """Used for files that contain no actual data"""
@@ -119,7 +121,7 @@ class BaseImageChunkCache(abc.ABC):
 
 class HDF5ImageCache(BaseImageChunkCache):
     def __init__(self,
-                 h5ds: h5py.Dataset,
+                 h5ds: h5py.Dataset | MappedHDF5Dataset,
                  chunk_size: int = 1000,
                  cache_size: int = 2,
                  boolean: bool = False):
@@ -132,13 +134,29 @@ class HDF5ImageCache(BaseImageChunkCache):
         `HDF5ImageCache` class caches the chunks from the HDF5 files
         into memory, making single-image-access very fast.
         """
+        if isinstance(h5ds, h5py.Dataset) and h5ds.chunks is not None:
+            # Align the `HDF5ImageCache` chunk size to the chunk size
+            # of the underlying HDF5 dataset.
+            # The alignment is not applied to:
+            # - `h5py.Dataset` data that are stored in contiguous mode
+            # - `MappedHDF5Dataset` instances
+            # Determine the chunk size of the dataset.
+            ds_chunk_size = h5ds.chunks[0]
+            if ds_chunk_size >= chunk_size:
+                # Adopt the actual chunk size. Nothing else makes sense.
+                chunk_size = ds_chunk_size
+            else:
+                # Determine the multiples of chunks that comprise
+                # the new chunk_size.
+                divider = chunk_size // ds_chunk_size
+                # The new chunk size might be smaller than the original one.
+                chunk_size = divider * ds_chunk_size
+
         super(HDF5ImageCache, self).__init__(
             shape=h5ds.shape,
             chunk_size=chunk_size,
             cache_size=cache_size)
-        # TODO:
-        # - adjust chunking to multiples of the chunks in the dataset
-        #   (which might slightly speed up things)
+
         self.h5ds = h5ds
         self.boolean = boolean
 
