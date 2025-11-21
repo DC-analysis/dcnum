@@ -44,23 +44,23 @@ class DCNumPipelineJob:
         path_out: pathlib.Path | str
             output data path
         data_code: str
-            code of input data reader to use
+            identification code of input data reader to use
         data_kwargs: dict
             keyword arguments for data reader
         background_code: str
-            code of background data computer to use
+            identification code of background data computation method
         background_kwargs: dict
-            keyword arguments for background data computer
+            keyword arguments for background data computation method
         segmenter_code: str
-            code of segmenter to use
+            identification code of segmenter to use
         segmenter_kwargs: dict
             keyword arguments for segmenter
         feature_code: str
-            code of feature extractor
+            identification code of feature extractor
         feature_kwargs: dict
             keyword arguments for feature extractor
         gate_code: str
-            code for gating/event filtering class
+            identification code for gating/event filtering class
         gate_kwargs: dict
             keyword arguments for gating/event filtering class
         basin_strategy: str
