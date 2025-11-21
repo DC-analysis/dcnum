@@ -17,6 +17,7 @@ class ChunkWriter(threading.Thread):
                  write_queue_size: mp.Value,
                  ds_kwds: dict = None,
                  mode: str = "a",
+                 parent_logger: logging.Logger = None,
                  *args, **kwargs):
         """Convenience class for writing to data outside the main loop
 
@@ -39,7 +40,10 @@ class ChunkWriter(threading.Thread):
             HDF5 file opening mode, passed to :class:`.HDF5Writer`
         """
         super(ChunkWriter, self).__init__(*args, **kwargs)
-        self.logger = logging.getLogger("dcnum.write.ChunkWriter")
+        if parent_logger is None:
+            self.logger = logging.getLogger("dcnum.write.ChunkWriter")
+        else:
+            self.logger = parent_logger.getChild("ChunkWriter")
         if mode == "w":
             path_out.unlink(missing_ok=True)
         self.writer = HDF5Writer(path_out, mode=mode, ds_kwds=ds_kwds)

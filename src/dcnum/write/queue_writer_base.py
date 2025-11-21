@@ -1,6 +1,6 @@
 import collections
-import logging
 from collections import deque
+import logging
 import queue
 import multiprocessing as mp
 import pathlib
@@ -13,6 +13,9 @@ from ..common import join_thread_helper
 from .chunk_writer import ChunkWriter
 from .event_stash import EventStash
 from .writer import set_default_filter_kwargs
+
+
+mp_spawn = mp.get_context("spawn")
 
 
 class QueueWriterBase:
@@ -61,10 +64,11 @@ class QueueWriterBase:
             output size could be 513 which is computed via
             `np.sum(feat_nevents[idx:idx+write_threshold])`.
         """
+        self.log_level = logging.getLogger("dcnum").level
+        """logging level (inherited from 'dcnum' logger)"""
+
         # Must call super init, otherwise Thread or Process are not initialized
         super(QueueWriterBase, self).__init__()
-
-        self.logger = logging.getLogger("dcnum.write.QueueCollector")
 
         self.event_queue = event_queue
         """Event queue from which to collect event data"""
@@ -82,19 +86,29 @@ class QueueWriterBase:
         self.write_threshold = write_threshold
         """Number of frames to send to `writer_dq` at a time."""
 
-        self.written_events = 0
+        self.written_events = mp_spawn.Value("L", 0)
         """Number of events sent to `writer_dq`"""
 
-        self.written_frames = 0
+        self.written_frames = mp_spawn.Value("L", 0)
         """Number of frames from `data` written to `writer_dq`"""
 
-    def run(self, buffer_dq=None, writer_dq=None):
+    def get_logger(self):
+        # We do not set the `self.logger` property, because that will cause
+        # problems with the QueueWriterProcess (since logger has a thread
+        # attached to it). It is safer to create the logger in `run` instead.
+        logger = logging.getLogger(f"dcnum.write.{self.__class__.__name__}")
+        logger.setLevel(self.log_level)
+        return logger
+
+    def run(self, buffer_dq=None, writer_dq=None, logger=None):
         """Start the writing process
 
         This method is intended to be run in a thread or process.
 
         `buffer_dq` and `writer_dq` are used for testing.
         """
+        if logger is None:
+            logger = self.get_logger()
         # We are not writing to `event_queue` so we can safely cancel
         # our queue thread if we are told to stop.
         self.event_queue.cancel_join_thread()
@@ -108,6 +122,7 @@ class QueueWriterBase:
             mode="w",
             ds_kwds=set_default_filter_kwargs(),
             write_queue_size=self.write_queue_size,
+            parent_logger=logger,
         )
         thr_write.start()
 
@@ -118,7 +133,7 @@ class QueueWriterBase:
 
         # Indexes the current frame in the input HDF5Data instance.
         last_idx = 0
-        self.logger.debug("Started collector thread")
+        logger.debug("Started collector thread")
         while True:
             # Slice of the shared nevents array. If it contains -1 values,
             # this means that some of the frames have not yet been processed.
@@ -130,7 +145,7 @@ class QueueWriterBase:
                 continue
 
             if len(cur_nevents) == 0:
-                self.logger.info(
+                logger.info(
                     "Reached dataset end (frame "
                     # `last_idx` is the size of the dataset in the end,
                     # because `len(cur_nevents)` is always added to it.
@@ -139,7 +154,7 @@ class QueueWriterBase:
 
             # We have reached the writer threshold. This means the extractor
             # has analyzed at least `write_threshold` frames (not events).
-            self.logger.debug(f"Current frame: {last_idx}")
+            logger.debug(f"Current frame: {last_idx}")
 
             # Create an event stash
             stash = EventStash(
@@ -209,8 +224,8 @@ class QueueWriterBase:
                                   indices - stash.index_offset]
                               ))
             # Update events/frames written (used for monitoring)
-            self.written_events += stash.size
-            self.written_frames += stash.num_frames
+            self.written_events.value += stash.size
+            self.written_frames.value += stash.num_frames
 
             # Increment current frame index.
             last_idx += len(cur_nevents)
@@ -220,8 +235,8 @@ class QueueWriterBase:
         join_thread_helper(thr=thr_write,
                            timeout=600,
                            retries=10,
-                           logger=self.logger,
+                           logger=logger,
                            name="writer")
 
-        self.logger.info(f"Counted {self.written_events} events")
-        self.logger.debug(f"Counted {self.written_frames} frames")
+        logger.info(f"Counted {self.written_events.value} events")
+        logger.debug(f"Counted {self.written_frames.value} frames")

@@ -26,7 +26,7 @@ from ..meta import ppid
 from ..read import HDF5Data, get_measurement_identifier, get_mapping_indices
 from .._version import version, version_tuple
 from ..write import (
-    HDF5Writer, QueueWriterThread, copy_features,
+    HDF5Writer, QueueWriterProcess, QueueWriterThread, copy_features,
     copy_metadata, create_with_basins,
 )
 
@@ -525,7 +525,7 @@ class DCNumJobRunner(threading.Thread):
         with HDF5Writer(self.path_temp_out) as hw:
             hout = hw.h5
             # First, we have to determine the basin mapping from input to
-            # output. This information is stored by the QueueWriterThread
+            # output. This information is stored by the QueueWriter
             # in the "basinmap0" feature, ready to be used by us.
             if "index_unmapped" in hout["events"]:
                 # The unmapped indices enumerate the events in the output file
@@ -690,12 +690,12 @@ class DCNumJobRunner(threading.Thread):
             # Split segmentation and feature extraction workers evenly.
             num_extractors = self.job["num_procs"] // 2
             num_segmenters = self.job["num_procs"] - num_extractors
-            # leave one CPU for the writer and the remaining Threads
+            # Leave one CPU for the writer and the other threads.
             num_segmenters -= 1
         else:  # GPU segmenter
             num_slots = 3
             num_extractors = self.job["num_procs"]
-            # leave one CPU for the writer and the remaining Threads
+            # Leave one CPU for the writer and the other threads.
             num_extractors -= 1
             num_segmenters = 1
         num_extractors = max(1, num_extractors)
@@ -740,14 +740,24 @@ class DCNumJobRunner(threading.Thread):
         thr_feat.start()
 
         # Start the data collection thread
-        thr_coll = QueueWriterThread(
-            event_queue=fe_kwargs["event_queue"],
-            write_queue_size=self.write_queue_size,
-            feat_nevents=fe_kwargs["feat_nevents"],
-            path_out=self.path_temp_out,
-            write_threshold=500,
-        )
-        thr_coll.start()
+        if self.job["debug"]:
+            worker_write = QueueWriterThread(
+                event_queue=fe_kwargs["event_queue"],
+                write_queue_size=self.write_queue_size,
+                feat_nevents=fe_kwargs["feat_nevents"],
+                path_out=self.path_temp_out,
+                write_threshold=500,
+                )
+        else:
+            worker_write = QueueWriterProcess(
+                event_queue=fe_kwargs["event_queue"],
+                write_queue_size=self.write_queue_size,
+                feat_nevents=fe_kwargs["feat_nevents"],
+                path_out=self.path_temp_out,
+                write_threshold=500,
+                log_queue=self.log_queue,
+                )
+        worker_write.start()
 
         data_size = len(self.dtin)
         t0 = time.monotonic()
@@ -755,8 +765,8 @@ class DCNumJobRunner(threading.Thread):
         # So in principle we are done here. We do not have to do anything
         # besides monitoring the progress.
         while True:
-            counted_frames = thr_coll.written_frames
-            self.event_count = thr_coll.written_events
+            counted_frames = worker_write.written_frames.value
+            self.event_count = worker_write.written_events.value
             td = time.monotonic() - t0
             # set the current status
             self._progress_ex = counted_frames / data_size
@@ -776,7 +786,7 @@ class DCNumJobRunner(threading.Thread):
         # Join the collector thread before the feature extractors. On
         # compute clusters, we had problems with joining the feature
         # extractors, maybe because the event_queue was not depleted.
-        join_thread_helper(thr=thr_coll,
+        join_thread_helper(thr=worker_write,
                            timeout=600,
                            retries=10,
                            logger=self.logger,
@@ -787,7 +797,7 @@ class DCNumJobRunner(threading.Thread):
                            logger=self.logger,
                            name="feature extraction")
 
-        self.event_count = thr_coll.written_events
+        self.event_count = worker_write.written_events.value
         if self.event_count == 0:
             self.logger.error(
                 f"No events found in {self.draw.path}! Please check the "
