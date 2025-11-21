@@ -5,7 +5,6 @@ import logging
 import multiprocessing as mp
 import pathlib
 from typing import Dict, Literal
-import warnings
 
 from ..feat import QueueEventExtractor
 from ..feat.feat_background.base import get_available_background_methods
@@ -30,7 +29,6 @@ class DCNumPipelineJob:
                  gate_code: str = "norm",
                  gate_kwargs: Dict = None,
                  basin_strategy: Literal["drain", "tap"] = "drain",
-                 no_basins_in_output: bool = None,
                  num_procs: int = None,
                  log_level: int = logging.INFO,
                  debug: bool = False,
@@ -72,8 +70,6 @@ class DCNumPipelineJob:
               will contain all features, but will also be very big.
             - You can "tap" the basins, including the input file, which means
               that the output file will be comparatively small.
-        no_basins_in_output: bool
-            Deprecated
         num_procs: int
             Number of processes to use
         log_level: int
@@ -82,14 +78,6 @@ class DCNumPipelineJob:
             Whether to set logging level to "DEBUG" and
             use threads instead of processes
         """
-        if no_basins_in_output is not None:
-            warnings.warn("The `no_basins_in_output` keyword argument is "
-                          "deprecated. Please use `basin_strategy` instead.")
-            if no_basins_in_output:
-                basin_strategy = "drain"
-            else:
-                basin_strategy = "tap"
-
         self.kwargs = {}
         """initialize keyword arguments for this job"""
 

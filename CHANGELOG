@@ -7,6 +7,7 @@
    writer queue size to `EventExtractorManagerThread`
  - ref: instantiate `ChunkWriter` in `QueueWriterBase.run`
  - ref: add `common` submodule
+ - ref: remove deprecated `no_basins_in_output` argument for `DCNumPipelineJob`
 0.25.11
  - enh: align measurement identifier computation with that of dclab
  - enh: new `get_measurement_identifier` method
