@@ -441,6 +441,7 @@ def copy_features(h5_src: h5py.File,
                   h5_dst: h5py.File,
                   features: List[str],
                   mapping: np.ndarray = None,
+                  ds_kwds: dict = None,
                   ):
     """Copy feature data from one HDF5 file to another
 
@@ -457,15 +458,19 @@ def copy_features(h5_src: h5py.File,
     mapping: 1D array
         If given, contains indices in the input file that should be
         written to the output file. If set to None, all features are written.
+    ds_kwds:
+        keyword arguments with which to initialize new Datasets
+        (e.g. compression); only relevant when `mapping is not None`
     """
     ei = h5_src["events"]
     eo = h5_dst.require_group("events")
-    hw = HDF5Writer(h5_dst)
+    hw = HDF5Writer(h5_dst, ds_kwds=ds_kwds)
     for feat in features:
         if feat in eo:
             if ei[feat].shape == eo[feat].shape:
                 # Feature already exists in output file
-                if len(ei[feat].shape) == 1 and np.all(ei[feat] == eo[feat]):
+                if (len(ei[feat].shape) == 1
+                        and np.all(ei[feat][:] == eo[feat][:])):
                     # Scalar features are identical, nothing to do.
                     continue
                 # TODO: Check non-scalar features with loop (OOM)?

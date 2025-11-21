@@ -522,7 +522,9 @@ class DCNumJobRunner(threading.Thread):
         #   internal basin in the output file.
 
         # Determine the basinmap feature
-        with HDF5Writer(self.path_temp_out) as hw:
+        with HDF5Writer(self.path_temp_out,
+                        ds_kwds=self.job.get_hdf5_dataset_kwargs(),
+                        ) as hw:
             hout = hw.h5
             # First, we have to determine the basin mapping from input to
             # output. This information is stored by the QueueWriter
@@ -636,10 +638,13 @@ class DCNumJobRunner(threading.Thread):
                       or importance == "critical"):
                     # DRAIN: Copy all features over to the output file.
                     self.logger.debug(f"Transferring {feats} to output file")
-                    copy_features(h5_src=hin,
-                                  h5_dst=hout,
-                                  features=feats,
-                                  mapping=basinmap0)
+                    copy_features(
+                        h5_src=hin,
+                        h5_dst=hout,
+                        features=feats,
+                        mapping=basinmap0,
+                        ds_kwds=self.job.get_hdf5_dataset_kwargs(),
+                      )
                 else:
                     # TAP: Create basins for the "optional" features in the
                     # output file. Note that the "critical" features never

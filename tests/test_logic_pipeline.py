@@ -329,8 +329,10 @@ def test_chained_pipeline():
 
 
 def test_compression():
+    """Compression level in job info must be honored"""
     path_orig = retrieve_data("fmt-hdf5_cytoshot_full-features_2023.zip")
     path = path_orig.with_name("input.rtdc")
+    path_out = path_orig.with_name("output.rtdc")
     with read.concatenated_hdf5_data(5 * [path_orig], path_out=path):
         pass
 
@@ -339,16 +341,59 @@ def test_compression():
 
     job = logic.DCNumPipelineJob(
         path_in=path,
+        path_out=path_out,
         compression="zstd-3",
+        basin_strategy="drain",
     )
     with logic.DCNumJobRunner(job=job) as runner:
         runner.run()
 
-    with h5py.File(job.kwargs["path_out"]) as h5:
-        ds = h5["events/deform"]
-        create_plist = ds.id.get_create_plist()
-        filter_args = create_plist.get_filter_by_id(32015)
-        assert filter_args[1] == (3,)
+    with h5py.File(path_out) as h5:
+        # Deformation is a new feature and should have been compressed
+        # with clevel=3.
+        deform = h5["events/deform"]
+        deform_create_plist = deform.id.get_create_plist()
+        deform_filter_args = deform_create_plist.get_filter_by_id(32015)
+        assert deform_filter_args[1] == (3,)
+
+
+def test_compression_redo_low():
+    """Data are not recompressed when new compression level is lower"""
+    path_orig = retrieve_data("fmt-hdf5_cytoshot_full-features_2023.zip")
+    path = path_orig.with_name("input.rtdc")
+    path_mid = path_orig.with_name("middle.rtdc")
+    path_out = path_orig.with_name("output.rtdc")
+    with read.concatenated_hdf5_data(5 * [path_orig], path_out=path):
+        pass
+
+    with read.HDF5Data(path) as hd:
+        assert len(hd) == 200, "sanity check"
+
+    job = logic.DCNumPipelineJob(
+        path_in=path,
+        path_out=path_mid,
+        compression="zstd-4",
+        basin_strategy="drain",
+    )
+    with logic.DCNumJobRunner(job=job) as runner:
+        runner.run()
+
+    job2 = logic.DCNumPipelineJob(
+        path_in=path_mid,
+        path_out=path_out,
+        compression="zstd-3",
+        basin_strategy="drain",
+    )
+    with logic.DCNumJobRunner(job=job2) as runner2:
+        runner2.run()
+
+    with h5py.File(path_out) as h5:
+        # Since no segmentation took place in the second job, all data
+        # should still have the initial compression level 4.
+        deform = h5["events/deform"]
+        deform_create_plist = deform.id.get_create_plist()
+        deform_filter_args = deform_create_plist.get_filter_by_id(32015)
+        assert deform_filter_args[1] == (4,)
 
 
 def test_duplicate_pipeline():
