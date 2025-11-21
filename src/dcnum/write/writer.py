@@ -433,8 +433,12 @@ def copy_basins(h5_src: h5py.File,
                            identifier=bn_dict.get("identifier"),
                            )
         else:
-            warnings.warn(f"Ignored basin of type '{bn_dict['type']}'",
-                          IgnoringBasinTypeWarning)
+            if bn_dict['type'] == "internal" and not internal_basins:
+                # User explicitly ignored internal basin.
+                pass
+            else:
+                warnings.warn(f"Ignored basin of type '{bn_dict['type']}'",
+                              IgnoringBasinTypeWarning)
 
 
 def copy_features(h5_src: h5py.File,
