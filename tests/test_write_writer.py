@@ -130,11 +130,12 @@ def test_copy_features_error_exists():
 
     with h5py.File(path, "r") as h5_src, h5py.File(path_wrt, "w") as h5_dst:
         write.copy_metadata(h5_src=h5_src, h5_dst=h5_dst)
-        write.copy_features(h5_src=h5_src,
-                            h5_dst=h5_dst,
-                            features=["deform"],
-                            )
+        # create a fake deform feature that does not match.
+        h5_dst["events/deform"] = h5_src["events/deform"][:] * 1.1
+
         with pytest.raises(ValueError, match="already contains the feature"):
+            # This will raise the error, because the features differ.
+            # See `test_copy_features_skip_identical` for the other case.
             write.copy_features(h5_src=h5_src,
                                 h5_dst=h5_dst,
                                 features=["deform"],
@@ -206,6 +207,26 @@ def test_copy_features_large_dataset(samples):
     # make sure this worked
     with h5py.File(path_large) as hl, h5py.File(path_out) as ho:
         assert np.all(hl["events/image"][:][mapping] == ho["events/image"][:])
+
+
+def test_copy_features_skip_identical():
+    path = retrieve_data(
+        "fmt-hdf5_cytoshot_full-features_legacy_allev_2023.zip")
+    path_wrt = path.with_name("written.hdf5")
+
+    with h5py.File(path, "r") as h5_src, h5py.File(path_wrt, "w") as h5_dst:
+        write.copy_metadata(h5_src=h5_src, h5_dst=h5_dst)
+        # create a fake deform feature that does not match.
+        write.copy_features(h5_src=h5_src,
+                            h5_dst=h5_dst,
+                            features=["deform"],
+                            )
+        # Call the method again. This should work, because both features'
+        # data are identical.
+        write.copy_features(h5_src=h5_src,
+                            h5_dst=h5_dst,
+                            features=["deform"],
+                            )
 
 
 def test_copy_metadata_empty_log_variable_length_string():

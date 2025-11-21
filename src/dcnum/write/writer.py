@@ -463,6 +463,12 @@ def copy_features(h5_src: h5py.File,
     hw = HDF5Writer(h5_dst)
     for feat in features:
         if feat in eo:
+            if ei[feat].shape == eo[feat].shape:
+                # Feature already exists in output file
+                if len(ei[feat].shape) == 1 and np.all(ei[feat] == eo[feat]):
+                    # Scalar features are identical, nothing to do.
+                    continue
+                # TODO: Check non-scalar features with loop (OOM)?
             raise ValueError(f"Output file {h5_dst.filename} already contains "
                              f"the feature {feat}.")
         if not isinstance(ei[feat], h5py.Dataset):
