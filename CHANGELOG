@@ -1,5 +1,6 @@
 0.26.0
  - feat: data writing is now done in a separate process (#32)
+ - fix: `create_with_basins` should not add internal basins, but register them
  - enh: allow passing compression options via `DCNumPipelineJob`
  - ref: migrate classes in `write` module to individual files
  - ref: rename `DequeueWriterThread` to `ChunkWriter`

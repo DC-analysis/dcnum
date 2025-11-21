@@ -374,11 +374,14 @@ def create_with_basins(
                 # copy metadata
                 with h5py.File(prep, libver="latest") as h5:
                     copy_metadata(h5_src=h5, h5_dst=hw.h5)
-                    copy_basins(h5_src=h5, h5_dst=hw.h5)
+                    copy_basins(h5_src=h5, h5_dst=hw.h5, internal_basins=False)
                     # extract features
-                    features = sorted(h5["events"].keys())
-                    features = [f for f in features if
-                                not f.startswith("basinmap")]
+                    features = list(h5["events"].keys())
+                    if "basin_events" in h5:
+                        # add features from internal basins
+                        features += list(h5["basin_events"].keys())
+                    features = sorted([f for f in features if
+                                       not f.startswith("basinmap")])
                     basin_identifier = get_measurement_identifier(h5)
                 name = prep.name
             else:
