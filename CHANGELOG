@@ -1,6 +1,6 @@
 0.26.1
  - enh: align `HDF5ImageCache` chunk size to the underlying `h5py.Dataset` (#5)
- - bmk: add benchmark for short pipeline run
+ - bmk: add benchmarks for short pipeline run and segmenter manager thread
 0.26.0
  - feat: data writing is now done in a separate process (#32)
  - fix: `create_with_basins` should not add internal basins, but register them

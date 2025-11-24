@@ -31,10 +31,11 @@ class Benchmark:
                                           path_out=self.path_out,
                                           basin_strategy="tap",
                                           )
+        self.runner = None
 
     def benchmark(self):
-        runner = logic.DCNumJobRunner(job=self.job)
-        runner.run()
+        self.runner = logic.DCNumJobRunner(job=self.job)
+        self.runner.run()
 
     def verify(self):
         with h5py.File(self.path_out) as h5:
@@ -42,4 +43,6 @@ class Benchmark:
             assert h5["events/deform"].shape[0] > 10000
 
     def teardown(self):
+        if self.runner is not None:
+            self.runner.close()
         shutil.rmtree(self.tmp_path, ignore_errors=True)
