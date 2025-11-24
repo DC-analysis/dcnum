@@ -1,5 +1,6 @@
 0.26.1
  - enh: align `HDF5ImageCache` chunk size to the underlying `h5py.Dataset` (#5)
+ - enh: improved start-up speed for MPO segmenters
  - bmk: add benchmarks for short pipeline run and segmenter manager thread
 0.26.0
  - feat: data writing is now done in a separate process (#32)

@@ -231,6 +231,12 @@ class MPOSegmenter(Segmenter, abc.ABC):
             num_workers = min(self.num_workers, images.shape[0])
             self.logger.debug(f"Running with {num_workers} workers")
 
+        # Match iteration number with workers
+        self.mp_batch_index.value += 1
+
+        # Tell workers to get going immediately
+        self.mp_batch_worker.value = 0
+
         if not self._mp_workers:
             step_size = batch_size // num_workers
             rest = batch_size % num_workers
@@ -247,12 +253,6 @@ class MPOSegmenter(Segmenter, abc.ABC):
                 w.start()
                 self._mp_workers.append(w)
                 wstart = wstop
-
-        # Match iteration number with workers
-        self.mp_batch_index.value += 1
-
-        # Tell workers to get going
-        self.mp_batch_worker.value = 0
 
         # Wait for all workers to complete
         while self.mp_batch_worker.value != num_workers:
