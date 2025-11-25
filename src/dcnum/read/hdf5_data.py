@@ -31,6 +31,7 @@ class HDF5Data:
                  logs: Dict[List[str]] = None,
                  tables: Dict[np.ndarray] = None,
                  image_cache_size: int = 2,
+                 image_chunk_size: int = 1000,
                  index_mapping: int | slice | List | np.ndarray = None,
                  ):
         """
@@ -57,6 +58,8 @@ class HDF5Data:
             if not provided
         image_cache_size:
             size of the image cache to use when accessing image data
+        image_chunk_size:
+            maximum number of images in each image cache chunk
         index_mapping:
             select only a subset of input events, transparently reducing the
             size of the dataset, possible data types are
@@ -80,6 +83,7 @@ class HDF5Data:
                            "logs": logs,
                            "tables": tables,
                            "image_cache_size": image_cache_size,
+                           "image_chunk_size": image_chunk_size,
                            "index_mapping": index_mapping,
                            })
 
@@ -138,6 +142,7 @@ class HDF5Data:
                 "tables": self.tables,
                 "basins": self.basins,
                 "image_cache_size": self.image.cache_size,
+                "image_chunk_size": self.image_chunk_size,
                 "index_mapping": self.index_mapping,
                 }
 
@@ -222,6 +227,7 @@ class HDF5Data:
             self.pixel_size = state["pixel_size"]
 
         self.image_cache_size = state["image_cache_size"]
+        self.image_chunk_size = state["image_chunk_size"]
 
         self.index_mapping = state["index_mapping"]
 
@@ -544,6 +550,7 @@ class HDF5Data:
                 image = HDF5ImageCache(
                     h5ds=get_mapped_object(obj=ds, index_mapping=idx_map),
                     cache_size=self.image_cache_size,
+                    chunk_size=self.image_chunk_size,
                     boolean=feat == "mask")
             else:
                 image = None
