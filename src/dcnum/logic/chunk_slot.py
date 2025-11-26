@@ -134,7 +134,7 @@ class ChunkSlot:
 
             image_corr = np.ctypeslib.as_array(
                 self.mp_image_corr).reshape(self.shape)
-            image_corr[:] = self.data.image_corr.get_chunk(idx)
+            image_corr[:] = np.array(image, dtype=np.int16) - image_bg
         else:
             image_bg = None
             image_corr = None
