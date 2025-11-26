@@ -678,10 +678,6 @@ class DCNumJobRunner(threading.Thread):
 
         # Start segmentation thread
         seg_cls = get_available_segmenters()[self.job["segmenter_code"]]
-        if seg_cls.requires_background_correction:
-            imdat = self.dtin.image_corr
-        else:
-            imdat = self.dtin.image
 
         if self.job["debug"]:
             num_slots = 1
@@ -727,7 +723,6 @@ class DCNumJobRunner(threading.Thread):
         # Initialize segmenter manager thread
         worker_segm = SegmenterManagerThread(
             segmenter=seg_cls(**self.job["segmenter_kwargs"]),
-            image_data=imdat,
             bg_off=self.dtin["bg_off"] if "bg_off" in self.dtin else None,
             slot_register=slot_register,
         )

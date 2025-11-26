@@ -4,8 +4,6 @@ import threading
 
 import numpy as np
 
-from ..read.cache import HDF5ImageCache, ImageCorrCache
-
 from .segmenter import Segmenter
 from .segmenter_mpo import MPOSegmenter
 
@@ -13,7 +11,6 @@ from .segmenter_mpo import MPOSegmenter
 class SegmenterManagerThread(threading.Thread):
     def __init__(self,
                  segmenter: Segmenter,
-                 image_data: HDF5ImageCache | ImageCorrCache,
                  slot_register: "SlotRegister",  # noqa: F821
                  bg_off: np.ndarray = None,
                  *args, **kwargs):
@@ -23,9 +20,6 @@ class SegmenterManagerThread(threading.Thread):
         ----------
         segmenter:
             The segmenter instance to use.
-        image_data:
-            The image data to use. This can be background-corrected
-            or not (hence the type hint), depending on `segmenter`
         slot_register:
             Manages a list of `ChunkSlots`, shared arrays on which
             to operate
@@ -50,9 +44,6 @@ class SegmenterManagerThread(threading.Thread):
 
         self.segmenter = segmenter
         """Segmenter instance"""
-
-        self.image_data = image_data
-        """Image data which is being segmented"""
 
         self.bg_off = (
             bg_off if self.segmenter.requires_background_correction else None)

@@ -36,7 +36,6 @@ def test_event_extractor_manager_thread():
         segmenter=SegmentThresh(
             kwargs_mask={"closing_disk": 0},  # otherwise no event in 1st image
         ),
-        image_data=hd.image_corr,
         slot_register=slot_register,
     )
     thr_segm.start()

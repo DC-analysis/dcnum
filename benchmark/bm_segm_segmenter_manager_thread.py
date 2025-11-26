@@ -49,7 +49,6 @@ class Benchmark:
         fake_extractor.start()
         thr_segm = segm.SegmenterManagerThread(
             segmenter=seg_cls(num_workers=2, **self.job["segmenter_kwargs"]),
-            image_data=self.runner.dtin.image_corr,
             bg_off=(self.runner.dtin["bg_off"]
                     if "bg_off" in self.runner.dtin else None),
             slot_register=self.slot_register,
