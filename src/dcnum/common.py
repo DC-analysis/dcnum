@@ -1,12 +1,13 @@
-def join_thread_helper(thr, timeout, retries, logger, name):
+def join_worker(worker, timeout, retries, logger, name):
+    """Patiently join a worker (Thread or Process)"""
     for _ in range(retries):
-        thr.join(timeout=timeout)
-        if thr.is_alive():
-            logger.info(f"Waiting for '{name}' ({thr}")
+        worker.join(timeout=timeout)
+        if worker.is_alive():
+            logger.info(f"Waiting for '{name}' ({worker}")
         else:
             logger.debug(f"Joined thread '{name}'")
             break
     else:
         logger.error(f"Failed to join thread '{name}'")
-        raise ValueError(f"Thread '{name}' ({thr}) did not join"
+        raise ValueError(f"Thread '{name}' ({worker}) did not join"
                          f"within {timeout * retries}s!")

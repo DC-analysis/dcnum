@@ -16,7 +16,7 @@ import uuid
 import h5py
 import numpy as np
 
-from ..common import join_thread_helper
+from ..common import join_worker
 from ..feat.feat_background.base import get_available_background_methods
 from ..feat.queue_event_extractor import QueueEventExtractor
 from ..feat import gate
@@ -719,19 +719,19 @@ class DCNumJobRunner(threading.Thread):
         self.logger.debug(f"Number of extractors: {num_extractors}")
 
         if self.job["debug"]:
-            u_worker = UniversalWorkerThread(slot_register=slot_register)
+            worker_uni = UniversalWorkerThread(slot_register=slot_register)
         else:
-            u_worker = UniversalWorkerProcess(slot_register=slot_register)
-        u_worker.start()
+            worker_uni = UniversalWorkerProcess(slot_register=slot_register)
+        worker_uni.start()
 
         # Initialize segmenter manager thread
-        thr_segm = SegmenterManagerThread(
+        worker_segm = SegmenterManagerThread(
             segmenter=seg_cls(**self.job["segmenter_kwargs"]),
             image_data=imdat,
             bg_off=self.dtin["bg_off"] if "bg_off" in self.dtin else None,
             slot_register=slot_register,
         )
-        thr_segm.start()
+        worker_segm.start()
 
         # Start feature extractor thread
         fe_kwargs = QueueEventExtractor.get_init_kwargs(
@@ -743,13 +743,13 @@ class DCNumJobRunner(threading.Thread):
             )
         fe_kwargs["extract_kwargs"] = self.job["feature_kwargs"]
 
-        thr_feat = EventExtractorManagerThread(
+        worker_feat = EventExtractorManagerThread(
             slot_register=slot_register,
             fe_kwargs=fe_kwargs,
             num_workers=num_extractors,
             write_queue_size=self.write_queue_size,
             debug=self.job["debug"])
-        thr_feat.start()
+        worker_feat.start()
 
         # Start the data collection thread
         if self.job["debug"]:
@@ -794,29 +794,29 @@ class DCNumJobRunner(threading.Thread):
         slot_register.close()
 
         # join threads
-        join_thread_helper(thr=thr_segm,
-                           timeout=30,
-                           retries=10,
-                           logger=self.logger,
-                           name="segmentation")
+        join_worker(worker=worker_segm,
+                    timeout=30,
+                    retries=10,
+                    logger=self.logger,
+                    name="segmentation")
         # Join the collector thread before the feature extractors. On
         # compute clusters, we had problems with joining the feature
         # extractors, maybe because the event_queue was not depleted.
-        join_thread_helper(thr=worker_write,
-                           timeout=600,
-                           retries=10,
-                           logger=self.logger,
-                           name="collector for writer")
-        join_thread_helper(thr=thr_feat,
-                           timeout=30,
-                           retries=10,
-                           logger=self.logger,
-                           name="feature extraction")
-        join_thread_helper(thr=u_worker,
-                           timeout=30,
-                           retries=10,
-                           logger=self.logger,
-                           name="universal worker")
+        join_worker(worker=worker_write,
+                    timeout=600,
+                    retries=10,
+                    logger=self.logger,
+                    name="collector for writer")
+        join_worker(worker=worker_feat,
+                    timeout=30,
+                    retries=10,
+                    logger=self.logger,
+                    name="feature extraction")
+        join_worker(worker=worker_uni,
+                    timeout=30,
+                    retries=10,
+                    logger=self.logger,
+                    name="universal worker")
 
         self.event_count = worker_write.written_events.value
         if self.event_count == 0:

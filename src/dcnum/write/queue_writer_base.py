@@ -8,7 +8,7 @@ import time
 
 import numpy as np
 
-from ..common import join_thread_helper
+from ..common import join_worker
 
 from .chunk_writer import ChunkWriter
 from .event_stash import EventStash
@@ -238,11 +238,11 @@ class QueueWriterBase:
 
         # Close chunk writer
         thr_write.finished_when_queue_empty()
-        join_thread_helper(thr=thr_write,
-                           timeout=600,
-                           retries=10,
-                           logger=logger,
-                           name="writer")
+        join_worker(worker=thr_write,
+                    timeout=600,
+                    retries=10,
+                    logger=logger,
+                    name="writer")
 
         logger.info(f"Counted {self.written_events.value} events")
         logger.debug(f"Counted {self.written_frames.value} frames")
