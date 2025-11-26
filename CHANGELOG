@@ -1,4 +1,5 @@
 0.27.0
+ - fix: set maximum chunk size for writing to 1000 (speed)
  - enh: align `HDF5ImageCache` chunk size to the underlying `h5py.Dataset` (#5)
  - enh: improved start-up speed for MPO segmenters
  - enh: add `image_chunk_size` argument for `HDF5Data`

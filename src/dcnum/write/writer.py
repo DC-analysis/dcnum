@@ -102,7 +102,9 @@ class HDF5Writer:
         chunk_size = num_bytes / event_size
         # Set minimum chunk size to 10 so that we can have at least some
         # compression performance.
-        chunk_size_int = max(10, int(np.floor(chunk_size)))
+        # Set maximum chunk size to 1000, so that we are not continuously
+        # rewriting data when there are a lot of events.
+        chunk_size_int = min(1000, max(10, int(np.floor(chunk_size))))
         return tuple([chunk_size_int] + list(item_shape))
 
     def require_feature(self,
