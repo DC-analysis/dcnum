@@ -5,8 +5,6 @@ import time
 
 import multiprocessing as mp
 
-import numpy as np
-
 from dcnum import logic
 from dcnum import segm
 
@@ -32,35 +30,34 @@ class Benchmark:
                                           path_out=self.path_out,
                                           basin_strategy="tap",
                                           segmenter_code="thresh",
+                                          num_procs=6,
                                           )
 
         self.runner = logic.DCNumJobRunner(job=self.job)
         self.runner.task_background()
 
+        self.slot_register = logic.SlotRegister(job=self.job,
+                                                data=self.runner.dtin,
+                                                num_slots=2)
+        self.u_worker = logic.UniversalWorkerThread(
+            slot_register=self.slot_register)
+        self.u_worker.start()
+
     def benchmark(self):
         seg_cls = segm.get_available_segmenters()[self.job["segmenter_code"]]
-        num_slots = 2
-        slot_chunks = mp_spawn.Array("i", num_slots, lock=False)
-        slot_states = mp_spawn.Array("u", num_slots, lock=False)
-        stop_event = threading.Event()
-
-        fake_extractor = SlotStateInvalidator(slot_states=slot_states,
-                                              slot_chunks=slot_chunks,
-                                              stop_event=stop_event)
+        fake_extractor = SlotStateInvalidator(slot_register=self.slot_register)
         fake_extractor.start()
-
         thr_segm = segm.SegmenterManagerThread(
-            segmenter=seg_cls(**self.job["segmenter_kwargs"]),
+            segmenter=seg_cls(num_workers=2, **self.job["segmenter_kwargs"]),
             image_data=self.runner.dtin.image_corr,
             bg_off=(self.runner.dtin["bg_off"]
                     if "bg_off" in self.runner.dtin else None),
-            slot_states=slot_states,
-            slot_chunks=slot_chunks,
+            slot_register=self.slot_register,
         )
         thr_segm.run()
-
-        stop_event.set()
+        self.slot_register.close()
         fake_extractor.join()
+        self.u_worker.join()
 
     def teardown(self):
         self.runner.close()
@@ -68,18 +65,16 @@ class Benchmark:
 
 class SlotStateInvalidator(threading.Thread):
     """Pretend to be the feature extractor"""
-    def __init__(self, slot_states, slot_chunks, stop_event, *args, **kwargs):
+    def __init__(self, slot_register, *args, **kwargs):
         super(SlotStateInvalidator, self).__init__(*args, **kwargs)
-        self.slot_states = slot_states
-        self.slot_chunks = slot_chunks
-        self.stop_event = stop_event
+        self.slot_register = slot_register
 
     def run(self):
-        while not self.stop_event.is_set():
-            for cur_slot in np.argsort(self.slot_chunks):
-                if self.slot_states[cur_slot] == "e":
+        while self.slot_register.state != "q":
+            for cs in self.slot_register:
+                if cs.state == "e":
                     time.sleep(0.1)
-                    self.slot_states[cur_slot] = "s"
+                    cs.state = "i"
                     break
             else:
                 time.sleep(0.1)

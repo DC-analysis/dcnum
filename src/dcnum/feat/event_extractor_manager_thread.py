@@ -3,7 +3,7 @@ import logging
 import multiprocessing as mp
 import threading
 import time
-from typing import Dict, List
+from typing import Dict
 
 import numpy as np
 
@@ -12,9 +12,7 @@ from .queue_event_extractor import EventExtractorThread, EventExtractorProcess
 
 class EventExtractorManagerThread(threading.Thread):
     def __init__(self,
-                 slot_states: mp.Array,
-                 slot_chunks: mp.Array,
-                 labels_list: List,
+                 slot_register: "SlotRegister",  # noqa: F821
                  fe_kwargs: Dict,
                  num_workers: int,
                  write_queue_size: mp.Value,
@@ -24,18 +22,9 @@ class EventExtractorManagerThread(threading.Thread):
 
         Parameters
         ----------
-        slot_states:
-            This is an utf-8 shared array whose length defines how many slots
-            are available. The extractor will only ever extract features
-            from a labeled image for a slot with segmented data. A slot
-            with slot segmented data means a value of "e" (for "task is
-            with extractor"). After the extractor has finished feature
-            extraction, the slot value will be set to "s" (for "task is
-            with segmenter"), so that the segmenter can compute a new
-            chunk of labels.
-        slot_chunks:
-            For each slot in ``slot_states``, this shared array defines
-            on which chunk in ``image_data`` the segmentation took place.
+        slot_register:
+            Manages a list of `ChunkSlots`, shared arrays on which
+            to operate
         fe_kwargs:
             Feature extraction keyword arguments. See
             :func:`.EventExtractor.get_init_kwargs` for more information.
@@ -59,15 +48,8 @@ class EventExtractorManagerThread(threading.Thread):
         for :class:`event_extractor_manager_thread.py.QueueEventExtractor`
         instances"""
 
-        self.data = fe_kwargs["data"]
-        """Data instance"""
-
-        self.slot_states = slot_states
-        """States of the segmenter-extractor pipeline slots"""
-
-        self.slot_chunks = slot_chunks
-        """Chunk indices corresponding to ``slot_states``
-        """
+        self.slot_register = slot_register
+        """Slot manager"""
 
         self.num_workers = 1 if debug else num_workers
         """Number of workers"""
@@ -75,26 +57,25 @@ class EventExtractorManagerThread(threading.Thread):
         self.raw_queue = self.fe_kwargs["raw_queue"]
         """Queue for sending chunks and label indices to the workers"""
 
-        self.labels_list = labels_list
-        """List of chunk labels corresponding to ``slot_states``
-        """
-
         self.label_array = np.ctypeslib.as_array(
-            self.fe_kwargs["label_array"]).reshape(
-            self.data.image.chunk_shape)
+            self.fe_kwargs["label_array"]).reshape(self.slot_register[0].shape)
         """Shared labeling array"""
 
         self.write_queue_size = write_queue_size
         """Number of event chunks waiting to be written to the output file"""
 
-        self.t_count = 0
-        """Time counter for feature extraction"""
+        self.t_extract = 0
+        """Feature extraction time counter"""
+
+        self.t_wait = 0
+        """Wait time counter"""
 
         self.debug = debug
         """Whether debugging is enabled"""
 
     def run(self):
         # Initialize all workers
+        ta = time.monotonic()
         if self.debug:
             worker_cls = EventExtractorThread
         else:
@@ -104,10 +85,13 @@ class EventExtractorManagerThread(threading.Thread):
         [w.start() for w in workers]
         worker_monitor = self.fe_kwargs["worker_monitor"]
 
-        num_slots = len(self.slot_states)
+        self.logger.info(f"Initialization time: {time.monotonic() - ta:.1f}s")
+
         chunks_processed = 0
         frames_processed = 0
         while True:
+            t0 = time.monotonic()
+
             # If the writer_dq starts filling up, then this could lead to
             # an oom-kill signal. Stall for the writer to prevent this.
             if (ldq := self.write_queue_size.value) > 1000:
@@ -120,71 +104,53 @@ class EventExtractorManagerThread(threading.Thread):
                     f"Stalled {stalled_sec:.1f}s due to slow writer "
                     f"({ldq} chunks queued)")
 
-            unavailable_slots = 0
-            found_free_slot = False
             # Check all slots for segmented labels
-            while not found_free_slot:
-                # We sort the slots according to the slot chunks so that we
-                # always process the slot with the smallest slot chunk number
-                # first. Initially, the slot_chunks array is filled with
-                # zeros, but the segmenter fills up the slots with the lowest
-                # number first.
-                for cur_slot in np.argsort(self.slot_chunks):
-                    # - "e" there is data from the segmenter (the extractor
-                    #   can take it and process it)
-                    # - "s" the extractor processed the data and is waiting
-                    #   for the segmenter
-                    if self.slot_states[cur_slot] == "e":
-                        # The segmenter has something for us in this slot.
-                        found_free_slot = True
-                        break
-                    else:
-                        # Try another slot.
-                        unavailable_slots += 1
-                        cur_slot = (cur_slot + 1) % num_slots
-                    if unavailable_slots >= num_slots:
-                        # There is nothing to do, try to avoid 100% CPU
-                        unavailable_slots = 0
-                        time.sleep(.1)
+            while True:
+                cs = self.slot_register.find_slot(state="e")
+                if cs is None:
+                    time.sleep(.1)
+                else:
+                    break
 
             t1 = time.monotonic()
+            self.t_wait += t1 - t0
 
             # We have a chunk, process it!
-            chunk = self.slot_chunks[cur_slot]
             # Populate the labeling array for the workers
-            new_labels = self.labels_list[cur_slot]
+            new_labels = np.ctypeslib.as_array(cs.mp_labels).reshape(cs.shape)
+            # TODO: `new_labels` is already a shared array.
             if len(new_labels) == self.label_array.shape[0]:
                 self.label_array[:] = new_labels
             elif len(new_labels) < self.label_array.shape[0]:
                 self.label_array[:len(new_labels)] = new_labels
                 self.label_array[len(new_labels):] = 0
             else:
-                raise ValueError("labels_list contains bad size data!")
+                raise ValueError("label array has bad shape")
 
             # Let the workers know there is work
-            chunk_size = self.data.image.get_chunk_size(chunk)
-            [self.raw_queue.put((chunk, ii)) for ii in range(chunk_size)]
+            [self.raw_queue.put((cs.chunk, ii)) for ii in range(cs.length)]
 
             # Make sure the entire chunk has been processed.
-            while np.sum(worker_monitor) != frames_processed + chunk_size:
+            while np.sum(worker_monitor) != frames_processed + cs.length:
                 time.sleep(.1)
 
-            # We are done here. The segmenter may continue its deed.
-            self.slot_states[cur_slot] = "w"
+            self.logger.debug(f"Extracted chunk {cs.chunk} in slot {cs}")
 
-            self.logger.debug(f"Extracted chunk {chunk} in slot {cur_slot}")
-            self.t_count += time.monotonic() - t1
+            # We are done here. The writer gets the events via a queue.
+            cs.state = "i"
+
+            self.t_extract += time.monotonic() - t1
 
             chunks_processed += 1
-            frames_processed += chunk_size
+            frames_processed += cs.length
 
-            if chunks_processed == self.data.image.num_chunks:
+            if chunks_processed == self.slot_register.num_chunks:
                 break
 
         inv_masks = self.fe_kwargs["invalid_mask_counter"].value
         if inv_masks:
             self.logger.info(f"Encountered {inv_masks} invalid masks")
-            inv_frac = inv_masks / len(self.data)
+            inv_frac = inv_masks / len(self.slot_register.num_frames)
             if inv_frac > 0.005:  # warn above one half percent
                 self.logger.warning(f"Discarded {inv_frac:.1%} of the masks, "
                                     f"please check segmenter applicability")
@@ -194,4 +160,5 @@ class EventExtractorManagerThread(threading.Thread):
         [w.join() for w in workers]
 
         self.logger.debug("Finished extraction")
-        self.logger.info(f"Extraction time: {self.t_count:.1f}s")
+        self.logger.info(f"Extraction time: {self.t_extract:.1f}s")
+        self.logger.info(f"Waiting time: {self.t_wait:.1f}s")

@@ -30,6 +30,7 @@ class Benchmark:
         self.job = logic.DCNumPipelineJob(path_in=path_in,
                                           path_out=self.path_out,
                                           basin_strategy="tap",
+                                          num_procs=6,
                                           )
         self.runner = None
 

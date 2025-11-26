@@ -130,6 +130,8 @@ class DCNumPipelineJob:
         return state
 
     def __setstate__(self, state):
+        if not hasattr(self, "kwargs"):
+            self.kwargs = {}
         self.kwargs.clear()
         self.kwargs.update(copy.deepcopy(state))
 

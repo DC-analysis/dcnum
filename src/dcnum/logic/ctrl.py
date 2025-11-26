@@ -32,6 +32,8 @@ from ..write import (
 
 from .job import DCNumPipelineJob
 from .json_encoder import ExtendedJSONEncoder
+from .slot_register import SlotRegister
+from .universal_worker import UniversalWorkerProcess, UniversalWorkerThread
 
 
 # Force using "spawn" method for multiprocessing, because we are using
@@ -707,20 +709,27 @@ class DCNumJobRunner(threading.Thread):
         num_segmenters = max(1, num_segmenters)
         self.job.kwargs["segmenter_kwargs"]["num_workers"] = num_segmenters
         self.job.kwargs["segmenter_kwargs"]["debug"] = self.job["debug"]
-        slot_chunks = mp_spawn.Array("i", num_slots, lock=False)
-        slot_states = mp_spawn.Array("u", num_slots, lock=False)
+
+        slot_register = SlotRegister(job=self.job,
+                                     data=self.dtin,
+                                     num_slots=num_slots)
 
         self.logger.debug(f"Number of slots: {num_slots}")
         self.logger.debug(f"Number of segmenters: {num_segmenters}")
         self.logger.debug(f"Number of extractors: {num_extractors}")
+
+        if self.job["debug"]:
+            u_worker = UniversalWorkerThread(slot_register=slot_register)
+        else:
+            u_worker = UniversalWorkerProcess(slot_register=slot_register)
+        u_worker.start()
 
         # Initialize segmenter manager thread
         thr_segm = SegmenterManagerThread(
             segmenter=seg_cls(**self.job["segmenter_kwargs"]),
             image_data=imdat,
             bg_off=self.dtin["bg_off"] if "bg_off" in self.dtin else None,
-            slot_states=slot_states,
-            slot_chunks=slot_chunks,
+            slot_register=slot_register,
         )
         thr_segm.start()
 
@@ -735,11 +744,9 @@ class DCNumJobRunner(threading.Thread):
         fe_kwargs["extract_kwargs"] = self.job["feature_kwargs"]
 
         thr_feat = EventExtractorManagerThread(
-            slot_chunks=slot_chunks,
-            slot_states=slot_states,
+            slot_register=slot_register,
             fe_kwargs=fe_kwargs,
             num_workers=num_extractors,
-            labels_list=thr_segm.labels_list,
             write_queue_size=self.write_queue_size,
             debug=self.job["debug"])
         thr_feat.start()
@@ -784,6 +791,8 @@ class DCNumJobRunner(threading.Thread):
 
         self.logger.debug("Flushing data to disk")
 
+        slot_register.close()
+
         # join threads
         join_thread_helper(thr=thr_segm,
                            timeout=30,
@@ -803,6 +812,11 @@ class DCNumJobRunner(threading.Thread):
                            retries=10,
                            logger=self.logger,
                            name="feature extraction")
+        join_thread_helper(thr=u_worker,
+                           timeout=30,
+                           retries=10,
+                           logger=self.logger,
+                           name="universal worker")
 
         self.event_count = worker_write.written_events.value
         if self.event_count == 0:

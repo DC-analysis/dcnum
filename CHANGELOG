@@ -1,8 +1,12 @@
-0.26.1
+0.27.0
  - enh: align `HDF5ImageCache` chunk size to the underlying `h5py.Dataset` (#5)
  - enh: improved start-up speed for MPO segmenters
  - enh: add `image_chunk_size` argument for `HDF5Data`
+ - enh: quantify waiting times in pipeline steps
+ - enh: loading data from disk is done in a separate thread
  - bmk: add benchmarks for short pipeline run and segmenter manager thread
+ - ref: introduce "chunk slot register" architecture which encompasses
+   the new classes `SlotRegister`, `ChunkSlot` and `UniversalWorker`
 0.26.0
  - feat: data writing is now done in a separate process (#32)
  - fix: `create_with_basins` should not add internal basins, but register them

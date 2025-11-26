@@ -71,7 +71,7 @@ class QueueWriterBase:
         """logging level (inherited from 'dcnum' logger)"""
 
         # Must call super init, otherwise Thread or Process are not initialized
-        super(QueueWriterBase, self).__init__()
+        super(QueueWriterBase, self).__init__(*args, **kwargs)
 
         self.event_queue = event_queue
         """Event queue from which to collect event data"""

@@ -5,6 +5,9 @@ import queue
 from dcnum.feat import (
     EventExtractorManagerThread, Gate, QueueEventExtractor
 )
+from dcnum.logic.slot_register import SlotRegister
+from dcnum.logic.universal_worker import UniversalWorkerThread
+from dcnum.logic.job import DCNumPipelineJob
 from dcnum.read import HDF5Data
 from dcnum.segm import SegmenterManagerThread
 from dcnum.segm.segm_thresh import SegmentThresh
@@ -22,17 +25,19 @@ def test_event_extractor_manager_thread():
     assert "image" in hd
     log_queue = mp_spawn.Queue()
 
-    slot_chunks = mp_spawn.Array("i", 1)
-    slot_states = mp_spawn.Array("u", 1)
+    job = DCNumPipelineJob(path_in=path)
+    slot_register = SlotRegister(job=job, data=hd)
     write_queue_size = mp_spawn.Value("L", 0)
+
+    u_worker = UniversalWorkerThread(slot_register=slot_register)
+    u_worker.start()
 
     thr_segm = SegmenterManagerThread(
         segmenter=SegmentThresh(
             kwargs_mask={"closing_disk": 0},  # otherwise no event in 1st image
         ),
         image_data=hd.image_corr,
-        slot_states=slot_states,
-        slot_chunks=slot_chunks,
+        slot_register=slot_register,
     )
     thr_segm.start()
 
@@ -45,15 +50,16 @@ def test_event_extractor_manager_thread():
     )
 
     thr_feat = EventExtractorManagerThread(
-        slot_chunks=slot_chunks,
-        slot_states=slot_states,
+        slot_register=slot_register,
         fe_kwargs=fe_kwargs,
         num_workers=1,
-        labels_list=thr_segm.labels_list,
         write_queue_size=write_queue_size,
         debug=True)
     thr_feat.run()
     thr_segm.join()
+
+    slot_register.close()
+    u_worker.join()
 
     assert fe_kwargs["worker_monitor"][0] == 40
 
