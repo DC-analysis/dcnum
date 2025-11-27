@@ -24,12 +24,9 @@ class IgnoringBasinTypeWarning(UserWarning):
 
 class HDF5Writer:
     def __init__(self,
-                 # TODO: make this a mandatory argument when `path` is
-                 #  properly removed
-                 obj: h5py.File | pathlib.Path | str = None,
+                 obj: h5py.File | pathlib.Path | str,
                  mode: str = "a",
                  ds_kwds: Dict = None,
-                 path: pathlib.Path | str = None,
                  ):
         """Write deformability cytometry HDF5 data
 
@@ -45,11 +42,6 @@ class HDF5Writer:
             keyword arguments with which to initialize new Datasets
             (e.g. compression)
         """
-        if path is not None:
-            obj = path
-            warnings.warn("The `path` keyword argument is deprecated, use "
-                          "`obj` instead",
-                          DeprecationWarning)
         if isinstance(obj, h5py.File):
             self.h5 = obj
             self.h5_owned = False

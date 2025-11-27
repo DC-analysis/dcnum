@@ -10,6 +10,7 @@
  - enh: loading data from disk is done in a separate thread
  - enh: globally increase the number of slots to 7
  - bmk: add benchmarks for short pipeline run and segmenter manager thread
+ - ref: remove deprecated `path` keyword argument for `HDF5Writer`
  - ref: introduce "chunk slot register" architecture which encompasses
    the new classes `SlotRegister`, `ChunkSlot` and `UniversalWorker`
  - ref: rename `join_thread_helper` to `join_worker`
