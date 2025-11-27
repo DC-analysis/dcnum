@@ -116,8 +116,7 @@ class Gate:
     @classmethod
     def get_ppid_from_ppkw(cls, kwargs):
         """return full pipeline identifier from the given keywords"""
-        # TODO:
-        #  If polygon filters are used, the MD5sum should be used and
+        # TODO: If polygon filters are used, the MD5sum should be used and
         #  they should be placed as a log to the output .rtdc file.
         kwargs = copy.deepcopy(kwargs)
         if kwargs.get("size_thresh_mask") is None:

@@ -51,13 +51,13 @@ class STOSegmenter(Segmenter, abc.ABC):
 
         Parameters
         ----------
-        images: 3d np.ndarray
+        images: 3d np.ndarray of shape (N, Y, X)
             The time-series image data. First axis is time.
         start: int
             First index to analyze in `images`
         stop: int
             Index after the last index to analyze in `images`
-        bg_off: 1D np.ndarray
+        bg_off: 1D np.ndarray of length N
             Optional 1D numpy array with background offset
 
         Notes

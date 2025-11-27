@@ -25,7 +25,7 @@ class IgnoringBasinTypeWarning(UserWarning):
 class HDF5Writer:
     def __init__(self,
                  # TODO: make this a mandatory argument when `path` is
-                 #       properly removed
+                 #  properly removed
                  obj: h5py.File | pathlib.Path | str = None,
                  mode: str = "a",
                  ds_kwds: Dict = None,

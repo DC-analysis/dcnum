@@ -85,7 +85,6 @@ class ChunkSlot:
             else:
                 self.mp_bg_off = None
 
-            # TODO: implement `segment` method.
             # Mask data
             self.mp_mask = mp_spawn.RawArray(
                 np.ctypeslib.as_ctypes_type(np.bool), array_length)
@@ -188,6 +187,10 @@ class ChunkSlot:
             bg_off[:] = self.data["bg_off"][chunk_slice]
         else:
             bg_off = None
+
+        # TODO: Check for duplicate, consecutive images while loading data
+        #  and store that information in a boolean array. This can speed-up
+        #  segmentation and feature extraction.
 
         self.chunk = idx
         return image, image_bg, image_corr, bg_off

@@ -165,6 +165,19 @@ class MPOSegmenter(Segmenter, abc.ABC):
           images, then `images` must already be background-corrected,
           except for the optional `bg_off`.
         """
+        # TODO: Replace `mp_image_raw`, `self._mp_image_np`, and the likes
+        #  with the preloaded data from the chunk. This means that the
+        #  SlotRegister must be passed to the segmenter class. This will
+        #  remove a lot of redundant code (definitions of the shared arrays),
+        #  avoid reinstantiating all workers for the last chunk, result in
+        #  a minor speed-up, and make the code more readable overall.
+
+        # TODO: Register the segmenter with the UniversalWorkers. To make
+        #  this change, the `sl_start` and `sl_stop` arguments should
+        #  somehow be managed by the ChunkSlot. This can get messy. Another
+        #  option would be to have some kind of dynamic number of workers
+        #  which could be organized by a shared array and timing information.
+
         if stop is None or start is None:
             start = 0
             stop = len(images)
@@ -180,9 +193,6 @@ class MPOSegmenter(Segmenter, abc.ABC):
             self._mp_image_np = None
             self._mp_labels_np = None
             self._mp_bg_off_np = None
-            # TODO: If only the batch_size changes, don't
-            #  reinitialize the workers. Otherwise, the final rest of
-            #  analyzing a dataset would always take a little longer.
             self.join_workers()
             self._mp_workers = []
             self.mp_batch_index.value = -1

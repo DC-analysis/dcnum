@@ -97,10 +97,10 @@ class Background(abc.ABC):
                 self.paths_ref.append(input_data)
                 self.h5in = h5py.File(input_data, "r", libver="latest")
             # TODO: Properly setup HDF5 caching.
-            #       Right now, we are accessing the raw h5ds property of
-            #       the ImageCache. We have to go via the ImageCache route,
-            #       because HDF5Data properly resolves basins and the image
-            #       feature might be in a basin.
+            #  Right now, we are accessing the raw h5ds property of
+            #  the ImageCache. We have to go via the ImageCache route,
+            #  because HDF5Data properly resolves basins and the image
+            #  feature might be in a basin.
             self.hdin = HDF5Data(self.h5in, md5_5m=md5_5m)
             self.input_data = self.hdin.image.h5ds
         else:

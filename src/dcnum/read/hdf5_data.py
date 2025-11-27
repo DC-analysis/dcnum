@@ -314,9 +314,8 @@ class HDF5Data:
     @staticmethod
     def extract_basin_dicts(h5, check=True):
         """Return list of basin dictionaries"""
-        # TODO:
-        #  - support iterative mapped basins and catch
-        #    circular basin definitions.
+        # TODO: support iterative mapped basins and catch
+        #  circular basin definitions.
         basins = []
         for bnkey in h5.get("basins", {}).keys():
             bn_data = "\n".join(

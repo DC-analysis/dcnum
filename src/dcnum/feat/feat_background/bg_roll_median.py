@@ -224,8 +224,7 @@ class BackgroundRollMed(Background):
                     break
 
             # Write output data to HDF5 file
-            # TODO:
-            #  Do this in a different thread so workers can keep going
+            # TODO: Do this in a different thread so workers can keep going
             #  and use a lock somewhere in case the disk is too slow.
             self.writer.store_feature_chunk(
                 "image_bg",

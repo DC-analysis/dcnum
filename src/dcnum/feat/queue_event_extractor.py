@@ -340,7 +340,7 @@ class QueueEventExtractor:
 
         # Check for duplicates
         # TODO: Check for duplicate images when loading data in ChunkSlot,
-        #       and make that information available as a boolean array.
+        #  and make that information available as a boolean array.
         if sub_index == 0:
             # We have to check whether the last image from the previous
             # chunk matches the current image.
