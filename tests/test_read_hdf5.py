@@ -9,6 +9,30 @@ from dcnum import read, write
 from helper_methods import retrieve_data
 
 
+def test_chunk_size_identical():
+    """Make sure the chunk size is identical for image and image_bg"""
+    h5path = retrieve_data("fmt-hdf5_cytoshot_full-features_2023.zip")
+    path = h5path.with_name("test.hdf5")
+    with read.concatenated_hdf5_data(101 * [h5path], path_out=path):
+        # This creates HDF5 chunks of size 32. Total length is 400.
+        # There will be one "remainder" chunk of size `400 % 32 = 16`.
+        pass
+
+    with h5py.File(path, "a") as h5:
+        # rewrite the image column, making it chunk-less
+        images = h5["events/image"][:]
+        images_bg = h5["events/image_bg"][:]
+        del h5["events/image"]
+        del h5["events/image_bg"]
+        h5.create_dataset("events/image", data=images, chunks=(900, 80, 320))
+        h5.create_dataset("events/image_bg", data=images_bg, chunks=(920, 80, 320))
+
+    with read.HDF5Data(path) as hd:
+        assert hd.image_chunk_size == 900
+        assert hd.image.get_chunk_size(0) == 900
+        assert hd.image_bg.get_chunk_size(0) == 900
+
+
 def test_features_scalar_frame():
     path = retrieve_data(
         "fmt-hdf5_cytoshot_full-features_legacy_allev_2023.zip")

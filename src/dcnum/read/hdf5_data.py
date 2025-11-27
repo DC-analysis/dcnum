@@ -75,6 +75,30 @@ class HDF5Data:
             self.h5 = path
             path = path.filename
 
+        # Optimize image chunk size
+        with h5py.File(path, "r") as h5:
+            if "events/image" in h5:
+                h5ds = h5["events/image"]
+                if isinstance(h5ds, h5py.Dataset) and h5ds.chunks is not None:
+                    # Align the `HDF5ImageCache` chunk size to the chunk size
+                    # of the underlying HDF5 dataset.
+                    # The alignment is not applied to:
+                    # - `h5py.Dataset` data that are stored in contiguous mode
+                    # - `MappedHDF5Dataset` instances
+                    # Determine the chunk size of the dataset.
+                    ds_chunk_size = h5ds.chunks[0]
+                    if ds_chunk_size >= image_chunk_size:
+                        # Adopt the actual chunk size. Nothing else
+                        # makes sense.
+                        image_chunk_size = ds_chunk_size
+                    else:
+                        # Determine the multiples of chunks that comprise
+                        # the new chunk_size.
+                        divider = image_chunk_size // ds_chunk_size
+                        # The new chunk size might be smaller than the
+                        # original one.
+                        image_chunk_size = divider * ds_chunk_size
+
         self.__setstate__({"path": path,
                            "pixel_size": pixel_size,
                            "md5_5m": md5_5m,

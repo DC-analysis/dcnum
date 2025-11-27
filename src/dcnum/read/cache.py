@@ -134,24 +134,6 @@ class HDF5ImageCache(BaseImageChunkCache):
         `HDF5ImageCache` class caches the chunks from the HDF5 files
         into memory, making single-image-access very fast.
         """
-        if isinstance(h5ds, h5py.Dataset) and h5ds.chunks is not None:
-            # Align the `HDF5ImageCache` chunk size to the chunk size
-            # of the underlying HDF5 dataset.
-            # The alignment is not applied to:
-            # - `h5py.Dataset` data that are stored in contiguous mode
-            # - `MappedHDF5Dataset` instances
-            # Determine the chunk size of the dataset.
-            ds_chunk_size = h5ds.chunks[0]
-            if ds_chunk_size >= chunk_size:
-                # Adopt the actual chunk size. Nothing else makes sense.
-                chunk_size = ds_chunk_size
-            else:
-                # Determine the multiples of chunks that comprise
-                # the new chunk_size.
-                divider = chunk_size // ds_chunk_size
-                # The new chunk size might be smaller than the original one.
-                chunk_size = divider * ds_chunk_size
-
         super(HDF5ImageCache, self).__init__(
             shape=h5ds.shape,
             chunk_size=chunk_size,
