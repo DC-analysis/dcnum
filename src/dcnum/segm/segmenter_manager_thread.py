@@ -12,7 +12,6 @@ class SegmenterManagerThread(threading.Thread):
     def __init__(self,
                  segmenter: Segmenter,
                  slot_register: "SlotRegister",  # noqa: F821
-                 bg_off: np.ndarray = None,
                  *args, **kwargs):
         """Manage the segmentation of image data
 
@@ -23,10 +22,6 @@ class SegmenterManagerThread(threading.Thread):
         slot_register:
             Manages a list of `ChunkSlots`, shared arrays on which
             to operate
-        bg_off:
-            1d array containing additional background image offset values
-            that are added to each background image before subtraction
-            from the input image
 
         Notes
         -----
@@ -44,10 +39,6 @@ class SegmenterManagerThread(threading.Thread):
 
         self.segmenter = segmenter
         """Segmenter instance"""
-
-        self.bg_off = (
-            bg_off if self.segmenter.requires_background_correction else None)
-        """Additional, optional background offset"""
 
         self.slot_register = slot_register
         """Slot manager"""
@@ -77,11 +68,9 @@ class SegmenterManagerThread(threading.Thread):
 
             # Read the images from the chunk
             if self.segmenter.requires_background_correction:
-                imraw = cs.mp_image_corr
+                images = cs.image_corr
             else:
-                imraw = cs.mp_image
-
-            images = np.ctypeslib.as_array(imraw).reshape(cs.shape)
+                images = cs.image
 
             # Store labels in a list accessible by the main thread
             labels = np.ctypeslib.as_array(cs.mp_labels).reshape(cs.shape)
@@ -89,7 +78,7 @@ class SegmenterManagerThread(threading.Thread):
             # We have a free slot to compute the segmentation
             labels[:] = self.segmenter.segment_batch(
                 images=images,
-                bg_off=self.bg_off,
+                bg_off=cs.bg_off,
             )
 
             # Let everyone know that segmentation is complete

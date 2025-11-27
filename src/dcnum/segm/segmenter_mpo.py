@@ -150,13 +150,13 @@ class MPOSegmenter(Segmenter, abc.ABC):
 
         Parameters
         ----------
-        images: 3d np.ndarray
+        images: 3d np.ndarray of shape (N, Y, X)
             The time-series image data. First axis is time.
         start: int
             First index to analyze in `images`
         stop: int
             Index after the last index to analyze in `images`
-        bg_off: 1D np.ndarray
+        bg_off: 1D np.ndarray of length N
             Optional 1D numpy array with background offset
 
         Notes
@@ -202,6 +202,7 @@ class MPOSegmenter(Segmenter, abc.ABC):
                         array_shape=(stop - start,),
                         batch_size=batch_size,
                         dtype=np.float64)
+            # The last chunk might be smaller
             self._mp_bg_off_np[:] = bg_off[start:stop]
 
         # input images

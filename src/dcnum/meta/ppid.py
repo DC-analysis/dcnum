@@ -9,7 +9,7 @@ import warnings
 
 import numpy as np
 
-DCNUM_PPID_GENERATION = "11"
+DCNUM_PPID_GENERATION = "12"
 """The dcnum pipeline generation.
 Increment this string if there are breaking changes that make
 previous pipelines unreproducible.

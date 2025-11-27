@@ -723,7 +723,6 @@ class DCNumJobRunner(threading.Thread):
         # Initialize segmenter manager thread
         worker_segm = SegmenterManagerThread(
             segmenter=seg_cls(**self.job["segmenter_kwargs"]),
-            bg_off=self.dtin["bg_off"] if "bg_off" in self.dtin else None,
             slot_register=slot_register,
         )
         worker_segm.start()

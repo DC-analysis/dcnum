@@ -5,7 +5,7 @@ import numpy as np
 
 import pytest
 
-from dcnum import logic, read, write
+from dcnum import logic, read, segm, write
 from dcnum.meta import ppid
 
 from helper_methods import retrieve_data
@@ -190,7 +190,7 @@ def test_basin_strategy_tap():
         # Make sure the correct basin identifier is stored
         # (must be the original identifier plus a dcn pipeline hash tag)
         assert h5.attrs["experiment:run identifier"] \
-            == "d5a40aed-0b6c-0412-e87c-59789fdd28d0_dcn-17decbe"
+            == "d5a40aed-0b6c-0412-e87c-59789fdd28d0_dcn-2943dfb"
 
         # The other features are accessed via basins
         hd = read.HDF5Data(h5)
@@ -943,6 +943,88 @@ def test_simple_pipeline_bg_off(debug):
                            atol=1e-8, rtol=0)
         assert np.allclose(h5["events/bg_off"][5554], -0.17625000000001023,
                            atol=1e-8, rtol=0)
+
+
+def test_simple_pipeline_bg_off_thresh_segmenter():
+    """In dcnum < 0.27.0, incorrect bg_off was used for bg correction
+
+    https://github.com/DC-analysis/dcnum/issues/47
+
+    This only applied to indices beyond the first chunk.
+    This only applied to segmentation, not feature extraction.
+    """
+    h5path = retrieve_data("fmt-hdf5_cytoshot_full-features_2023.zip")
+    path = h5path.with_name("test.hdf5")
+    with read.concatenated_hdf5_data(101 * [h5path], path_out=path):
+        # This creates HDF5 chunks of size 32. Total length is 400.
+        # There will be one "remainder" chunk of size `400 % 32 = 16`.
+        pass
+
+    with h5py.File(path, "a") as h5:
+        assert "bg_off" not in h5["events"]
+
+        # artificially modify the images for a few frames
+        # (simulates flickering).
+        images = h5["events/image"][:]
+        # misuse the persistent temperature feature for tracking
+        temp = np.zeros(images.shape[0])
+        del h5["events/image"]
+        images[1000] = images[10]
+        flicker_idx = [10, 130, 1000, 3001, 3999, 4024]
+        for idx in flicker_idx:
+            images[idx] += 5
+            temp[idx] = idx
+        h5["events/image"] = images
+        h5["events/temp"] = temp
+
+    job = logic.DCNumPipelineJob(
+        path_in=path,
+        segmenter_code="thresh",
+        segmenter_kwargs={"thresh": -6},
+        debug=True,
+    )
+
+    with logic.DCNumJobRunner(job=job) as runner:
+        runner.run()
+
+    segmenter = segm.segm_thresh.SegmentThresh(thresh=-6)
+
+    with read.HDF5Data(job["path_out"]) as hd:
+        assert "bg_off" in hd
+        for idx in flicker_idx:
+            fidx = np.where(hd["temp"] == idx)[0]
+            print(idx, fidx)
+            assert len(fidx), "make sure we have something to test against"
+
+            # sanity check for mask
+            labels_sc = segmenter.segment_single(
+                image=hd.image_corr[fidx[0]+10],
+                bg_off=hd["bg_off"][fidx[0]+10])
+            for ii in range(1, np.max(labels_sc) + 1):
+                if np.all((labels_sc == ii) == hd["mask"][fidx[0] + 10]):
+                    break
+            else:
+                assert False, f"Sanity mask {fidx[0] + 10} not matching"
+
+            # check the masks by reproducing the segmentation
+            labels = segmenter.segment_single(
+                image=hd.image_corr[fidx[0]],
+                bg_off=hd["bg_off"][fidx[0]])
+
+            for fid in fidx:
+                # check the mask
+                for ii in range(1, np.max(labels)+1):
+                    if np.all((labels == ii) == hd["mask"][fid]):
+                        break
+                else:
+                    assert False, f"Mask {fid} not matching"
+
+                # check the features as well
+                assert hd["bg_off"][fid] > 3.8
+
+                # sanity check for features
+                assert abs(hd["bg_off"][fid-10]) < 1.5
+                assert abs(hd["bg_off"][fid+10]) < 1.5
 
 
 @pytest.mark.parametrize("debug", [True, False])
