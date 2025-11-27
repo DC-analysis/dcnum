@@ -684,19 +684,12 @@ class DCNumJobRunner(threading.Thread):
             num_extractors = 1
             num_segmenters = 1
         elif seg_cls.hardware_processor == "cpu":  # MPO segmenter
-            # We could in principle set the number of slots to one and
-            # have both number of extractors and number of segmenters set
-            # to the total number of CPUs. However, we would need more RAM
-            # (for caching the image data) and we also have more overhead.
-            # Having two slots shared between all workers is more efficient.
-            num_slots = 2
             # Split segmentation and feature extraction workers evenly.
             num_extractors = self.job["num_procs"] // 2
             num_segmenters = self.job["num_procs"] - num_extractors
             # Leave one CPU for the writer and the other threads.
             num_segmenters -= 1
         else:  # GPU segmenter
-            num_slots = 3
             num_extractors = self.job["num_procs"]
             # Leave one CPU for the writer and the other threads.
             num_extractors -= 1
@@ -705,6 +698,13 @@ class DCNumJobRunner(threading.Thread):
         num_segmenters = max(1, num_segmenters)
         self.job.kwargs["segmenter_kwargs"]["num_workers"] = num_segmenters
         self.job.kwargs["segmenter_kwargs"]["debug"] = self.job["debug"]
+
+        # The number of ChunkSlots defines how well workers can operate in
+        # parallel. This should be higher than the number states a ChunkSlot
+        # can have to prevent workers from waiting on each other. Seven slots
+        # results in a shared memory usage of roughly 1GB for a standard
+        # blood measurement (image chunks of (1000, 80, 32).
+        num_slots = 7
 
         slot_register = SlotRegister(job=self.job,
                                      data=self.dtin,

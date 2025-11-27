@@ -6,6 +6,7 @@
  - enh: add `image_chunk_size` argument for `HDF5Data`
  - enh: quantify waiting times in pipeline steps
  - enh: loading data from disk is done in a separate thread
+ - enh: globally increase the number of slots to 7
  - bmk: add benchmarks for short pipeline run and segmenter manager thread
  - ref: introduce "chunk slot register" architecture which encompasses
    the new classes `SlotRegister`, `ChunkSlot` and `UniversalWorker`
