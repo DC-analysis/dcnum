@@ -68,11 +68,22 @@ class ChunkSlot:
             self.mp_image = mp_spawn.RawArray(
                 np.ctypeslib.as_ctypes_type(np.uint8), array_length)
 
-            self.mp_image_corr = mp_spawn.RawArray(
-                np.ctypeslib.as_ctypes_type(np.int16), array_length)
+            if "image_bg" in self.data:
+                self.mp_image_bg = mp_spawn.RawArray(
+                    np.ctypeslib.as_ctypes_type(np.uint8), array_length)
 
-            self.mp_image_bg = mp_spawn.RawArray(
-                np.ctypeslib.as_ctypes_type(np.uint8), array_length)
+                self.mp_image_corr = mp_spawn.RawArray(
+                    np.ctypeslib.as_ctypes_type(np.int16), array_length)
+            else:
+                self.mp_image_bg = None
+                self.mp_image_corr = None
+
+            if "bg_off" in self.data:
+                # background offset data
+                self.mp_bg_off = mp_spawn.RawArray(
+                    np.ctypeslib.as_ctypes_type(np.float64), self.length)
+            else:
+                self.mp_bg_off = None
 
             # TODO: implement `segment` method.
             # Mask data
@@ -116,28 +127,62 @@ class ChunkSlot:
     def state(self, value):
         self._state.value = value
 
-    @with_state_change(before="i", after="s")
-    def load(self, idx):
-        """Load chunk `idx` into `self.mp_image` and return a numpy view"""
-        # create view on images array
+    @property
+    def bg_off(self):
+        """Brightness offset correction for the current chunk"""
+        if self.mp_bg_off is not None:
+            return np.ctypeslib.as_array(self.mp_bg_off)
+        else:
+            return None
+
+    @property
+    def image(self):
+        """Return numpy view on image data"""
         # Convert the RawArray to something we can write to fast
         # (similar to memory view, but without having to cast) using
         # np.ctypeslib.as_array. See discussion in
         # https://stackoverflow.com/questions/37705974
-        image = np.ctypeslib.as_array(self.mp_image).reshape(self.shape)
+        return np.ctypeslib.as_array(self.mp_image).reshape(self.shape)
+
+    @property
+    def image_bg(self):
+        """Return numpy view on background image data"""
+        if self.mp_image_bg is not None:
+            return np.ctypeslib.as_array(self.mp_image_bg).reshape(self.shape)
+        else:
+            return None
+
+    @property
+    def image_corr(self):
+        """Return numpy view on background-corrected image data"""
+        if self.mp_image_corr is not None:
+            return np.ctypeslib.as_array(
+                self.mp_image_corr).reshape(self.shape)
+        else:
+            return None
+
+    @with_state_change(before="i", after="s")
+    def load(self, idx):
+        """Load chunk `idx` into `self.mp_image` and return a numpy view"""
+        # create views on image arrays
+        image = self.image
         image[:] = self.data.image.get_chunk(idx)
 
-        if self.data.image_bg:
-            image_bg = np.ctypeslib.as_array(
-                self.mp_image_bg).reshape(self.shape)
+        if self.mp_image_bg is not None:
+            image_bg = self.image_bg
             image_bg[:] = self.data.image_bg.get_chunk(idx)
-
-            image_corr = np.ctypeslib.as_array(
-                self.mp_image_corr).reshape(self.shape)
+            image_corr = self.image_corr
             image_corr[:] = np.array(image, dtype=np.int16) - image_bg
         else:
             image_bg = None
             image_corr = None
 
+        if self.mp_bg_off is not None:
+            bg_off = self.bg_off
+            chunk_slice = self.data.image.get_chunk_slice(idx)
+            bg_off[:] = self.data["bg_off"][chunk_slice]
+        else:
+            bg_off = None
+
         self.chunk = idx
-        return image, image_bg, image_corr
+        return image, image_bg, image_corr, bg_off

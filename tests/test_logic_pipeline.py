@@ -917,6 +917,103 @@ def test_simple_pipeline(debug):
 
 
 @pytest.mark.parametrize("debug", [True, False])
+def test_simple_pipeline_bg_off(debug):
+    h5path = retrieve_data("fmt-hdf5_cytoshot_full-features_2023.zip")
+    path = h5path.with_name("test.hdf5")
+    with read.concatenated_hdf5_data(101 * [h5path], path_out=path):
+        # This creates HDF5 chunks of size 32. Total length is 400.
+        # There will be one "remainder" chunk of size `400 % 32 = 16`.
+        pass
+
+    with h5py.File(path) as h5:
+        assert "bg_off" not in h5["events"]
+
+    job = logic.DCNumPipelineJob(
+        path_in=path,
+        debug=debug,
+    )
+
+    with logic.DCNumJobRunner(job=job) as runner:
+        runner.run()
+
+    with h5py.File(job["path_out"]) as h5:
+        assert "bg_off" in h5["events"]
+        assert len(h5["events/bg_off"]) == 5555
+        assert np.allclose(h5["events/bg_off"][0], -0.3795000000000073,
+                           atol=1e-8, rtol=0)
+        assert np.allclose(h5["events/bg_off"][5554], -0.17625000000001023,
+                           atol=1e-8, rtol=0)
+
+
+@pytest.mark.parametrize("debug", [True, False])
+def test_pipeline_duplicate_images(debug):
+    """Make sure that duplicate images are not analyzed twice"""
+    h5path = retrieve_data("fmt-hdf5_cytoshot_full-features_2023.zip")
+    path = h5path.with_name("test.hdf5")
+    with read.concatenated_hdf5_data(101 * [h5path], path_out=path):
+        # This creates HDF5 chunks of size 32. Total length is 400.
+        # There will be one "remainder" chunk of size `400 % 32 = 16`.
+        pass
+
+    with h5py.File(path, "a") as h5:
+        # first, make sure all images are unique
+        images = h5["events/image"][:]
+        counter = 0
+        index = [0, 0]
+        for ii in range(len(images)):
+            counter += 1
+            images[ii][index] += counter
+            if counter > 10:
+                counter = 0
+                index[0] += 1
+                if index[0] > 50:
+                    index[0] = 0
+                    index[1] += 1
+            print(counter, index)
+
+        # Then, make a few of the images non-unique
+        frames = np.arange(4040)
+        same_indices = [500, 1000, 1999, 3001, 4000, 4020, 4039]
+        valid_image = images[20]
+
+        for idx in same_indices:
+            frames[idx] = frames[idx-1]
+            images[idx] = valid_image
+            images[idx-1] = valid_image
+
+        # write the modified data to the file
+        del h5["events/frame"]
+        h5["events/frame"] = frames
+        del h5["events/image"]
+        h5["events/image"] = images
+
+    job = logic.DCNumPipelineJob(
+        path_in=path,
+        # Use rolling-median background correction, so we don't have
+        # different values of "bg_off".
+        background_code="rollmed",
+        debug=debug,
+    )
+    with logic.DCNumJobRunner(job=job) as runner:
+        # make sure the chunk size is set to 1000
+        # (important for the indices that we chose)
+        assert runner.dtin.image.chunk_size == 1000
+        runner.run()
+
+    with h5py.File(job["path_out"]) as h5:
+
+        for idx in same_indices:
+            fri = frames[idx]
+            # where are these frames
+            loc = np.where(h5["events/frame"][:] == fri)[0]
+            print("expecting duplicate frame at", idx, fri, loc)
+            assert len(loc) == 3
+            area_um = h5["events/area_um"][:][loc]
+            assert len(area_um) == 3
+            assert np.all(np.sort(area_um) == np.unique(area_um))
+
+
+@pytest.mark.parametrize("debug", [True, False])
 def test_simple_pipeline_no_offset_correction(debug):
     path_orig = retrieve_data("fmt-hdf5_cytoshot_full-features_2023.zip")
     path = path_orig.with_name("input.rtdc")

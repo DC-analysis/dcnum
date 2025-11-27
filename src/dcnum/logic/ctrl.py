@@ -730,7 +730,8 @@ class DCNumJobRunner(threading.Thread):
 
         # Start feature extractor thread
         fe_kwargs = QueueEventExtractor.get_init_kwargs(
-            data=self.dtin,
+            slot_register=slot_register,
+            pixel_size=self.dtin.pixel_size,
             gate=gate.Gate(self.dtin, **self.job["gate_kwargs"]),
             num_extractors=num_extractors,
             log_queue=self.log_queue,

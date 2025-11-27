@@ -12,7 +12,6 @@ import numpy as np
 
 from ..os_env_st import RequestSingleThreaded, confirm_single_threaded
 from ..meta.ppid import kwargs_to_ppid, ppid_to_kwargs
-from ..read.hdf5_data import HDF5Data
 
 from .feat_brightness import brightness_features
 from .feat_contour import moments_based_features, volume_from_contours
@@ -27,7 +26,8 @@ mp_spawn = mp.get_context("spawn")
 
 class QueueEventExtractor:
     def __init__(self,
-                 data: HDF5Data,
+                 slot_register: "SlotRegister",  # noqa: F821
+                 pixel_size: float,
                  gate: Gate,
                  raw_queue: mp.Queue,
                  event_queue: mp.Queue,
@@ -48,8 +48,10 @@ class QueueEventExtractor:
 
         Parameters
         ----------
-        data: .hdf5_data.HDF5Data
-            Data source.
+        slot_register: .logic.slot_register.SlotRegister
+            Chunk slot register
+        pixel_size:
+            Imaging pixel size
         gate: .gate.Gate
             Gating rules.
         raw_queue:
@@ -88,8 +90,11 @@ class QueueEventExtractor:
         self.worker_index = worker_index or 0
         """Worker index for populating"""
 
-        self.data = data
-        """Data instance"""
+        self.slot_register = slot_register
+        """Chunk slot register"""
+
+        self.pixel_size = pixel_size
+        """Imaging pixel size"""
 
         self.gate = gate
         """Gating information"""
@@ -137,7 +142,8 @@ class QueueEventExtractor:
         """Feature extraction keyword arguments."""
 
     @staticmethod
-    def get_init_kwargs(data: HDF5Data,
+    def get_init_kwargs(slot_register: "SlotRegister",  # noqa: F821
+                        pixel_size: float,
                         gate: Gate,
                         num_extractors: int,
                         log_queue: mp.Queue,
@@ -153,8 +159,10 @@ class QueueEventExtractor:
 
         Parameters
         ----------
-        data: .hdf5_data.HDF5Data
-            Input data
+        slot_register: .logic.slot_register.SlotRegister
+            Chunk slot register
+        pixel_size:
+            Imaging pixel size
         gate: .gate.Gate
             Gating class to use
         num_extractors: int
@@ -174,44 +182,51 @@ class QueueEventExtractor:
         # queue with event-wise feature dictionaries
         event_queue = mp_spawn.Queue()
 
+        num_frames = slot_register.num_frames
+
         # Note that the order must be identical to  __init__
         args = collections.OrderedDict()
-        args["data"] = data
+        args["slot_register"] = slot_register
+        args["pixel_size"] = pixel_size
         args["gate"] = gate
         args["raw_queue"] = raw_queue
         args["event_queue"] = event_queue
         args["log_queue"] = log_queue
-        args["feat_nevents"] = mp_spawn.Array("i", len(data))
-        args["feat_nevents"][:] = np.full(len(data), -1)
+        args["feat_nevents"] = mp_spawn.Array("i", num_frames)
+        args["feat_nevents"][:] = np.full(num_frames, -1)
         # "h" is signed short (np.int16)
         args["label_array"] = mp_spawn.RawArray(
             np.ctypeslib.ctypes.c_int16,
-            int(np.prod(data.image.chunk_shape)))
+            int(np.prod(slot_register[0].shape)))
         args["finalize_extraction"] = mp_spawn.Value("b", False)
         args["invalid_mask_counter"] = mp_spawn.Value("L", 0)
         args["worker_monitor"] = mp_spawn.RawArray("L", num_extractors)
         args["log_level"] = log_level or logging.getLogger("dcnum").level
         return args
 
-    def get_events_from_masks(self, masks, data_index, *,
+    def get_events_from_masks(self,
+                              masks,
+                              chunk_slot,
+                              sub_index,
+                              *,
                               brightness: bool = True,
                               haralick: bool = True,
                               volume: bool = True,
                               ):
         """Get events dictionary, performing event-based gating"""
         events = {"mask": masks}
-        image = self.data.image[data_index][np.newaxis]
-        image_bg = self.data.image_bg[data_index][np.newaxis]
-        image_corr = self.data.image_corr[data_index][np.newaxis]
-        if "bg_off" in self.data:
-            bg_off = self.data["bg_off"][data_index]
+        image = chunk_slot.image[sub_index][np.newaxis]
+        image_bg = chunk_slot.image_bg[sub_index][np.newaxis]
+        image_corr = chunk_slot.image_corr[sub_index][np.newaxis]
+        if chunk_slot.bg_off is not None:
+            bg_off = chunk_slot.bg_off[sub_index]
         else:
             bg_off = None
 
         events.update(
             moments_based_features(
                 masks,
-                pixel_size=self.data.pixel_size,
+                pixel_size=self.pixel_size,
                 ret_contour=volume,
                 ))
 
@@ -235,7 +250,7 @@ class QueueEventExtractor:
                 contour=events.pop("contour"),  # remove contour from events!
                 pos_x=events["pos_x"],
                 pos_y=events["pos_y"],
-                pixel_size=self.data.pixel_size,
+                pixel_size=self.pixel_size,
             ))
 
         # gating on feature arrays
@@ -327,16 +342,35 @@ class QueueEventExtractor:
 
     def process_label(self, label, index):
         """Process one label image, extracting masks and features"""
-        if (np.all(self.data.image[index - 1] == self.data.image[index])
-                and index):
-            # TODO: Do this before segmentation already?
-            # skip events that have been analyzed already
-            return None
+        chunk = index // self.slot_register.chunk_size
+        sub_index = index % self.slot_register.chunk_size
+        chunk_slot = self.slot_register.find_slot(state="e", chunk=chunk)
+
+        images = chunk_slot.image
+
+        # Check for duplicates
+        # TODO: Check for duplicate images when loading data in ChunkSlot,
+        #       and make that information available as a boolean array.
+        if sub_index == 0:
+            # We have to check whether the last image from the previous
+            # chunk matches the current image.
+            data = self.slot_register.data
+            if (chunk != 0
+                    and np.all(images[sub_index] == data.image[index - 1])):
+                # skip duplicate events that have been analyzed already
+                return None
+        else:
+            if np.all(images[sub_index] == images[sub_index - 1]):
+                # skip duplicate events that have been analyzed already
+                return None
 
         masks = self.get_masks_from_label(label)
         if masks.size:
             events = self.get_events_from_masks(
-                masks=masks, data_index=index, **self.extract_kwargs)
+                masks=masks,
+                chunk_slot=chunk_slot,
+                sub_index=sub_index,
+                **self.extract_kwargs)
         else:
             events = None
         return events
@@ -365,7 +399,7 @@ class QueueEventExtractor:
         self.logger.info("Ready")
 
         mp_array = np.ctypeslib.as_array(
-            self.label_array).reshape(self.data.image.chunk_shape)
+            self.label_array).reshape(self.slot_register[0].shape)
 
         # only close queues when we have created them ourselves.
         close_queues = isinstance(self, EventExtractorProcess)
@@ -373,7 +407,8 @@ class QueueEventExtractor:
         while True:
             try:
                 chunk_index, label_index = self.raw_queue.get(timeout=.03)
-                index = chunk_index * self.data.image.chunk_size + label_index
+                index = (chunk_index * self.slot_register.chunk_size
+                         + label_index)
             except queue.Empty:
                 if self.finalize_extraction.value:
                     # The manager told us that there is nothing more coming.

@@ -41,7 +41,8 @@ def test_event_extractor_manager_thread():
     thr_segm.start()
 
     fe_kwargs = QueueEventExtractor.get_init_kwargs(
-        data=hd,
+        slot_register=slot_register,
+        pixel_size=hd.pixel_size,
         gate=Gate(hd),
         num_extractors=1,
         log_queue=log_queue,
