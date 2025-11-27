@@ -93,6 +93,8 @@ class ChunkSlot:
             self.mp_labels = mp_spawn.RawArray(
                 np.ctypeslib.as_ctypes_type(np.int16), array_length)
 
+        # TODO: Track timing information for e.g. the `load` method.
+
         self._state.value = "i"
 
     def __str__(self):
