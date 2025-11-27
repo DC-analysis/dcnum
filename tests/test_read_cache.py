@@ -1,8 +1,5 @@
-import h5py
-
 from dcnum.write import HDF5Writer
 from dcnum.read import HDF5Data, concatenated_hdf5_data
-from dcnum.read.cache import HDF5ImageCache
 
 import pytest
 
@@ -52,7 +49,7 @@ def test_image_read_cache_auto_reduced():
 
     with HDF5Data(path, image_chunk_size=81) as hd:
         assert hd.h5["events/image"].chunks == (32, 80, 400)
-        assert hd.image.chunk_size == 64, "chunking reduced to maximum below 81"
+        assert hd.image.chunk_size == 64, "chunking reduced to max below 81"
 
 
 @pytest.mark.parametrize("chunk_size", (32, 64, 1000))
@@ -82,4 +79,4 @@ def test_image_read_cache_contiguous():
 
     with HDF5Data(path, image_chunk_size=81) as hd:
         assert hd.h5["events/image"].chunks is None
-        assert hd.image.chunk_size == 81, "chunking as requested, contiguous arrays"
+        assert hd.image.chunk_size == 81, "chunking to 81, contiguous arrays"

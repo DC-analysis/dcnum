@@ -24,8 +24,13 @@ def test_chunk_size_identical():
         images_bg = h5["events/image_bg"][:]
         del h5["events/image"]
         del h5["events/image_bg"]
-        h5.create_dataset("events/image", data=images, chunks=(900, 80, 320))
-        h5.create_dataset("events/image_bg", data=images_bg, chunks=(920, 80, 320))
+        h5.create_dataset("events/image",
+                          data=images,
+                          chunks=(900, 80, 320))
+        h5.create_dataset("events/image_bg",
+                          data=images_bg,
+                          # Different chunks!
+                          chunks=(920, 80, 320))
 
     with read.HDF5Data(path) as hd:
         assert hd.image_chunk_size == 900
