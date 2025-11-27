@@ -161,6 +161,11 @@ class ChunkSlot:
         else:
             return None
 
+    @property
+    def labels(self):
+        return np.ctypeslib.as_array(
+            self.mp_labels).reshape(self.shape)
+
     @with_state_change(before="i", after="s")
     def load(self, idx):
         """Load chunk `idx` into `self.mp_image` and return a numpy view"""

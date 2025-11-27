@@ -479,7 +479,7 @@ def copy_features(h5_src: h5py.File,
                         and np.all(ei[feat][:] == eo[feat][:])):
                     # Scalar features are identical, nothing to do.
                     continue
-                # TODO: Check non-scalar features with loop (OOM)?
+                # TODO: Check non-scalar features with loop as well (OOM)?
             raise ValueError(f"Output file {h5_dst.filename} already contains "
                              f"the feature {feat}.")
         if not isinstance(ei[feat], h5py.Dataset):

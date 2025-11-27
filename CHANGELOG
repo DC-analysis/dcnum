@@ -11,6 +11,7 @@
  - ref: introduce "chunk slot register" architecture which encompasses
    the new classes `SlotRegister`, `ChunkSlot` and `UniversalWorker`
  - ref: rename `join_thread_helper` to `join_worker`
+ - ref: `QueueEventExtractor` fetches preloaded labels from `ChunkSlot`
 0.26.0
  - feat: data writing is now done in a separate process (#32)
  - fix: `create_with_basins` should not add internal basins, but register them

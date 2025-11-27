@@ -33,7 +33,6 @@ class QueueEventExtractor:
                  event_queue: mp.Queue,
                  log_queue: mp.Queue,
                  feat_nevents: mp.Array,
-                 label_array: mp.Array,
                  finalize_extraction: mp.Value,
                  invalid_mask_counter: mp.Value,
                  worker_monitor: mp.RawArray,
@@ -66,8 +65,6 @@ class QueueEventExtractor:
             Shared array of same length as data into which the number of
             events per input frame is written. This array must be initialized
             with -1 (all values minus one).
-        label_array:
-            Shared array containing the labels of one chunk from `data`.
         finalize_extraction:
             Shared value indicating whether this worker should stop as
             soon as the `raw_queue` is empty.
@@ -100,7 +97,7 @@ class QueueEventExtractor:
         """Gating information"""
 
         self.raw_queue = raw_queue
-        """queue containing sub-indices for ``label_array``"""
+        """queue containing sub-indices for the labels"""
 
         self.event_queue = event_queue
         """queue with event-wise feature dictionaries"""
@@ -125,9 +122,6 @@ class QueueEventExtractor:
         Shared array of length `len(data)` into which the number of
         events per frame is written.
         """
-
-        self.label_array = label_array
-        """Shared array containing the labels of one chunk from `data`."""
 
         self.finalize_extraction = finalize_extraction
         """Set to True to let worker join when `raw_queue` is empty."""
@@ -194,10 +188,6 @@ class QueueEventExtractor:
         args["log_queue"] = log_queue
         args["feat_nevents"] = mp_spawn.Array("i", num_frames)
         args["feat_nevents"][:] = np.full(num_frames, -1)
-        # "h" is signed short (np.int16)
-        args["label_array"] = mp_spawn.RawArray(
-            np.ctypeslib.ctypes.c_int16,
-            int(np.prod(slot_register[0].shape)))
         args["finalize_extraction"] = mp_spawn.Value("b", False)
         args["invalid_mask_counter"] = mp_spawn.Value("L", 0)
         args["worker_monitor"] = mp_spawn.RawArray("L", num_extractors)
@@ -340,7 +330,7 @@ class QueueEventExtractor:
                                 ppid=pp_extr_kwargs)
         return kwargs
 
-    def process_label(self, label, index):
+    def process_label(self, index):
         """Process one label image, extracting masks and features"""
         chunk = index // self.slot_register.chunk_size
         sub_index = index % self.slot_register.chunk_size
@@ -364,7 +354,7 @@ class QueueEventExtractor:
                 # skip duplicate events that have been analyzed already
                 return None
 
-        masks = self.get_masks_from_label(label)
+        masks = self.get_masks_from_label(chunk_slot.labels[sub_index])
         if masks.size:
             events = self.get_events_from_masks(
                 masks=masks,
@@ -398,9 +388,6 @@ class QueueEventExtractor:
         self.logger.addHandler(queue_handler)
         self.logger.info("Ready")
 
-        mp_array = np.ctypeslib.as_array(
-            self.label_array).reshape(self.slot_register[0].shape)
-
         # only close queues when we have created them ourselves.
         close_queues = isinstance(self, EventExtractorProcess)
 
@@ -417,9 +404,7 @@ class QueueEventExtractor:
                     break
             else:
                 try:
-                    events = self.process_label(
-                        label=mp_array[label_index],
-                        index=index)
+                    events = self.process_label(index=index)
                 except BaseException:
                     self.logger.error(traceback.format_exc())
                 else:

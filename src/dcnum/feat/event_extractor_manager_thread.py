@@ -57,10 +57,6 @@ class EventExtractorManagerThread(threading.Thread):
         self.raw_queue = self.fe_kwargs["raw_queue"]
         """Queue for sending chunks and label indices to the workers"""
 
-        self.label_array = np.ctypeslib.as_array(
-            self.fe_kwargs["label_array"]).reshape(self.slot_register[0].shape)
-        """Shared labeling array"""
-
         self.write_queue_size = write_queue_size
         """Number of event chunks waiting to be written to the output file"""
 
@@ -116,16 +112,6 @@ class EventExtractorManagerThread(threading.Thread):
             self.t_wait += t1 - t0
 
             # We have a chunk, process it!
-            # Populate the labeling array for the workers
-            new_labels = np.ctypeslib.as_array(cs.mp_labels).reshape(cs.shape)
-            # TODO: `new_labels` is already a shared array.
-            if len(new_labels) == self.label_array.shape[0]:
-                self.label_array[:] = new_labels
-            elif len(new_labels) < self.label_array.shape[0]:
-                self.label_array[:len(new_labels)] = new_labels
-                self.label_array[len(new_labels):] = 0
-            else:
-                raise ValueError("label array has bad shape")
 
             # Let the workers know there is work
             [self.raw_queue.put((cs.chunk, ii)) for ii in range(cs.length)]
