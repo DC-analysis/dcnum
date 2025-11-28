@@ -82,6 +82,7 @@ class STOSegmenter(Segmenter, abc.ABC):
                     structure=ndi.generate_binary_structure(2, 2))
             labels = new_labels
 
+        # TODO: Parallelize this
         # Perform mask postprocessing
         if self.mask_postprocessing:
             for ii in range(len(labels)):
