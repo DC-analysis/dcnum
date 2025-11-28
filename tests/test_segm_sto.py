@@ -77,14 +77,14 @@ def test_segm_sto_bg_off_batch():
 def test_segm_sto_bg_off_no_background_correction():
     """
     When a segmenter does not employ background correction, a ValueError
-    is raised when calling `segment_chunk` with bg_off."""
+    is raised when calling `segment_batch` with bg_off."""
     sg = MockSTOSegmenter()
     # This will raise the value error below
     sg.requires_background_correction = False
 
     im = MockImageData()
     with pytest.raises(ValueError, match="does not employ background"):
-        sg.segment_chunk(im, chunk=1, bg_off=np.ones(100, dtype=float))
+        sg.segment_batch(im.get_chunk(1), bg_off=np.ones(100, dtype=float))
 
 
 def test_segm_sto_bg_off_single():
@@ -244,7 +244,7 @@ def test_segm_sto_mask_postprocessing_removed_border_fill_holes():
     sg = MockSTOSegmenter()
     im = MockImageData()
     assert sg.mask_postprocessing
-    labels = sg.segment_chunk(im, chunk=1)
+    labels = sg.segment_batch(im.get_chunk(1))
     assert labels.shape == (100, 14, 8)
     label = labels[0]
 
@@ -271,7 +271,7 @@ def test_segm_sto_mask_postprocessing_removed_border_no_fill_holes():
     sg = MockSTOSegmenter(kwargs_mask={"fill_holes": False})
     im = MockImageData()
     assert sg.mask_postprocessing
-    labels = sg.segment_chunk(im, chunk=1)
+    labels = sg.segment_batch(im.get_chunk(1))
     assert labels.shape == (100, 14, 8)
     label = labels[0]
 

@@ -63,7 +63,7 @@ def test_segm_mpo_bg_off_batch():
 def test_segm_sto_bg_off_no_background_correction():
     """
     When a segmenter does not employ background correction, a ValueError
-    is raised when calling `segment_chunk` with bg_off."""
+    is raised when calling `segment_batch` with bg_off."""
     sm = segm.segm_thresh.SegmentThresh(thresh=-6,
                                         kwargs_mask={"clear_border": True,
                                                      "fill_holes": True,
@@ -73,8 +73,9 @@ def test_segm_sto_bg_off_no_background_correction():
     sm.requires_background_correction = False
 
     im = MockImageData()
+
     with pytest.raises(ValueError, match="does not employ background"):
-        sm.segment_chunk(im, chunk=1, bg_off=np.ones(100, dtype=float))
+        sm.segment_batch(im.get_chunk(1), bg_off=np.ones(100, dtype=float))
 
 
 def test_segm_mpo_bg_off_single():
@@ -301,16 +302,18 @@ def test_segm_mpo_labeled_mask_fill_holes_int32():
     assert labels_2.dtype == np.int32
 
 
-def test_segm_mpo_segment_chunk():
+def test_segm_mpo_segment_batch():
     with segm.segm_thresh.SegmentThresh(
             thresh=-12,
             kwargs_mask={"closing_disk": 0},
             debug=True
     ) as sm:
         image_data = MockImageData()
-        labels_1 = np.copy(sm.segment_chunk(image_data, 0))  # below threshold
+        # below threshold
+        labels_1 = np.copy(sm.segment_batch(image_data.get_chunk(0)))
         assert sm.image_array.min() == -10
-        labels_2 = np.copy(sm.segment_chunk(image_data, 10))  # above threshold
+        # above threshold
+        labels_2 = np.copy(sm.segment_batch(image_data.get_chunk(10)))
         assert sm.image_array.min() == -20
         assert np.all(labels_1 == 0)
         assert not np.all(labels_2 == 0)
@@ -321,7 +324,7 @@ def test_cpu_segmenter_getsetstate():
     with segm.segm_thresh.SegmentThresh(thresh=-12, debug=True) as sm2:
         image_data = MockImageData()
         # Do some processing so that we have workers
-        sm2.segment_chunk(image_data, 0)
+        sm2.segment_batch(image_data.get_chunk(0))
         # get the state
         state = sm2.__getstate__()
         # set the state

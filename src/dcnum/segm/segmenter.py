@@ -329,31 +329,34 @@ class Segmenter(abc.ABC):
         This is implemented in the MPO and STO segmenters.
         """
 
-    def segment_chunk(self, image_data, chunk, bg_off=None):
-        """Return the integer labels for one `image_data` chunk
+    def segment_chunk(self,
+                      chunk_slot: "ChunkSlot",  # noqa: F821
+                      ):
+        """Segment the image data of one `ChunkSlot`
 
-        This is a wrapper for `segment_batch`.
+        This is a wrapper for `segment_batch`. The image information
+        are extracted from the `chunk_slot.image`/`chunk_slot.image_corr`
+        properties and the labels are written to ``chunk_slot.labels`.
 
         Parameters
         ----------
-        image_data:
-            Instance of dcnum's :class:`.BaseImageChunkCache` with
-            the methods `get_chunk` and `get_chunk_slice`.
-        chunk: int
-            Integer identifying the chunk in `image_data` to segment
-        bg_off: ndarray
-            Optional 1D array with same length as `image_data` that holds
-            additional background offset values that should be subtracted
-            from the image data before segmentation. Should only be
-            used in combination with segmenters that have
-            ``requires_background_correction`` set to True.
+        chunk_slot: ChunkSlot
+            The data chunk to perform segmentation on
+
+        Returns
+        -------
+        labels: np.array
+            The `chunk_slot.labels` numpy view on the shared labels array.
         """
-        images = image_data.get_chunk(chunk)
-        if bg_off is not None:
-            bg_off_chunk = bg_off[image_data.get_chunk_slice(chunk)]
+        if self.requires_background_correction:
+            images = chunk_slot.image_corr
         else:
-            bg_off_chunk = None
-        return self.segment_batch(images, bg_off=bg_off_chunk)
+            images = chunk_slot.image
+
+        labels = chunk_slot.labels
+
+        labels[:] = self.segment_batch(images, bg_off=chunk_slot.bg_off)
+        return labels
 
     @abc.abstractmethod
     def segment_single(self, image):

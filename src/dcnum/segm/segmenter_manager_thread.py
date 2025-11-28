@@ -2,8 +2,6 @@ import logging
 import time
 import threading
 
-import numpy as np
-
 from .segmenter import Segmenter
 from .segmenter_mpo import MPOSegmenter
 
@@ -66,20 +64,9 @@ class SegmenterManagerThread(threading.Thread):
             t1 = time.monotonic()
             self.t_wait += t1 - t0
 
-            # Read the images from the chunk
-            if self.segmenter.requires_background_correction:
-                images = cs.image_corr
-            else:
-                images = cs.image
-
-            # Store labels in a list accessible by the main thread
-            labels = np.ctypeslib.as_array(cs.mp_labels).reshape(cs.shape)
-
             # We have a free slot to compute the segmentation
-            labels[:] = self.segmenter.segment_batch(
-                images=images,
-                bg_off=cs.bg_off,
-            )
+            # `segment_chunk` populates the `cs.labels` array.
+            self.segmenter.segment_chunk(cs)
 
             # Let everyone know that segmentation is complete
             cs.state = "e"

@@ -144,7 +144,7 @@ class MPOSegmenter(Segmenter, abc.ABC):
 
         Before segmentation, an optional background offset correction with
         ``bg_off`` is performed. After segmentation, mask postprocessing is
-        performed according to the class definition.
+        performed according to the segmenter class definition.
 
         Parameters
         ----------
