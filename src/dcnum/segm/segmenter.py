@@ -323,7 +323,7 @@ class Segmenter(abc.ABC):
         return segm_wrap
 
     @abc.abstractmethod
-    def segment_batch(self, images, start=None, stop=None, bg_off=None):
+    def segment_batch(self, images, bg_off=None):
         """Return the integer labels for an entire batch
 
         This is implemented in the MPO and STO segmenters.

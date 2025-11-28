@@ -39,8 +39,6 @@ class STOSegmenter(Segmenter, abc.ABC):
 
     def segment_batch(self,
                       images: np.ndarray,
-                      start: int = None,
-                      stop: int = None,
                       bg_off: np.ndarray = None,
                       ):
         """Perform batch segmentation of `images`
@@ -53,10 +51,6 @@ class STOSegmenter(Segmenter, abc.ABC):
         ----------
         images: 3d np.ndarray of shape (N, Y, X)
             The time-series image data. First axis is time.
-        start: int
-            First index to analyze in `images`
-        stop: int
-            Index after the last index to analyze in `images`
         bg_off: 1D np.ndarray of length N
             Optional 1D numpy array with background offset
 
@@ -66,11 +60,6 @@ class STOSegmenter(Segmenter, abc.ABC):
           images, then `images` must already be background-corrected,
           except for the optional `bg_off`.
         """
-        if stop is None or start is None:
-            start = 0
-            stop = len(images)
-
-        image_slice = images[start:stop]
         segm = self.segment_algorithm_wrapper()
 
         if bg_off is not None:
@@ -78,10 +67,10 @@ class STOSegmenter(Segmenter, abc.ABC):
                 raise ValueError(f"The segmenter {self.__class__.__name__} "
                                  f"does not employ background correction, "
                                  f"but the `bg_off` keyword argument was "
-                                 f"passed to `segment_chunk`. Please check "
+                                 f"passed to `segment_batch`. Please check "
                                  f"your analysis pipeline.")
-            image_slice = image_slice - bg_off.reshape(-1, 1, 1)
-        labels = segm(image_slice)
+            images = images - bg_off.reshape(-1, 1, 1)
+        labels = segm(images)
 
         # Make sure we have integer labels and perform mask postprocessing
         if labels.dtype == bool:

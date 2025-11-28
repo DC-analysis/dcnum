@@ -138,8 +138,6 @@ class MPOSegmenter(Segmenter, abc.ABC):
 
     def segment_batch(self,
                       images: np.ndarray,
-                      start: int = None,
-                      stop: int = None,
                       bg_off: np.ndarray = None,
                       ):
         """Perform batch segmentation of `images`
@@ -152,10 +150,6 @@ class MPOSegmenter(Segmenter, abc.ABC):
         ----------
         images: 3d np.ndarray of shape (N, Y, X)
             The time-series image data. First axis is time.
-        start: int
-            First index to analyze in `images`
-        stop: int
-            Index after the last index to analyze in `images`
         bg_off: 1D np.ndarray of length N
             Optional 1D numpy array with background offset
 
@@ -178,12 +172,8 @@ class MPOSegmenter(Segmenter, abc.ABC):
         #  option would be to have some kind of dynamic number of workers
         #  which could be organized by a shared array and timing information.
 
-        if stop is None or start is None:
-            start = 0
-            stop = len(images)
-
-        batch_size = stop - start
-        size = np.prod(images.shape[1:]) * batch_size
+        size = np.prod(images.shape)
+        chunk_size = images.shape[0]
 
         if self.image_shape is None:
             self.image_shape = images[0].shape
@@ -203,32 +193,30 @@ class MPOSegmenter(Segmenter, abc.ABC):
                 raise ValueError(f"The segmenter {self.__class__.__name__} "
                                  f"does not employ background correction, "
                                  f"but the `bg_off` keyword argument was "
-                                 f"passed to `segment_chunk`. Please check "
+                                 f"passed to `segment_batch`. Please check "
                                  f"your analysis pipeline.")
             # background offset
             if self._mp_bg_off_np is None:
-                self.mp_bg_off_raw, self._mp_bg_off_np = \
-                    self._create_shared_array(
-                        array_shape=(stop - start,),
-                        batch_size=batch_size,
-                        dtype=np.float64)
+                ctype = np.ctypeslib.as_ctypes_type(np.float64)
+                self.mp_bg_off_raw = mp_spawn.RawArray(ctype, chunk_size)
+                self._mp_bg_off_np = np.ctypeslib.as_array(self.mp_bg_off_raw)
             # The last chunk might be smaller
-            self._mp_bg_off_np[:] = bg_off[start:stop]
+            self._mp_bg_off_np[:] = bg_off
 
         # input images
         if self._mp_image_np is None:
             self.mp_image_raw, self._mp_image_np = self._create_shared_array(
                 array_shape=self.image_shape,
-                batch_size=batch_size,
+                batch_size=chunk_size,
                 dtype=images.dtype,
             )
-        self._mp_image_np[:] = images[start:stop]
+        self._mp_image_np[:] = images
 
         # output labels
         if self._mp_labels_np is None:
             self.mp_labels_raw, self._mp_labels_np = self._create_shared_array(
                 array_shape=self.image_shape,
-                batch_size=batch_size,
+                batch_size=chunk_size,
                 dtype=np.uint16,
             )
 
@@ -249,8 +237,8 @@ class MPOSegmenter(Segmenter, abc.ABC):
         self.mp_batch_worker.value = 0
 
         if not self._mp_workers:
-            step_size = batch_size // num_workers
-            rest = batch_size % num_workers
+            step_size = chunk_size // num_workers
+            rest = chunk_size % num_workers
             wstart = 0
             for ii in range(num_workers):
                 # Give every worker the same-sized workload and add one

@@ -83,7 +83,7 @@ def test_segm_thresh_segment_batch(worker_type):
 
     sm = segm.segm_thresh.SegmentThresh(debug=debug)
 
-    labels_seg = sm.segment_batch(image_u_c, start=0, stop=11)
+    labels_seg = sm.segment_batch(image_u_c)
     assert labels_seg is sm.labels_array
     assert np.all(np.array(labels_seg, dtype=bool) == sm.mask_array)
     # tell workers to stop
@@ -110,8 +110,7 @@ def test_segm_thresh_segment_batch_large(worker_type):
                                         kwargs_mask={"closing_disk": 0},
                                         debug=debug)
 
-    labels_seg_1 = np.copy(
-        sm.segment_batch(images, start=0, stop=101))
+    labels_seg_1 = np.copy(sm.segment_batch(images)[:101])
 
     assert labels_seg_1.dtype == np.uint16  # uint8 is not enough
     assert sm.mp_batch_index.value == 0
@@ -124,8 +123,7 @@ def test_segm_thresh_segment_batch_large(worker_type):
         # Check whether all processes did their deeds
         assert sm.mp_batch_worker.value == mp.cpu_count()
 
-    labels_seg_2 = np.copy(
-        sm.segment_batch(images, start=101, stop=121))
+    labels_seg_2 = np.copy(sm.segment_batch(images)[101:121])
 
     # tell workers to stop
     sm.join_workers()
