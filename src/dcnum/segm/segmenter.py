@@ -330,7 +330,8 @@ class Segmenter(abc.ABC):
         """
 
     def segment_chunk(self,
-                      chunk_slot: "ChunkSlot",  # noqa: F821
+                      chunk: int,  # noqa: F821
+                      slot_list: list,
                       ):
         """Segment the image data of one `ChunkSlot`
 
@@ -348,14 +349,21 @@ class Segmenter(abc.ABC):
         labels: np.array
             The `chunk_slot.labels` numpy view on the shared labels array.
         """
-        if self.requires_background_correction:
-            images = chunk_slot.image_corr
+        # Find the slot that we are supposed to be working on.
+        for cs in slot_list:
+            if cs.state == "s" and cs.chunk == chunk:
+                break
         else:
-            images = chunk_slot.image
+            raise ValueError(f"Could not find slot for {chunk=}")
 
-        labels = chunk_slot.labels
+        if self.requires_background_correction:
+            images = cs.image_corr
+        else:
+            images = cs.image
 
-        labels[:] = self.segment_batch(images, bg_off=chunk_slot.bg_off)
+        labels = cs.labels
+
+        labels[:] = self.segment_batch(images, bg_off=cs.bg_off)
         return labels
 
     @abc.abstractmethod

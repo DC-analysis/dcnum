@@ -147,7 +147,7 @@ class QueueWriterBase:
                           last_idx:last_idx + self.write_threshold]
             if np.any(np.array(cur_nevents) < 0):
                 # We are not yet ready to write any new data to the queue.
-                time.sleep(.01)
+                time.sleep(.03)
                 continue
 
             if len(cur_nevents) == 0:

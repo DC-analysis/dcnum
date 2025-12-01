@@ -42,32 +42,24 @@ class MPOSegmenter(Segmenter, abc.ABC):
                                            debug=debug,
                                            **kwargs)
         self.num_workers = num_workers or mp.cpu_count()
-        # batch input image data
-        self.mp_image_raw = None
-        self._mp_image_np = None
-        # batch output image data
-        self.mp_labels_raw = None
-        self._mp_labels_np = None
-        # batch image background offset
-        self.mp_bg_off_raw = None
-        self._mp_bg_off_np = None
+
+        self.slot_list = None
+        """List of ChunkSlot instances"""
+
+        self.mp_slot_index = mp_spawn.Value("i", 0)
+        """The slot that is currently being worked on"""
+
+        self.mp_active = mp_spawn.Value("i", 0)
+        """Whether the workers are allowed to do work"""
+
+        self.mp_num_workers_done = mp_spawn.Value("i", 0)
+        """Number of workers that are done processing the slot"""
+
+        self.mp_shutdown = mp_spawn.Value("i", 0)
+        """Shutdown bit tells workers to stop when set to != 0"""
+
         # workers
-        self._mp_workers = []
-        # Image shape of the input array
-        self.image_shape = None
-        # Processing control values
-        # The batch worker number helps to communicate with workers.
-        # <-1: exit
-        # -1: idle
-        # 0: start
-        # >0: this number of workers finished a batch
-        self.mp_batch_worker = mp_spawn.Value("i", 0)
-        # The iteration of the process (increment to wake workers)
-        # (raw value, because only this thread changes it)
-        self.mp_batch_index = mp_spawn.RawValue("i", -1)
-        # Tells the workers to stop
-        # (raw value, because only this thread changes it)
-        self.mp_shutdown = mp_spawn.RawValue("i", 0)
+        self._workers = []
 
     def __enter__(self):
         return self
@@ -85,56 +77,54 @@ class MPOSegmenter(Segmenter, abc.ABC):
         state = self.__dict__.copy()
         # Remove the unpicklable entries.
         del state["logger"]
-        del state["_mp_image_np"]
-        del state["_mp_labels_np"]
-        del state["_mp_bg_off_np"]
-        del state["_mp_workers"]
+        del state["_workers"]
         return state
 
     def __setstate__(self, state):
         # Restore instance attributes
         self.__dict__.update(state)
 
-    @staticmethod
-    def _create_shared_array(array_shape, batch_size, dtype):
-        """Return raw and numpy-view on shared array
-
-        Parameters
-        ----------
-        array_shape: tuple of int
-            Shape of one single image in the array
-        batch_size: int
-            Number of images in the array
-        dtype:
-            numpy dtype
-        """
-        ctype = np.ctypeslib.as_ctypes_type(dtype)
-        sa_raw = mp_spawn.RawArray(ctype,
-                                   int(np.prod(array_shape) * batch_size))
-        # Convert the RawArray to something we can write to fast
-        # (similar to memory view, but without having to cast) using
-        # np.ctypeslib.as_array. See discussion in
-        # https://stackoverflow.com/questions/37705974
-        sa_np = np.ctypeslib.as_array(sa_raw).reshape(batch_size, *array_shape)
-        return sa_raw, sa_np
-
-    @property
-    def image_array(self):
-        return self._mp_image_np
-
-    @property
-    def labels_array(self):
-        return self._mp_labels_np
-
-    @property
-    def mask_array(self):
-        return np.array(self._mp_labels_np, dtype=bool)
-
     def join_workers(self):
         """Ask all workers to stop and join them"""
-        if self._mp_workers:
+        if self._workers:
             self.mp_shutdown.value = 1
-            [w.join() for w in self._mp_workers]
+            for w in self._workers:
+                w.join()
+                if hasattr(w, "close"):
+                    w.close()
+        self._workers.clear()
+
+    def reinitialize_workers(self, slot_list):
+        self.join_workers()
+        self.slot_list = slot_list
+        self.mp_shutdown.value = 0
+
+        if self.debug:
+            worker_cls = MPOSegmenterWorkerThread
+            num_workers = 1
+            self.logger.debug("Running with one worker in main thread")
+        else:
+            worker_cls = MPOSegmenterWorkerProcess
+            num_workers = self.num_workers
+            self.logger.debug(f"Running with {num_workers} workers")
+
+        chunk_size = self.slot_list[0].length
+        self.num_workers = min(num_workers, chunk_size)
+        step_size = chunk_size // self.num_workers
+        rest = chunk_size % self.num_workers
+        w_start = 0
+        for ii in range(self.num_workers):
+            # Give every worker the same-sized workload and add one
+            # from the rest until there is no more.
+            w_stop = w_start + step_size
+            if rest:
+                w_stop += 1
+                rest -= 1
+            args = [self, w_start, w_stop]
+            w = worker_cls(*args)
+            w.start()
+            self._workers.append(w)
+            w_start = w_stop
 
     def segment_batch(self,
                       images: np.ndarray,
@@ -159,105 +149,84 @@ class MPOSegmenter(Segmenter, abc.ABC):
           images, then `images` must already be background-corrected,
           except for the optional `bg_off`.
         """
-        # TODO: Replace `mp_image_raw`, `self._mp_image_np`, and the likes
-        #  with the preloaded data from the chunk. This means that the
-        #  SlotRegister must be passed to the segmenter class. This will
-        #  remove a lot of redundant code (definitions of the shared arrays),
-        #  avoid reinstantiating all workers for the last chunk, result in
-        #  a minor speed-up, and make the code more readable overall.
-
-        # TODO: Register the segmenter with the UniversalWorkers. To make
-        #  this change, the `sl_start` and `sl_stop` arguments should
-        #  somehow be managed by the ChunkSlot. This can get messy. Another
-        #  option would be to have some kind of dynamic number of workers
-        #  which could be organized by a shared array and timing information.
-
-        size = np.prod(images.shape)
-        chunk_size = images.shape[0]
-
-        if self.image_shape is None:
-            self.image_shape = images[0].shape
-
-        if self._mp_image_np is not None and self._mp_image_np.size != size:
-            # reset image data
-            self._mp_image_np = None
-            self._mp_labels_np = None
-            self._mp_bg_off_np = None
-            self.join_workers()
-            self._mp_workers = []
-            self.mp_batch_index.value = -1
-            self.mp_shutdown.value = 0
-
+        from ..logic.chunk_slot import ChunkSlotBase
+        available_features = ["image_bg"]
         if bg_off is not None:
+            available_features.append("bg_off")
+        cs = ChunkSlotBase(shape=images.shape,
+                           available_features=available_features)
+        if self.requires_background_correction:
+            cs.image_corr[:] = images
+            if bg_off is not None:
+                cs.bg_off[:] = bg_off
+        else:
+            cs.image[:] = images
+
+        cs.chunk = 0
+        cs.state = "s"
+
+        self.segment_chunk(0, [cs])
+        return cs.labels[:]
+
+    def segment_chunk(self,
+                      chunk: int,  # noqa: F821
+                      slot_list: list,
+                      ):
+        """Segment the image data of one `ChunkSlot`
+
+        Parameters
+        ----------
+        chunk:
+            The data chunk index to perform segmentation on
+        slot_list:
+            List of `ChunkSlotBase` instances (e.g. `SlotRegister.slots`)
+
+        Returns
+        -------
+        labels: np.array
+            The `chunk_slot.labels` numpy view on the shared labels array.
+        """
+        self.mp_active.value = 0
+
+        # Find the slot that we are supposed to be working on.
+        for cs in slot_list:
+            if cs.state == "s" and cs.chunk == chunk:
+                break
+        else:
+            raise ValueError(f"Could not find slot for {chunk=}")
+
+        if cs.bg_off is not None:
             if not self.requires_background_correction:
                 raise ValueError(f"The segmenter {self.__class__.__name__} "
                                  f"does not employ background correction, "
                                  f"but the `bg_off` keyword argument was "
-                                 f"passed to `segment_batch`. Please check "
+                                 f"passed to `segment_chunk`. Please check "
                                  f"your analysis pipeline.")
-            # background offset
-            if self._mp_bg_off_np is None:
-                ctype = np.ctypeslib.as_ctypes_type(np.float64)
-                self.mp_bg_off_raw = mp_spawn.RawArray(ctype, chunk_size)
-                self._mp_bg_off_np = np.ctypeslib.as_array(self.mp_bg_off_raw)
-            # The last chunk might be smaller
-            self._mp_bg_off_np[:] = bg_off
 
-        # input images
-        if self._mp_image_np is None:
-            self.mp_image_raw, self._mp_image_np = self._create_shared_array(
-                array_shape=self.image_shape,
-                batch_size=chunk_size,
-                dtype=images.dtype,
-            )
-        self._mp_image_np[:] = images
+        # Prepare everything for the workers, so they can already start
+        # segmenting when they are created.
+        slot_index = slot_list.index(cs)
+        self.mp_slot_index.value = slot_index
 
-        # output labels
-        if self._mp_labels_np is None:
-            self.mp_labels_raw, self._mp_labels_np = self._create_shared_array(
-                array_shape=self.image_shape,
-                batch_size=chunk_size,
-                dtype=np.uint16,
-            )
+        self.mp_num_workers_done.value = 0
+        self.mp_active.value = 1
 
-        # Create the workers
-        if self.debug:
-            worker_cls = MPOSegmenterWorkerThread
-            num_workers = 1
-            self.logger.debug("Running with one worker in main thread")
+        if self.slot_list is not None:
+            for cs1, cs2 in zip(slot_list, self.slot_list):
+                if cs1 is not cs2:
+                    # Something changed. We have to respawn the workers.
+                    self.slot_list = slot_list
+                    self.reinitialize_workers(slot_list)
+                    break
         else:
-            worker_cls = MPOSegmenterWorkerProcess
-            num_workers = min(self.num_workers, images.shape[0])
-            self.logger.debug(f"Running with {num_workers} workers")
+            self.slot_list = slot_list
+            self.reinitialize_workers(slot_list)
 
-        # Match iteration number with workers
-        self.mp_batch_index.value += 1
-
-        # Tell workers to get going immediately
-        self.mp_batch_worker.value = 0
-
-        if not self._mp_workers:
-            step_size = chunk_size // num_workers
-            rest = chunk_size % num_workers
-            wstart = 0
-            for ii in range(num_workers):
-                # Give every worker the same-sized workload and add one
-                # from the rest until there is no more.
-                wstop = wstart + step_size
-                if rest:
-                    wstop += 1
-                    rest -= 1
-                args = [self, wstart, wstop]
-                w = worker_cls(*args)
-                w.start()
-                self._mp_workers.append(w)
-                wstart = wstop
-
-        # Wait for all workers to complete
-        while self.mp_batch_worker.value != num_workers:
+        while self.mp_num_workers_done.value != self.num_workers:
             time.sleep(.01)
 
-        return self._mp_labels_np
+        self.mp_active.value = 0
+        return cs.labels
 
     def segment_single(self, image, bg_off: float = None):
         """Return the integer label image for an input image
@@ -284,6 +253,11 @@ class MPOSegmenter(Segmenter, abc.ABC):
             labels = self.process_mask(labels, **self.kwargs_mask)
         return labels
 
+    def close(self):
+        self.join_workers()
+        if self.slot_list is not None:
+            self.slot_list.clear()
+
 
 class MPOSegmenterWorker:
     def __init__(self,
@@ -305,66 +279,67 @@ class MPOSegmenterWorker:
         # Must call super init, otherwise Thread or Process are not initialized
         super(MPOSegmenterWorker, self).__init__()
         self.segmenter = segmenter
-        # Value incrementing the batch index. Starts with 0 and is
-        # incremented every time :func:`Segmenter.segment_batch` is
-        # called.
-        self.batch_index = segmenter.mp_batch_index
-        # Value incrementing the number of workers that have finished
-        # their part of the batch.
-        self.batch_worker = segmenter.mp_batch_worker
-        # Shutdown bit tells workers to stop when set to != 0
-        self.shutdown = segmenter.mp_shutdown
-        # The image data for segmentation
-        self.image_arr_raw = segmenter.mp_image_raw
-        # Background data offset
-        self.bg_off = segmenter.mp_bg_off_raw
-        # Integer output label array
-        self.labels_data_raw = segmenter.mp_labels_raw
-        # The shape of one image
-        self.image_shape = segmenter.image_shape
+
+        self.slot_list = segmenter.slot_list
+        """List of ChunkSlot instances"""
+
+        self.mp_slot_index = segmenter.mp_slot_index
+        """The slot that is currently being worked on"""
+
+        self.mp_active = segmenter.mp_active
+        """Whether the workers are allowed to do work"""
+
+        self.mp_num_workers_done = segmenter.mp_num_workers_done
+        """Number of workers that are done processing the slot"""
+
+        self.mp_shutdown = segmenter.mp_shutdown
+        """Shutdown bit tells workers to stop when set to != 0"""
+
         self.sl_start = sl_start
         self.sl_stop = sl_stop
 
     def run(self):
         # confirm single-threadedness (prints to log)
         confirm_single_threaded()
-        # We have to create the numpy-versions of the mp.RawArrays here,
-        # otherwise we only get some kind of copy in the new process
-        # when we use "spawn" instead of "fork".
-        labels_arr = np.ctypeslib.as_array(self.labels_data_raw).reshape(
-            -1, self.image_shape[0], self.image_shape[1])
-        image_arr = np.ctypeslib.as_array(self.image_arr_raw).reshape(
-            -1, self.image_shape[0], self.image_shape[1])
-        if self.bg_off is not None:
-            bg_off_data = np.ctypeslib.as_array(self.bg_off)
-        else:
-            bg_off_data = None
+        last_chunk = -1
 
-        idx = self.sl_start
-        itr = 0  # current iteration (incremented when we reach self.sl_stop)
         while True:
-            correct_iter = self.batch_index.value == itr
-            if correct_iter:
-                if idx == self.sl_stop:
-                    # We finished processing everything.
-                    itr += 1  # prevent running same things again
-                    idx = self.sl_start  # reset counter for next batch
-                    with self.batch_worker:
-                        self.batch_worker.value += 1
-                else:
-                    if bg_off_data is None:
-                        bg_off = None
-                    else:
-                        bg_off = bg_off_data[idx]
-
-                    labels_arr[idx, :, :] = self.segmenter.segment_single(
-                        image=image_arr[idx], bg_off=bg_off)
-                    idx += 1
-            elif self.shutdown.value:
+            if self.mp_shutdown.value:
                 break
-            else:
-                # Wait for more data to arrive
+            elif not self.mp_active.value:
+                # Wait until there is work to be done
                 time.sleep(.01)
+            else:
+                # Get the current slot
+                cs = self.slot_list[self.mp_slot_index.value]
+
+                if cs.chunk == last_chunk:
+                    # We processed this chunk already
+                    time.sleep(0.01)
+                    continue
+                elif self.sl_start >= cs.length:
+                    # We have no data to process
+                    pass
+                else:
+                    if self.segmenter.requires_background_correction:
+                        images = cs.image_corr
+                        bg_offs = cs.bg_off
+                    else:
+                        images = cs.image
+                        bg_offs = None
+
+                    # Iterate over the chunks in that slot
+                    for idx in range(self.sl_start,
+                                     min(self.sl_stop, cs.length)):
+                        cs.labels[idx] = self.segmenter.segment_single(
+                            image=images[idx],
+                            bg_off=None if bg_offs is None else bg_offs[idx],
+                        )
+
+                with self.mp_num_workers_done:
+                    self.mp_num_workers_done.value += 1
+
+                last_chunk = cs.chunk
 
 
 class MPOSegmenterWorkerProcess(MPOSegmenterWorker, mp_spawn.Process):

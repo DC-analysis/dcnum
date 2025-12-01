@@ -311,10 +311,10 @@ def test_segm_mpo_segment_batch():
         image_data = MockImageData()
         # below threshold
         labels_1 = np.copy(sm.segment_batch(image_data.get_chunk(0)))
-        assert sm.image_array.min() == -10
+        assert sm.slot_list[0].image_corr.min() == -10
         # above threshold
         labels_2 = np.copy(sm.segment_batch(image_data.get_chunk(10)))
-        assert sm.image_array.min() == -20
+        assert sm.slot_list[0].image_corr.min() == -20
         assert np.all(labels_1 == 0)
         assert not np.all(labels_2 == 0)
 
@@ -330,8 +330,8 @@ def test_cpu_segmenter_getsetstate():
         # set the state
         sm1.__setstate__(state)
         # and here we test for the raw data that was transferred
-        assert not np.all(sm1.image_array == sm2.image_array)
-        assert np.all(sm1.mp_image_raw == sm2.mp_image_raw)
+        assert np.all(sm1.slot_list[0].image_corr
+                      == sm2.slot_list[0].image_corr)
 
 
 def test_segm_mpo_labeled_mask_clear_border():

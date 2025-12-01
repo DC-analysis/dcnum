@@ -66,7 +66,7 @@ class SegmenterManagerThread(threading.Thread):
 
             # We have a free slot to compute the segmentation
             # `segment_chunk` populates the `cs.labels` array.
-            self.segmenter.segment_chunk(cs)
+            self.segmenter.segment_chunk(cs.chunk, self.slot_register.slots)
 
             # Let everyone know that segmentation is complete
             cs.state = "e"

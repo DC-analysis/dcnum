@@ -73,7 +73,8 @@ def test_segm_thresh_segment_batch(worker_type):
     # Concatenate the masks
     frame_u, indices = np.unique(frame, return_index=True)
     image_u = image[indices]
-    image_bg_u = image_bg[indices] + bg_off[indices].reshape(-1, 1, 1)
+    image_bg_u = image_bg[indices]
+    bg_off_u = bg_off[indices]
     mask_u = np.zeros_like(image_u, dtype=bool)
     for ii, fr in enumerate(frame):
         idx = np.where(frame_u == fr)[0]
@@ -83,9 +84,7 @@ def test_segm_thresh_segment_batch(worker_type):
 
     sm = segm.segm_thresh.SegmentThresh(debug=debug)
 
-    labels_seg = sm.segment_batch(image_u_c)
-    assert labels_seg is sm.labels_array
-    assert np.all(np.array(labels_seg, dtype=bool) == sm.mask_array)
+    labels_seg = sm.segment_batch(image_u_c, bg_off=bg_off_u)
     # tell workers to stop
     sm.join_workers()
 
@@ -113,15 +112,15 @@ def test_segm_thresh_segment_batch_large(worker_type):
     labels_seg_1 = np.copy(sm.segment_batch(images)[:101])
 
     assert labels_seg_1.dtype == np.uint16  # uint8 is not enough
-    assert sm.mp_batch_index.value == 0
+    assert sm.mp_slot_index.value == 0
     if worker_type == "thread":
-        assert len(sm._mp_workers) == 1
-        assert sm.mp_batch_worker.value == 1
+        assert len(sm._workers) == 1
+        assert sm.mp_num_workers_done.value == 1
     else:
         # This will fail if you have too many CPUs in your system
-        assert len(sm._mp_workers) == mp.cpu_count()
+        assert len(sm._workers) == mp.cpu_count()
         # Check whether all processes did their deeds
-        assert sm.mp_batch_worker.value == mp.cpu_count()
+        assert sm.mp_num_workers_done.value == mp.cpu_count()
 
     labels_seg_2 = np.copy(sm.segment_batch(images)[101:121])
 
