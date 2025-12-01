@@ -680,7 +680,6 @@ class DCNumJobRunner(threading.Thread):
         seg_cls = get_available_segmenters()[self.job["segmenter_code"]]
 
         if self.job["debug"]:
-            num_slots = 1
             num_extractors = 1
             num_segmenters = 1
         elif seg_cls.hardware_processor == "cpu":  # MPO segmenter
@@ -704,7 +703,10 @@ class DCNumJobRunner(threading.Thread):
         # can have to prevent workers from waiting on each other. Seven slots
         # results in a shared memory usage of roughly 1GB for a standard
         # blood measurement (image chunks of (1000, 80, 32).
-        num_slots = 7
+        if self.job["debug"]:
+            num_slots = 1
+        else:
+            num_slots = 7
 
         slot_register = SlotRegister(job=self.job,
                                      data=self.dtin,
