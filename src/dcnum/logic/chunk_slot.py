@@ -25,40 +25,15 @@ class with_state_change:
         return method
 
 
-class ChunkSlot:
-    _instance_counter = 0
-
-    def __init__(self, job, data, is_remainder=False):
-        self._instance_counter += 1
-        self.index = self._instance_counter
-
-        self.job = job
-        """Job information object"""
-
-        self.data = data
-        """Input data object"""
+class ChunkSlotBase:
+    def __init__(self, shape, available_features=None):
+        self.shape = shape
+        available_features = available_features or []
+        self.length = shape[0]
 
         self._state = mp_spawn.Value("u", "0", lock=False)
 
         self._chunk = mp_spawn.Value("i", 0, lock=False)
-
-        self.is_remainder = is_remainder
-        """Whether this slot only applies to the last chunk"""
-
-        # Determine the dtype of the input data
-        self.seg_cls = get_available_segmenters()[self.job["segmenter_code"]]
-        """Segmentation class"""
-
-        if self.is_remainder:
-            try:
-                self.length = self.data.image.get_chunk_size(
-                    chunk_index=self.data.image.num_chunks - 1)
-            except IndexError:
-                self.length = 0
-        else:
-            self.length = self.data.image.chunk_size
-
-        self.shape = (self.length,) + self.data.image.shape[1:]
 
         # Initialize all shared arrays
         if self.length:
@@ -68,7 +43,7 @@ class ChunkSlot:
             self.mp_image = mp_spawn.RawArray(
                 np.ctypeslib.as_ctypes_type(np.uint8), array_length)
 
-            if "image_bg" in self.data:
+            if "image_bg" in available_features:
                 self.mp_image_bg = mp_spawn.RawArray(
                     np.ctypeslib.as_ctypes_type(np.uint8), array_length)
 
@@ -78,7 +53,7 @@ class ChunkSlot:
                 self.mp_image_bg = None
                 self.mp_image_corr = None
 
-            if "bg_off" in self.data:
+            if "bg_off" in available_features:
                 # background offset data
                 self.mp_bg_off = mp_spawn.RawArray(
                     np.ctypeslib.as_ctypes_type(np.float64), self.length)
@@ -91,14 +66,9 @@ class ChunkSlot:
 
             # Label data
             self.mp_labels = mp_spawn.RawArray(
-                np.ctypeslib.as_ctypes_type(np.int16), array_length)
-
-        # TODO: Track timing information for e.g. the `load` method.
+                np.ctypeslib.as_ctypes_type(np.uint16), array_length)
 
         self._state.value = "i"
-
-    def __str__(self):
-        return f"SC-{self.index}"
 
     @property
     def chunk(self):
@@ -166,6 +136,46 @@ class ChunkSlot:
     def labels(self):
         return np.ctypeslib.as_array(
             self.mp_labels).reshape(self.shape)
+
+
+class ChunkSlot(ChunkSlotBase):
+    _instance_counter = 0
+
+    def __init__(self, job, data, is_remainder=False):
+        self._instance_counter += 1
+        self.index = self._instance_counter
+
+        self.job = job
+        """Job information object"""
+
+        self.data = data
+        """Input data object"""
+
+        self.is_remainder = is_remainder
+        """Whether this slot only applies to the last chunk"""
+
+        # Determine the dtype of the input data
+        self.seg_cls = get_available_segmenters()[self.job["segmenter_code"]]
+        """Segmentation class"""
+
+        if self.is_remainder:
+            try:
+                length = self.data.image.get_chunk_size(
+                    chunk_index=self.data.image.num_chunks - 1)
+            except IndexError:
+                length = 0
+        else:
+            length = self.data.image.chunk_size
+
+        super(ChunkSlot, self).__init__(
+            shape=(length,) + self.data.image.shape[1:],
+            available_features=self.data.keys(),
+        )
+
+        # TODO: Track timing information for e.g. the `load` method.
+
+    def __str__(self):
+        return f"SC-{self.index}"
 
     @with_state_change(before="i", after="s")
     def load(self, idx):
