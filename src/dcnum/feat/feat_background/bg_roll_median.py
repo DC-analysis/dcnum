@@ -219,7 +219,7 @@ class BackgroundRollMed(Background):
 
             # block until workers are done
             while True:
-                time.sleep(.03)
+                time.sleep(.01)
                 if self.worker_counter.value == num_jobs:
                     break
 

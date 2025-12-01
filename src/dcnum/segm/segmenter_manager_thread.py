@@ -57,7 +57,7 @@ class SegmenterManagerThread(threading.Thread):
                 # (preloaded from disk by UniversalWorker)
                 cs = self.slot_register.find_slot(state="s", chunk=chunk)
                 if cs is None:
-                    time.sleep(.1)
+                    time.sleep(.01)
                 else:
                     break
 

@@ -16,7 +16,7 @@ class UniversalWorker:
         sr = self.slot_register
         while sr.state != "q":
             if sr.state == "p":
-                time.sleep(1)
+                time.sleep(0.5)
                 continue
 
             # Load data into memory for all slots

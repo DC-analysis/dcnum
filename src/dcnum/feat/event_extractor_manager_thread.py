@@ -104,7 +104,7 @@ class EventExtractorManagerThread(threading.Thread):
             while True:
                 cs = self.slot_register.find_slot(state="e")
                 if cs is None:
-                    time.sleep(.1)
+                    time.sleep(.01)
                 else:
                     break
 
@@ -118,7 +118,7 @@ class EventExtractorManagerThread(threading.Thread):
 
             # Make sure the entire chunk has been processed.
             while np.sum(worker_monitor) != frames_processed + cs.length:
-                time.sleep(.1)
+                time.sleep(.01)
 
             self.logger.debug(f"Extracted chunk {cs.chunk} in slot {cs}")
 
