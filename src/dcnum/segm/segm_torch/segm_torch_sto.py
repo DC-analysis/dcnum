@@ -57,7 +57,7 @@ class SegmentTorchSTO(TorchSegmenterBase, STOSegmenter):
             mask or label images of shape (N, H, W)
         """
         if model_file is None:
-            raise ValueError("Please specify a model file!")
+            raise ValueError("Please specify a .dcnm model file!")
 
         # Determine device to use
         device = torch.device(gpu_id if gpu_id is not None else "cuda")

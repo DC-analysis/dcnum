@@ -151,10 +151,21 @@ class MPOSegmenter(Segmenter, abc.ABC):
         """
         from ..logic.chunk_slot import ChunkSlotBase
         available_features = ["image_bg"]
+
+        if bg_off is not None:
+            if not self.requires_background_correction:
+                raise ValueError(f"The segmenter {self.__class__.__name__} "
+                                 f"does not employ background correction, "
+                                 f"but the `bg_off` keyword argument was "
+                                 f"passed to `segment_batch`. Please check "
+                                 f"your analysis pipeline.")
+
         if bg_off is not None:
             available_features.append("bg_off")
+
         cs = ChunkSlotBase(shape=images.shape,
                            available_features=available_features)
+
         if self.requires_background_correction:
             cs.image_corr[:] = images
             if bg_off is not None:
@@ -194,14 +205,6 @@ class MPOSegmenter(Segmenter, abc.ABC):
                 break
         else:
             raise ValueError(f"Could not find slot for {chunk=}")
-
-        if cs.bg_off is not None:
-            if not self.requires_background_correction:
-                raise ValueError(f"The segmenter {self.__class__.__name__} "
-                                 f"does not employ background correction, "
-                                 f"but the `bg_off` keyword argument was "
-                                 f"passed to `segment_chunk`. Please check "
-                                 f"your analysis pipeline.")
 
         # Prepare everything for the workers, so they can already start
         # segmenting when they are created.
