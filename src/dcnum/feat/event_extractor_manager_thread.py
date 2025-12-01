@@ -71,7 +71,7 @@ class EventExtractorManagerThread(threading.Thread):
 
     def run(self):
         # Initialize all workers
-        ta = time.monotonic()
+        ta = time.perf_counter()
         if self.debug:
             worker_cls = EventExtractorThread
         else:
@@ -81,12 +81,13 @@ class EventExtractorManagerThread(threading.Thread):
         [w.start() for w in workers]
         worker_monitor = self.fe_kwargs["worker_monitor"]
 
-        self.logger.info(f"Initialization time: {time.monotonic() - ta:.1f}s")
+        self.logger.info(
+            f"Initialization time: {time.perf_counter() - ta:.1f}s")
 
         chunks_processed = 0
         frames_processed = 0
         while True:
-            t0 = time.monotonic()
+            t0 = time.perf_counter()
 
             # If the writer_dq starts filling up, then this could lead to
             # an oom-kill signal. Stall for the writer to prevent this.
@@ -108,7 +109,7 @@ class EventExtractorManagerThread(threading.Thread):
                 else:
                     break
 
-            t1 = time.monotonic()
+            t1 = time.perf_counter()
             self.t_wait += t1 - t0
 
             # We have a chunk, process it!
@@ -125,7 +126,7 @@ class EventExtractorManagerThread(threading.Thread):
             # We are done here. The writer gets the events via a queue.
             cs.state = "i"
 
-            self.t_extract += time.monotonic() - t1
+            self.t_extract += time.perf_counter() - t1
 
             chunks_processed += 1
             frames_processed += cs.length

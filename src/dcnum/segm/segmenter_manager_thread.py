@@ -50,7 +50,7 @@ class SegmenterManagerThread(threading.Thread):
     def run(self):
         # We iterate over all the chunks of the image data.
         for chunk in range(self.slot_register.num_chunks):
-            t0 = time.monotonic()
+            t0 = time.perf_counter()
 
             while True:
                 # Find the slot that has the `chunk`
@@ -61,7 +61,7 @@ class SegmenterManagerThread(threading.Thread):
                 else:
                     break
 
-            t1 = time.monotonic()
+            t1 = time.perf_counter()
             self.t_wait += t1 - t0
 
             # We have a free slot to compute the segmentation
@@ -72,7 +72,7 @@ class SegmenterManagerThread(threading.Thread):
             cs.state = "e"
             self.logger.debug(f"Segmented chunk {chunk} in slot {cs}")
 
-            self.t_segm += time.monotonic() - t1
+            self.t_segm += time.perf_counter() - t1
 
         # Cleanup
         if isinstance(self.segmenter, MPOSegmenter):

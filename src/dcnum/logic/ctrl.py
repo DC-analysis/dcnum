@@ -273,7 +273,7 @@ class DCNumJobRunner(threading.Thread):
 
     def run_pipeline(self):
         """Execute the pipeline job"""
-        time_start = time.monotonic()
+        time_start = time.perf_counter()
         time_string = time.strftime("%Y-%m-%d-%H.%M.%S", time.gmtime())
         self.logger.info(f"Run start: {time_string}")
         if self.job["path_out"].exists():
@@ -462,7 +462,8 @@ class DCNumJobRunner(threading.Thread):
                 mid_new = f"{mid_cur}_{mid_ap}" if mid_cur else mid_ap
                 hw.h5.attrs["experiment:run identifier"] = mid_new
 
-        trun = datetime.timedelta(seconds=round(time.monotonic() - time_start))
+        trun = datetime.timedelta(
+            seconds=round(time.perf_counter() - time_start))
         self.logger.info(f"Run duration: {str(trun)}")
         self.logger.info(time.strftime("Run stop: %Y-%m-%d-%H.%M.%S",
                                        time.gmtime()))
@@ -771,20 +772,23 @@ class DCNumJobRunner(threading.Thread):
         worker_write.start()
 
         data_size = len(self.dtin)
-        t0 = time.monotonic()
+        t0 = time.perf_counter()
 
         # So in principle we are done here. We do not have to do anything
         # besides monitoring the progress.
         while True:
             counted_frames = worker_write.written_frames.value
             self.event_count = worker_write.written_events.value
-            td = time.monotonic() - t0
+            td = time.perf_counter() - t0
             # set the current status
             self._progress_ex = counted_frames / data_size
             self._segm_rate = counted_frames / (td or 0.03)
             time.sleep(.1)
             if counted_frames == data_size:
                 break
+
+        self.logger.info(
+            f"Data load time: {slot_register.get_time('load'):.1f}s")
 
         self.logger.debug("Flushing data to disk")
 

@@ -1,5 +1,6 @@
 import functools
 import multiprocessing as mp
+import time
 
 import numpy as np
 
@@ -17,9 +18,17 @@ class with_state_change:
     def __call__(self, func):
         @functools.wraps(func)
         def method(inst, *args, **kwargs):
-            assert inst.state == self.before
+            if inst.state != self.before:
+                raise ValueError(
+                    f"Incorrect state: {inst.state=}, {inst.before=}")
+            t0 = time.perf_counter()
             data = func(inst, *args, **kwargs)
             inst.state = self.after
+            # update the time counter for this method
+            fn = func.__name__
+            if fn in inst.timers:
+                with inst.timers[fn].get_lock():
+                    inst.timers[fn].value += time.perf_counter() - t0
             return data
 
         return method
@@ -145,6 +154,10 @@ class ChunkSlot(ChunkSlotBase):
         self._instance_counter += 1
         self.index = self._instance_counter
 
+        self.timers = {
+            "load": mp_spawn.Value("d", 0.0)
+        }
+
         self.job = job
         """Job information object"""
 
@@ -171,8 +184,6 @@ class ChunkSlot(ChunkSlotBase):
             shape=(length,) + self.data.image.shape[1:],
             available_features=self.data.keys(),
         )
-
-        # TODO: Track timing information for e.g. the `load` method.
 
     def __str__(self):
         return f"SC-{self.index}"

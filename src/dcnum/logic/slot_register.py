@@ -104,3 +104,13 @@ class SlotRegister:
             return self._chunks_loaded.get_lock()
         else:
             raise KeyError(f"No lock defined for {name}")
+
+    def get_time(self, method_name):
+        """Return accumulative time for the given method
+
+        The times are extracted from each slot's `timers` values.
+        """
+        time_count = 0.0
+        for sc in self._slots:
+            time_count += sc.timers[method_name].value
+        return time_count
