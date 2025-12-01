@@ -5,6 +5,8 @@ def join_worker(worker, timeout, retries, logger, name):
         if worker.is_alive():
             logger.info(f"Waiting for '{name}' ({worker}")
         else:
+            if hasattr(worker, "close"):
+                worker.close()
             logger.debug(f"Joined thread '{name}'")
             break
     else:

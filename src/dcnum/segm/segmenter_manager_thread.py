@@ -76,8 +76,7 @@ class SegmenterManagerThread(threading.Thread):
 
         # Cleanup
         if isinstance(self.segmenter, MPOSegmenter):
-            # Join the segmentation workers.
-            self.segmenter.join_workers()
+            self.segmenter.close()
 
         self.logger.info(f"Segmentation time: {self.t_segm:.1f}s")
         self.logger.info(f"Waiting time: {self.t_wait:.1f}s")

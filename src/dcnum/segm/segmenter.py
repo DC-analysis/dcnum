@@ -365,6 +365,10 @@ class Segmenter(abc.ABC):
         This is implemented in the MPO and STO segmenters.
         """
 
+    def close(self):
+        """Subclasses can implement clean-up code here"""
+        pass
+
     @classmethod
     def validate_applicability(cls,
                                segmenter_kwargs: Dict,
