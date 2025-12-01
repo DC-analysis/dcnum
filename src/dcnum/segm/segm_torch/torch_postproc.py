@@ -16,7 +16,7 @@ def postprocess_masks(masks,
       :func:`.preprocess_images` by padding with zeros and cropping.
     - If the original image shape is larger than the mask image shape,
       also clear borders in an intermediate step
-      (maks postprocessing using :func:`Segmenter.process_mask`).
+      (maks postprocessing using :func:`Segmenter.process_labels`).
 
     Parameters
     ----------
