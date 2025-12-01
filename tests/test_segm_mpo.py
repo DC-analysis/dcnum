@@ -294,10 +294,10 @@ def test_segm_mpo_labeled_mask_fill_holes_int32():
     # sanity checks
     assert labels.dtype == np.int64
     assert labels.dtype != np.int32
-    labels_2 = sm1.process_mask(labels,
-                                clear_border=False,
-                                fill_holes=True,
-                                closing_disk=False)
+    labels_2 = sm1.process_labels(labels,
+                                  clear_border=False,
+                                  fill_holes=True,
+                                  closing_disk=False)
     assert np.allclose(labels, labels_2)
     assert labels_2.dtype == np.int32
 
@@ -350,10 +350,10 @@ def test_segm_mpo_labeled_mask_clear_border():
 
     sm = segm.segm_thresh.SegmentThresh(thresh=-6)
 
-    labels = sm.process_mask(lab0,
-                             clear_border=False,
-                             fill_holes=True,
-                             closing_disk=False)
+    labels = sm.process_labels(lab0,
+                               clear_border=False,
+                               fill_holes=True,
+                               closing_disk=False)
 
     assert np.sum(labels == 0) > 20, "background should be largest"
     assert np.sum(labels == 1) == 9

@@ -32,13 +32,13 @@ class Segmenter(abc.ABC):
     mask_postprocessing = True
     """Whether to enable mask post-processing.
     If disabled, you should make sure that your mask is properly defined
-    and cleaned or you have to call `process_mask` in your
+    and cleaned or you have to call `process_labels` in your
     ``segment_algorithm`` implementation.
     """
 
     mask_default_kwargs = {}
     """Default keyword arguments for mask post-processing.
-    See `process_mask` for available options.
+    See `process_labels` for available options.
     """
 
     requires_background_correction = False
@@ -61,7 +61,7 @@ class Segmenter(abc.ABC):
         Parameters
         ----------
         kwargs_mask: dict
-            Keyword arguments for mask post-processing (see `process_mask`)
+            Keyword arguments for mask post-processing (see `process_labels`)
         debug: bool
             Enable debugging mode (e.g. CPU segmenter runs in one thread)
         kwargs:
@@ -81,7 +81,7 @@ class Segmenter(abc.ABC):
         """keyword arguments for mask post-processing"""
 
         if self.mask_postprocessing:
-            spec_mask = inspect.getfullargspec(self.process_mask)
+            spec_mask = inspect.getfullargspec(self.process_labels)
             self.kwargs_mask.update(spec_mask.kwonlydefaults or {})
             self.kwargs_mask.update(self.mask_default_kwargs)
             if kwargs_mask is not None:
@@ -126,7 +126,7 @@ class Segmenter(abc.ABC):
 
             t=-6^b=0
 
-        KW_MASK represents keyword arguments for `process_mask`.
+        KW_MASK represents keyword arguments for `process_labels`.
         """
         return self.get_ppid_from_ppkw(self.kwargs, self.kwargs_mask)
 
@@ -170,7 +170,7 @@ class Segmenter(abc.ABC):
 
         if cls.mask_postprocessing:
             ppid_parts.append(
-                kwargs_to_ppid(cls, "process_mask", kwargs_mask_used))
+                kwargs_to_ppid(cls, "process_labels", kwargs_mask_used))
 
         return ":".join(ppid_parts)
 
@@ -194,15 +194,15 @@ class Segmenter(abc.ABC):
         if cls.mask_postprocessing:
             pp_kwargs_mask = ppid_parts[2]
             kwargs["kwargs_mask"] = ppid_to_kwargs(cls=cls,
-                                                   method="process_mask",
+                                                   method="process_labels",
                                                    ppid=pp_kwargs_mask)
         return kwargs
 
     @staticmethod
-    def process_mask(labels, *,
-                     clear_border: bool = True,
-                     fill_holes: bool = True,
-                     closing_disk: int = 5):
+    def process_labels(labels, *,
+                       clear_border: bool = True,
+                       fill_holes: bool = True,
+                       closing_disk: int = 5):
         """Post-process retrieved mask image
 
         This is an optional convenience method that is called for each

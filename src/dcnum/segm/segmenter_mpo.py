@@ -31,7 +31,7 @@ class MPOSegmenter(Segmenter, abc.ABC):
         Parameters
         ----------
         kwargs_mask: dict
-            Keyword arguments for mask post-processing (see `process_mask`)
+            Keyword arguments for mask post-processing (see `process_labels`)
         debug: bool
             Debugging parameters
         kwargs:
@@ -250,7 +250,7 @@ class MPOSegmenter(Segmenter, abc.ABC):
             labels = mol
         # optional mask/label postprocessing
         if self.mask_postprocessing:
-            labels = self.process_mask(labels, **self.kwargs_mask)
+            labels = self.process_labels(labels, **self.kwargs_mask)
         return labels
 
     def close(self):

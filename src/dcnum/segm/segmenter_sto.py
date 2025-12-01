@@ -23,7 +23,7 @@ class STOSegmenter(Segmenter, abc.ABC):
         Parameters
         ----------
         kwargs_mask: dict
-            Keyword arguments for mask post-processing (see `process_mask`)
+            Keyword arguments for mask post-processing (see `process_labels`)
         debug: bool
             Debugging parameters
         kwargs:
@@ -86,7 +86,8 @@ class STOSegmenter(Segmenter, abc.ABC):
         # Perform mask postprocessing
         if self.mask_postprocessing:
             for ii in range(len(labels)):
-                labels[ii] = self.process_mask(labels[ii], **self.kwargs_mask)
+                labels[ii] = self.process_labels(labels[ii],
+                                                 **self.kwargs_mask)
 
         return labels
 

@@ -33,7 +33,7 @@ def test_ppid_no_union_kwonlykwargs(segm_method):
         assert not isinstance(annot[key], types.UnionType), segm_method
 
 
-def test_segmenter_process_mask_clear_border():
+def test_segmenter_process_labels_clear_border():
     # labels image with al-filled border values
     label = np.array([
         [1, 1, 1, 1, 1, 1, 1, 1],
@@ -47,11 +47,11 @@ def test_segmenter_process_mask_clear_border():
         [2, 2, 2, 2, 2, 2, 2, 2],
     ], dtype=int)
 
-    lbs = segm.Segmenter.process_mask(label,
-                                      clear_border=True,
-                                      fill_holes=False,
-                                      closing_disk=False,
-                                      )
+    lbs = segm.Segmenter.process_labels(label,
+                                        clear_border=True,
+                                        fill_holes=False,
+                                        closing_disk=False,
+                                        )
     assert np.sum(lbs) > 0
     assert np.sum(lbs > 0) == 9
     assert lbs[:, 0].sum() == 0
@@ -77,10 +77,10 @@ def test_segmenter_labeled_mask_clear_border2():
 
     sm = segm.segm_thresh.SegmentThresh(thresh=-6)
 
-    labels = sm.process_mask(lab0,
-                             clear_border=False,
-                             fill_holes=True,
-                             closing_disk=False)
+    labels = sm.process_labels(lab0,
+                               clear_border=False,
+                               fill_holes=True,
+                               closing_disk=False)
 
     assert np.sum(labels == 0) > 20, "background should be largest"
     assert np.sum(labels == 1) == 9
@@ -131,10 +131,10 @@ def test_segmenter_labeled_mask_spurious_noise_closing():
 
     sm = segm.segm_thresh.SegmentThresh(thresh=-6)
 
-    labels = sm.process_mask(lab0,
-                             clear_border=False,
-                             fill_holes=True,
-                             closing_disk=1)
+    labels = sm.process_labels(lab0,
+                               clear_border=False,
+                               fill_holes=True,
+                               closing_disk=1)
 
     assert np.sum(labels == 0) > 20, "background should be largest"
     assert np.sum(labels == 1) == 16

@@ -219,7 +219,7 @@ def test_segm_torch_mpo_explicit(image_stem):
     assert np.all(mask_exp_segm == np.array(mask_segm, dtype=bool))
 
     # segmentation + mask postprocessing
-    mask_act = sg.process_mask(np.copy(mask_segm), **sg.mask_default_kwargs)
+    mask_act = sg.process_labels(np.copy(mask_segm), **sg.mask_default_kwargs)
     # cv2.imwrite(str(f"{image_stem}_mask.png"),
     #             np.array(mask_act*255, dtype=np.uint8))
     assert np.all(mask_exp == np.array(mask_act, dtype=bool))

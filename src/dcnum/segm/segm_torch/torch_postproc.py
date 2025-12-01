@@ -65,10 +65,10 @@ def postprocess_masks(masks,
         # to remove events on the edges, otherwise we will have half-segmented
         # cell events in the output array.
         for ii in range(batch_size):
-            labels[ii] = Segmenter.process_mask(labels[ii],
-                                                clear_border=True,
-                                                fill_holes=False,
-                                                closing_disk=0)
+            labels[ii] = Segmenter.process_labels(labels[ii],
+                                                  clear_border=True,
+                                                  fill_holes=False,
+                                                  closing_disk=0)
 
     # Crop first, only then pad.
     if s1diff > 0:
