@@ -20,7 +20,7 @@ class SlotRegister:
         self.data = data
         self.chunk_size = data.image.chunk_size
         self.num_chunks = data.image.num_chunks
-        self.slots = []
+        self._slots = []
 
         self._chunks_loaded = mp_spawn.Value("L", 0)
 
@@ -31,11 +31,11 @@ class SlotRegister:
 
         # generate all slots
         for ii in range(num_slots):
-            self.slots.append(ChunkSlot(job=job, data=data))
+            self._slots.append(ChunkSlot(job=job, data=data))
         # we might need a slot for the remainder
         chunk_slot_remainder = ChunkSlot(job=job, data=data, is_remainder=True)
         if chunk_slot_remainder.length != 0:
-            self.slots.append(chunk_slot_remainder)
+            self._slots.append(chunk_slot_remainder)
 
     def __getitem__(self, idx):
         return self.slots[idx]
@@ -56,6 +56,10 @@ class SlotRegister:
     @chunks_loaded.setter
     def chunks_loaded(self, value):
         self._chunks_loaded.value = value
+
+    @property
+    def slots(self):
+        return [s for s in self._slots]
 
     @property
     def state(self):
