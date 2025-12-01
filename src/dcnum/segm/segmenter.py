@@ -358,12 +358,14 @@ class Segmenter(abc.ABC):
 
         if self.requires_background_correction:
             images = cs.image_corr
+            bg_off = cs.bg_off
         else:
             images = cs.image
+            bg_off = None
 
         labels = cs.labels
 
-        labels[:] = self.segment_batch(images, bg_off=cs.bg_off)
+        labels[:] = self.segment_batch(images, bg_off=bg_off)
         return labels
 
     @abc.abstractmethod
