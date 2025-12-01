@@ -697,7 +697,6 @@ class DCNumJobRunner(threading.Thread):
         num_extractors = max(1, num_extractors)
         num_segmenters = max(1, num_segmenters)
         self.job.kwargs["segmenter_kwargs"]["num_workers"] = num_segmenters
-        self.job.kwargs["segmenter_kwargs"]["debug"] = self.job["debug"]
 
         # The number of ChunkSlots defines how well workers can operate in
         # parallel. This should be higher than the number states a ChunkSlot
@@ -725,7 +724,8 @@ class DCNumJobRunner(threading.Thread):
 
         # Initialize segmenter manager thread
         worker_segm = SegmenterManagerThread(
-            segmenter=seg_cls(**self.job["segmenter_kwargs"]),
+            segmenter=seg_cls(debug=self.job["debug"],
+                              **self.job["segmenter_kwargs"]),
             slot_register=slot_register,
         )
         worker_segm.start()
