@@ -15,6 +15,8 @@ class UniversalWorker:
     def run(self):
         sr = self.slot_register
         while sr.state != "q":
+            did_something = False
+
             if sr.state == "p":
                 time.sleep(0.5)
                 continue
@@ -34,12 +36,14 @@ class UniversalWorker:
                                     and sc.is_remainder)):
                                 sc.load(sr.chunks_loaded)
                                 sr.chunks_loaded += 1
+                                did_something = True
                 except BaseException:
                     print(traceback.format_exc())
                 finally:
                     lock.release()
 
-            time.sleep(.1)
+            if not did_something:
+                time.sleep(.01)
 
 
 class UniversalWorkerThread(UniversalWorker, threading.Thread):
