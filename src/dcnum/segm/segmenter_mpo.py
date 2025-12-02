@@ -48,14 +48,14 @@ class MPOSegmenter(Segmenter, abc.ABC):
         self.mp_slot_index = mp_spawn.Value("i", 0)
         """The slot that is currently being worked on"""
 
-        self.mp_active = mp_spawn.Value("i", 0)
-        """Whether the workers are allowed to do work"""
+        self.mp_active = mp_spawn.Event()
+        """Event that defines whether the workers are allowed to do work"""
 
         self.mp_num_workers_done = mp_spawn.Value("i", 0)
         """Number of workers that are done processing the slot"""
 
-        self.mp_shutdown = mp_spawn.Value("i", 0)
-        """Shutdown bit tells workers to stop when set to != 0"""
+        self.mp_shutdown = mp_spawn.Event()
+        """Shutdown event tells workers to stop when set to != 0"""
 
         # workers
         self._workers = []
@@ -86,7 +86,7 @@ class MPOSegmenter(Segmenter, abc.ABC):
     def join_workers(self):
         """Ask all workers to stop and join them"""
         if self._workers:
-            self.mp_shutdown.value = 1
+            self.mp_shutdown.set()
             for w in self._workers:
                 w.join()
                 if hasattr(w, "close"):
@@ -96,7 +96,7 @@ class MPOSegmenter(Segmenter, abc.ABC):
     def reinitialize_workers(self, slot_list):
         self.join_workers()
         self.slot_list = slot_list
-        self.mp_shutdown.value = 0
+        self.mp_shutdown.clear()
 
         if self.debug:
             worker_cls = MPOSegmenterWorkerThread
@@ -196,7 +196,7 @@ class MPOSegmenter(Segmenter, abc.ABC):
         labels: np.array
             The `chunk_slot.labels` numpy view on the shared labels array.
         """
-        self.mp_active.value = 0
+        self.mp_active.clear()
 
         # Find the slot that we are supposed to be working on.
         for cs in slot_list:
@@ -211,7 +211,7 @@ class MPOSegmenter(Segmenter, abc.ABC):
         self.mp_slot_index.value = slot_index
 
         self.mp_num_workers_done.value = 0
-        self.mp_active.value = 1
+        self.mp_active.set()
 
         if self.slot_list is not None:
             for cs1, cs2 in zip(slot_list, self.slot_list):
@@ -227,7 +227,7 @@ class MPOSegmenter(Segmenter, abc.ABC):
         while self.mp_num_workers_done.value != self.num_workers:
             time.sleep(.01)
 
-        self.mp_active.value = 0
+        self.mp_active.clear()
         return cs.labels
 
     def segment_single(self, image, bg_off: float = None):
@@ -304,18 +304,14 @@ class MPOSegmenterWorker:
         last_chunk = -1
 
         while True:
-            if self.mp_shutdown.value:
+            if self.mp_shutdown.is_set():
                 break
-            elif not self.mp_active.value:
-                # Wait until there is work to be done
-                time.sleep(.01)
-            else:
+            if self.mp_active.wait(timeout=1):
                 # Get the current slot
                 cs = self.slot_list[self.mp_slot_index.value]
-
                 if cs.chunk == last_chunk:
                     # We processed this chunk already
-                    time.sleep(0.01)
+                    time.sleep(.01)
                     continue
                 elif self.sl_start >= cs.length:
                     # We have no data to process
