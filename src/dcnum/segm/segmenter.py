@@ -280,7 +280,7 @@ class Segmenter(abc.ABC):
             #
             element = Segmenter.get_disk(closing_disk)
             # Note: erode/dilate not implemented for int32
-            labels_uint8 = np.array(labels, dtype=np.uint8)
+            labels_uint8 = np.asarray(labels, dtype=np.uint8)
             # Historically, we would like to do a closing (dilation followed
             # by erosion) on the image data where lower brightness values
             # meant "we have an event". However, since we are now working

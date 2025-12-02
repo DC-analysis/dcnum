@@ -63,7 +63,7 @@ def get_mapping_indices(
         return _get_mapping_indices_cached(
             (index_mapping.start, index_mapping.stop, index_mapping.step))
     elif isinstance(index_mapping, (np.ndarray, list)):
-        return np.array(index_mapping, dtype=np.uint32)
+        return np.asarray(index_mapping, dtype=np.uint32)
     else:
         raise ValueError(f"Invalid type for `index_mapping`: "
                          f"{type(index_mapping)} ({index_mapping})")
@@ -82,7 +82,7 @@ def _get_mapping_indices_cached(
                 "Slices must have start and stop defined")
         return np.arange(im_slice.start, im_slice.stop, im_slice.step)
     elif isinstance(index_mapping, list):
-        return np.array(index_mapping, dtype=np.uint32)
+        return np.asarray(index_mapping, dtype=np.uint32)
     else:
         raise ValueError(f"Invalid type for cached `index_mapping`: "
                          f"{type(index_mapping)} ({index_mapping})")

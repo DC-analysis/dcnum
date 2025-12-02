@@ -35,13 +35,13 @@ def haralick_texture_features(
     - 11. `tex_f13`: (13) Information Measure of Correlation 2
     """
     # make sure we have a boolean array
-    mask = np.array(mask, dtype=bool)
+    mask = np.asarray(mask, dtype=bool)
     size = mask.shape[0]
 
     # compute features if necessary
     if image_bg is not None and image is not None and image_corr is None:
         # Background-corrected brightness values
-        image_corr = np.array(image, dtype=np.int16) - image_bg
+        image_corr = np.asarray(image, dtype=np.int16) - image_bg
 
     tex_dict = {}
     empty = np.full(size, np.nan, dtype=np.float64)
@@ -65,7 +65,7 @@ def haralick_texture_features(
         else:
             imcoi = image_corr[ii]
         minval = imcoi[maski].min()
-        imi = np.array((imcoi - minval + 1) * maski, dtype=np.uint8)
+        imi = np.asarray((imcoi - minval + 1) * maski, dtype=np.uint8)
         try:
             ret = mh_haralick(imi,
                               ignore_zeros=True,

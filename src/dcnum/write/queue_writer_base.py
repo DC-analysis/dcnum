@@ -220,7 +220,7 @@ class QueueWriterBase:
             # to the correct "basinmap0" feature
             # (see `DCNumJobRunner.task_enforce_basin_strategy`)
             writer_dq.append(("index_unmapped",
-                              np.array(indices, dtype=np.uint32)))
+                              np.asarray(indices, dtype=np.uint32)))
 
             # Write the number of events.
             writer_dq.append(("nevents",

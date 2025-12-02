@@ -199,7 +199,7 @@ class ChunkSlot(ChunkSlotBase):
             image_bg = self.image_bg
             image_bg[:] = self.data.image_bg.get_chunk(idx)
             image_corr = self.image_corr
-            image_corr[:] = np.array(image, dtype=np.int16) - image_bg
+            image_corr[:] = np.asarray(image, dtype=np.int16) - image_bg
         else:
             image_bg = None
             image_corr = None

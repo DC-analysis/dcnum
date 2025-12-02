@@ -241,7 +241,7 @@ class HDF5Data:
                         tabdict = {}
                         for tkey in fields.keys():
                             tabdict[tkey] = \
-                                np.array(h5["tables"][tab][tkey]).reshape(-1)
+                                np.asarray(h5["tables"][tab][tkey]).reshape(-1)
                         self.tables[tab] = tabdict
                 # basins
                 basins = self.extract_basin_dicts(h5)
@@ -396,7 +396,7 @@ class HDF5Data:
                    )
         elif isinstance(im, (list, np.ndarray)):
             idhash = hashlib.md5(
-                np.array(im, dtype=np.uint32).tobytes()).hexdigest()
+                np.asarray(im, dtype=np.uint32).tobytes()).hexdigest()
             dim = f"h-{idhash[:8]}"
         else:
             dim = "unknown"

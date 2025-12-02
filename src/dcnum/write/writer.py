@@ -276,7 +276,7 @@ class HDF5Writer:
         never single events.
         """
         if feat == "mask" and data.dtype == bool:
-            data = 255 * np.array(data, dtype=np.uint8)
+            data = 255 * np.asarray(data, dtype=np.uint8)
         ds, offset = self.require_feature(feat=feat,
                                           item_shape=data.shape[1:],
                                           feat_dtype=data.dtype,

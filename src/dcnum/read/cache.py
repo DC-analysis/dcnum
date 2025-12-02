@@ -150,7 +150,7 @@ class HDF5ImageCache(BaseImageChunkCache):
     def _get_chunk_data(self, chunk_slice):
         data = self.h5ds[chunk_slice]
         if self.boolean:
-            data = np.array(data, dtype=bool)
+            data = np.asarray(data, dtype=bool)
         return data
 
 
@@ -166,7 +166,7 @@ class ImageCorrCache(BaseImageChunkCache):
         self.image_bg = image_bg
 
     def _get_chunk_data(self, chunk_slice):
-        data = np.array(
+        data = np.asarray(
             self.image._get_chunk_data(chunk_slice), dtype=np.int16) \
            - self.image_bg._get_chunk_data(chunk_slice)
         return data
