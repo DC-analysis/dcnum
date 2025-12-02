@@ -411,8 +411,6 @@ class BackgroundSparseMed(Background):
         self.shared_input[:] = self.input_data[idx_start:idx_stop].reshape(
             self.kernel_size, -1)
 
-        self.worker_counter.value = 0
-
         num_jobs = 0
         # Cut the image into jobs with ival=500 pixels which seems
         # optimal on Paul's laptop.
