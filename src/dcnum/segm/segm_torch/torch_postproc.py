@@ -1,6 +1,6 @@
 from typing import Tuple
 
-from ..segmenter import Segmenter
+from ..segmenter import Segmenter, STRUCTURING_ELEMENT
 
 import numpy as np
 from scipy import ndimage as ndi
@@ -40,12 +40,11 @@ def postprocess_masks(masks,
 
     # Label the mask image
     labels = np.empty(masks.shape, dtype=np.uint16)
-    label_struct = ndi.generate_binary_structure(2, 2)
     for ii in range(masks.shape[0]):
         ndi.label(
             input=masks[ii],
             output=labels[ii],
-            structure=label_struct)
+            structure=STRUCTURING_ELEMENT)
 
     batch_size = labels.shape[0]
 

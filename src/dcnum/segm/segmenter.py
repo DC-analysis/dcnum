@@ -13,6 +13,9 @@ from skimage import morphology
 from ..meta.ppid import kwargs_to_ppid, ppid_to_kwargs
 
 
+STRUCTURING_ELEMENT = ndi.generate_binary_structure(2, 2)
+
+
 class SegmenterNotApplicableError(BaseException):
     """Used to indicate when a dataset cannot be segmented with a segmenter"""
     def __init__(self, segmenter_class, reasons_list):
@@ -199,7 +202,8 @@ class Segmenter(abc.ABC):
         return kwargs
 
     @staticmethod
-    def process_labels(labels, *,
+    def process_labels(labels,
+                       *,
                        clear_border: bool = True,
                        fill_holes: bool = True,
                        closing_disk: int = 5):
@@ -212,7 +216,7 @@ class Segmenter(abc.ABC):
 
         Parameters
         ----------
-        labels: 2d integer or boolean ndarray
+        labels: 2d uint16 or boolean ndarray
             Labeled input (contains blobs consisting of unique numbers)
         clear_border: bool
             clear the image boarder using
@@ -224,11 +228,8 @@ class Segmenter(abc.ABC):
             if > 0, perform a binary closing with a disk
             of that radius in pixels
         """
-        if labels.dtype == bool:
-            # Convert mask image to labels
-            labels, _ = ndi.label(
-                input=labels,
-                structure=ndi.generate_binary_structure(2, 2))
+        # Every case must modify the `labels` variable such that it is
+        # either a uint16 labeling image or a boolean mask.
 
         if clear_border:
             #
@@ -237,8 +238,9 @@ class Segmenter(abc.ABC):
             #
             if (labels[0, :].sum() or labels[-1, :].sum()
                     or labels[:, 0].sum() or labels[:, -1].sum()):
+                labels = assert_labels(labels)
                 border = Segmenter.get_border(labels.shape)
-                indices = sorted(np.unique(labels[border]))
+                indices = np.unique(labels[border])
                 for li in indices:
                     if li == 0:
                         # ignore background values
@@ -246,27 +248,24 @@ class Segmenter(abc.ABC):
                     labels[labels == li] = 0
 
         if fill_holes:
-            # Floodfill only works with uint8 (too small) or int32
-            if labels.dtype != np.int32:
-                labels = np.array(labels, dtype=np.int32)
+            # Floodfill only works with uint8 or int32
+            if labels.dtype != bool:
+                labels = labels > 0
+            labels = np.asarray(labels, dtype=np.uint8)
             #
             # from scipy import ndimage
             # mask_old = ndimage.binary_fill_holes(mask)
             #
             # Floodfill algorithm fills the background image and
             # the resulting inversion is the image with holes filled.
-            # This will destroy labels (adding 2,147,483,647 to background)
             # Since floodfill will use the upper left corner of the image as
             # a seed, we have to make sure it is set to background. We set
             # a line of pixels in the upper channel wall to zero to be sure.
             labels[0, :] = 0
             # ...and a 4x4 pixel region in the top left corner.
             labels[1, :2] = 0
-            cv2.floodFill(labels, None, (0, 0), 2147483647)
-            mask = labels != 2147483647
-            labels, _ = ndi.label(
-                input=mask,
-                structure=ndi.generate_binary_structure(2, 2))
+            cv2.floodFill(labels, None, (0, 0), 255)
+            labels = labels != 255
 
         if closing_disk:
             # scikit-image is too slow for us here. So we use OpenCV.
@@ -280,6 +279,8 @@ class Segmenter(abc.ABC):
             #
             element = Segmenter.get_disk(closing_disk)
             # Note: erode/dilate not implemented for int32
+            if labels.dtype != bool:
+                labels = labels > 0
             labels_uint8 = np.asarray(labels, dtype=np.uint8)
             # Historically, we would like to do a closing (dilation followed
             # by erosion) on the image data where lower brightness values
@@ -289,12 +290,9 @@ class Segmenter(abc.ABC):
             # actually the event. Thus, we have to perform an opening
             # (erosion followed by dilation) of the label image.
             labels_eroded = cv2.erode(labels_uint8, element)
-            labels_dilated = cv2.dilate(labels_eroded, element)
-            labels, _ = ndi.label(
-                input=labels_dilated > 0,
-                structure=ndi.generate_binary_structure(2, 2))
+            labels = cv2.dilate(labels_eroded, element) > 0
 
-        return labels
+        return assert_labels(labels)
 
     @staticmethod
     @abc.abstractmethod
@@ -407,6 +405,22 @@ class Segmenter(abc.ABC):
             If the segmenter is not applicable to the dataset
         """
         return True
+
+
+def assert_labels(arr):
+    """Make sure a labeling array is returned
+
+    If `arr``is a boolean array, it is processed with `ndi.label`.
+    """
+    if arr.dtype == bool:
+        # Convert mask image to labels
+        labels, _ = ndi.label(
+            input=arr,
+            structure=STRUCTURING_ELEMENT)
+    else:
+        # already labeled
+        labels = arr
+    return labels
 
 
 @functools.cache

@@ -12,6 +12,7 @@
  - enh: globally increase the number of slots to 7
  - enh: more accurate timing statistics
  - enh: use `np.asarray` instead of `np.array` where possible (speed-up)
+ - enh: increase efficiency for label postprocessing (speed-up)
  - bmk: add benchmarks for short pipeline run and segmenter manager thread
  - ref: remove unused `start`/`stop` kwargs for `segment_batch`
  - ref: make `segment_chunk` accept a `ChunkSlot` instance

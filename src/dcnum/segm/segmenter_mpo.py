@@ -5,11 +5,10 @@ import threading
 from typing import Dict
 
 import numpy as np
-import scipy.ndimage as ndi
 
 from ..os_env_st import RequestSingleThreaded, confirm_single_threaded
 
-from .segmenter import Segmenter
+from .segmenter import Segmenter, assert_labels
 
 
 # All subprocesses should use 'spawn' to avoid issues with threads
@@ -239,21 +238,19 @@ class MPOSegmenter(Segmenter, abc.ABC):
         performed according to the class definition.
         """
         segm_wrap = self.segment_algorithm_wrapper()
+
         # optional subtraction of background offset
         if bg_off is not None:
             image = image - bg_off
+
         # obtain mask or label
         mol = segm_wrap(image)
-        if mol.dtype == bool:
-            # convert mask to labels
-            labels, _ = ndi.label(
-                input=mol,
-                structure=ndi.generate_binary_structure(2, 2))
-        else:
-            labels = mol
+
         # optional mask/label postprocessing
         if self.mask_postprocessing:
-            labels = self.process_labels(labels, **self.kwargs_mask)
+            labels = self.process_labels(mol, **self.kwargs_mask)
+        else:
+            labels = assert_labels(mol)
         return labels
 
     def close(self):

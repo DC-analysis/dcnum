@@ -2,10 +2,8 @@ import abc
 from typing import Dict
 
 import numpy as np
-import scipy.ndimage as ndi
 
-
-from .segmenter import Segmenter
+from .segmenter import Segmenter, assert_labels
 
 
 class STOSegmenter(Segmenter, abc.ABC):
@@ -70,24 +68,26 @@ class STOSegmenter(Segmenter, abc.ABC):
                                  f"passed to `segment_batch`. Please check "
                                  f"your analysis pipeline.")
             images = images - bg_off.reshape(-1, 1, 1)
-        labels = segm(images)
 
-        # Make sure we have integer labels and perform mask postprocessing
-        if labels.dtype == bool:
-            new_labels = np.zeros_like(labels, dtype=np.uint16)
-            for ii in range(len(labels)):
-                ndi.label(
-                    input=labels[ii],
-                    output=new_labels[ii],
-                    structure=ndi.generate_binary_structure(2, 2))
-            labels = new_labels
+        # obtain masks or labels
+        mols = segm(images)
+
+        # Put everything into a uint16 array
+        if mols.dtype == bool:
+            # Create output array
+            labels = np.zeros_like(mols, dtype=np.uint16)
+        else:
+            # Modification in-place
+            labels = np.asarray(mols, dtype=np.uint16)
 
         # TODO: Parallelize this
         # Perform mask postprocessing
         if self.mask_postprocessing:
             for ii in range(len(labels)):
-                labels[ii] = self.process_labels(labels[ii],
-                                                 **self.kwargs_mask)
+                labels[ii] = self.process_labels(mols[ii], **self.kwargs_mask)
+        else:
+            for ii in range(len(labels)):
+                labels[ii] = assert_labels(mols[ii])
 
         return labels
 
