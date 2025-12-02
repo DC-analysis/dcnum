@@ -52,7 +52,7 @@ class HDF5Writer:
                 libver="latest",
                 # https://support.hdfgroup.org/documentation/hdf5-docs/advanced_topics/chunking_in_hdf5.html
                 # https://docs.h5py.org/en/stable/high/file.html#chunk-cache
-                # Set chunk cache size to for each
+                # Set chunk cache size for each
                 # dataset to allow partial writes.
                 rdcc_nbytes=10 * 1024**2,
                 # If the value is set to 1, the library will
