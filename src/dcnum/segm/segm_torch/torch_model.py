@@ -43,6 +43,8 @@ def load_model(path_or_name, device):
     model_meta: dict
         metadata associated with the loaded model
     """
+    device = torch.device(device)
+
     model_path = retrieve_model_file(path_or_name)
     # define an extra files mapping dictionary that loads the model's metadata
     extra_files = {"dcnum_meta.json": ""}
