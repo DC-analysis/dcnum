@@ -201,6 +201,10 @@ class Segmenter(abc.ABC):
                                                    ppid=pp_kwargs_mask)
         return kwargs
 
+    def log_info(self, logger):
+        """Allow segmenter to write informative log messages"""
+        pass
+
     @staticmethod
     def process_labels(labels,
                        *,

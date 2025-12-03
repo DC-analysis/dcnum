@@ -1,5 +1,6 @@
 0.27.1
  - enh: optimize torchsto segmentation (batch size, threshold on GPU)
+ - enh: add info logging for segmenters
 0.27.0
  - meta: increment DCNUM_PPID_GENERATION (segmentation with background, #47)
  - fix: wrong `bg_off` background correction for segmentation (#47)

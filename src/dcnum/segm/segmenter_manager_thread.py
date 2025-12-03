@@ -48,6 +48,7 @@ class SegmenterManagerThread(threading.Thread):
         """Waiting time counter"""
 
     def run(self):
+        self.segmenter.log_info(self.logger)
         # We iterate over all the chunks of the image data.
         for chunk in range(self.slot_register.num_chunks):
             t0 = time.perf_counter()

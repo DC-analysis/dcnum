@@ -11,6 +11,15 @@ from .torch_postproc import postprocess_masks
 class SegmentTorchSTO(TorchSegmenterBase, STOSegmenter):
     """PyTorch segmentation (GPU version)"""
 
+    def log_info(self, logger, gpu_id=None):
+        model_file = self.kwargs["model_file"]
+        device = torch.device(gpu_id if gpu_id is not None else "cuda")
+        _, total = torch.cuda.mem_get_info(device)
+        model, model_meta = load_model(model_file, device)
+        batch_size = model_meta["estimated_batch_size_cuda"]
+        logger.info(f"Available GPU memory: {total/1024**3:.1f}GB")
+        logger.info(f"GPU segmentation batch size: {batch_size}")
+
     @staticmethod
     def _segment_in_batches(images, model, model_meta, device):
         """Segment image data in batches
