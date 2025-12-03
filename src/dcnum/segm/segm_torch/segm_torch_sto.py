@@ -23,19 +23,26 @@ class SegmentTorchSTO(TorchSegmenterBase, STOSegmenter):
             batch = imgs_t[start_idx:start_idx + batch_size]
             # Move image tensors to cuda
             batch = torch.tensor(batch, device=device)
+
             # Model inference
             batch_seg = model(batch)
+            # perform thresholding on GPU
+            batch_seg_bool = batch_seg > 0.5
+            # For debugging and profiling, uncomment the next line.
+            # torch.cuda.synchronize()
+
             # Remove extra dim [B, C, H, W] --> [B, H, W]
-            batch_seg = batch_seg.squeeze(1)
-            # Convert cuda-tensor into numpy arrays
-            batch_seg_np = batch_seg.detach().cpu().numpy()
-            # Fill empty array with segmented batch
-            masks[start_idx:start_idx + batch_size] = batch_seg_np >= 0.5
+            batch_seg_bool = batch_seg_bool.squeeze(1)
+            # Convert cuda-tensor to numpy array and fill masks array
+            masks[start_idx:start_idx + batch_size] \
+                = batch_seg_bool.detach().cpu().numpy()
 
         return masks
 
     @staticmethod
-    def segment_algorithm(images, gpu_id=None, batch_size=50, *,
+    def segment_algorithm(images,
+                          gpu_id=None,
+                          *,
                           model_file: str = None):
         """
         Parameters
@@ -44,8 +51,6 @@ class SegmentTorchSTO(TorchSegmenterBase, STOSegmenter):
             array of N event images of shape (N, H, W)
         gpu_id: str
             optional argument specifying the GPU to use
-        batch_size: int
-            number of images to process in one batch
         model_file: str
             path to or name of a dcnum model file (.dcnm); if only a
             name is provided, then the "torch_model_files" directory
@@ -68,14 +73,16 @@ class SegmentTorchSTO(TorchSegmenterBase, STOSegmenter):
         # Preprocess the images
         image_preproc = preprocess_images(images,
                                           **model_meta["preprocessing"])
+
         # Model inference
         # The `masks` array has the shape (len(images), H, W), where
         # H and W may be different from the corresponding axes in `images`.
-        masks = SegmentTorchSTO._segment_in_batches(image_preproc,
-                                                    model,
-                                                    batch_size,
-                                                    device
-                                                    )
+        masks = SegmentTorchSTO._segment_in_batches(
+            imgs_t=image_preproc,
+            model=model,
+            batch_size=model_meta["estimated_batch_size_cuda"],
+            device=device,
+        )
 
         # Perform postprocessing in cases where the image shapes don't match
         assert len(masks.shape[1:]) == len(images.shape[1:]), "sanity check"

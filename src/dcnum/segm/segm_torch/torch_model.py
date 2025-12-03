@@ -6,6 +6,7 @@ import logging
 import os
 import pathlib
 
+import numpy as np
 import torch
 
 from ...meta import paths
@@ -55,6 +56,36 @@ def load_model(path_or_name, device):
     model_jit.eval()
     # optimize for inference on device
     model_jit = torch.jit.optimize_for_inference(model_jit)
+
+    if device.type == "cuda":
+        # Estimate the batch size for the current device.
+        # In principle, we would be fine with a batch size of 50, but
+        # there is a slight improvement in performance when going to
+        # higher batch sizes and users will also see the GPU usage
+        # in the task manager (to perform a sanity check).
+        sy, sx = model_meta["preprocessing"]["image_shape"]
+
+        # We estimate the batch size by determining the memory usage.
+        size = 100
+        for _ in range(50):
+            data = torch.tensor(
+                np.zeros((size, 1, sy, sx), dtype=np.float32),
+                device=device)
+            data_seg = model_jit(data)
+            data_seg_bin = data_seg > 0  # noqa: F841
+            torch.cuda.synchronize()
+            free, total = torch.cuda.mem_get_info(device)
+            if free / total < 0.1:  # leave a bit of space for other things
+                size -= 100
+                break
+            size += 100
+            del data, data_seg, data_seg_bin
+            import gc
+            gc.collect()
+            torch.cuda.empty_cache()
+
+        model_meta["estimated_batch_size_cuda"] = size
+
     return model_jit, model_meta
 
 
