@@ -85,7 +85,8 @@ def load_model(path_or_name, device):
             import gc
             gc.collect()
             torch.cuda.empty_cache()
-
+        # 50 images should fit in any GPU
+        size = max(size, 50)
         model_meta["estimated_batch_size_cuda"] = size
 
     return model_jit, model_meta
