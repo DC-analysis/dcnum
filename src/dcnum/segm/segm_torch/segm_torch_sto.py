@@ -27,7 +27,7 @@ class SegmentTorchSTO(TorchSegmenterBase, STOSegmenter):
             # Model inference
             batch_seg = model(batch)
             # perform thresholding on GPU
-            batch_seg_bool = batch_seg > 0.5
+            batch_seg_bool = batch_seg >= 0.5
             # For debugging and profiling, uncomment the next line.
             # torch.cuda.synchronize()
 
