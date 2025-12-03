@@ -80,6 +80,12 @@ class SegmentTorchSTO(TorchSegmenterBase, STOSegmenter):
         masks = SegmentTorchSTO._segment_in_batches(
             imgs_t=image_preproc,
             model=model,
+            # In dcnum <= 0.27.0, we had a fixed batch size of 50 which
+            # resulted in a small speed penalty. Here, we use a batch size
+            # that is tailored to the GPU memory. Note that for individual
+            # events, the batch size may have an effect on segmentation. When
+            # comparing torchmpo and torchsto in DCscope, always make sure
+            # to turn of downsampling for a correct comparison.
             batch_size=model_meta["estimated_batch_size_cuda"],
             device=device,
         )
