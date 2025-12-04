@@ -148,7 +148,7 @@ class MPOSegmenter(Segmenter, abc.ABC):
           images, then `images` must already be background-corrected,
           except for the optional `bg_off`.
         """
-        from ..logic.chunk_slot import ChunkSlotBase
+        from ..logic.chunk_slot_data import ChunkSlotData
         available_features = ["image_bg"]
 
         if bg_off is not None:
@@ -162,7 +162,7 @@ class MPOSegmenter(Segmenter, abc.ABC):
         if bg_off is not None:
             available_features.append("bg_off")
 
-        cs = ChunkSlotBase(shape=images.shape,
+        cs = ChunkSlotData(shape=images.shape,
                            available_features=available_features)
 
         if self.requires_background_correction:
@@ -189,7 +189,7 @@ class MPOSegmenter(Segmenter, abc.ABC):
         chunk:
             The data chunk index to perform segmentation on
         slot_list:
-            List of `ChunkSlotBase` instances (e.g. `SlotRegister.slots`)
+            List of `ChunkSlotData` instances (e.g. `SlotRegister.slots`)
 
         Returns
         -------
