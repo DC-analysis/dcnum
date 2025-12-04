@@ -16,7 +16,11 @@ class SlotRegister:
                  job: DCNumPipelineJob,
                  data: HDF5Data,
                  num_slots: int = 3):
-        """A register fo `ChunkSlot`s for shared memory access"""
+        """A register for `ChunkSlot`s for shared memory access
+
+        The `SlotRegister` manages all `ChunkSlot` instances and
+        implements methods to interact with individual `ChunkSlot`s.
+        """
         self.data = data
         self.chunk_size = data.image.chunk_size
         self.num_chunks = data.image.num_chunks
@@ -59,11 +63,12 @@ class SlotRegister:
 
     @property
     def slots(self):
+        """A list of all `ChunkSlots`"""
         return [s for s in self._slots]
 
     @property
     def state(self):
-        """State of the slot manager, used for communication with workers
+        """State of the `SlotRegister`, used for communication with workers
 
          - "w": initialized (workers work)
          - "p": paused (all workers pause)

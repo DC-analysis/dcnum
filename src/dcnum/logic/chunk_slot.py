@@ -80,7 +80,7 @@ class ChunkSlot(ChunkSlotData):
 
     @with_state_change(before="i", after="s")
     def load(self, idx):
-        """Load chunk `idx` into `self.mp_image` and return a numpy view"""
+        """Load chunk `idx` into `self.mp_image` and return numpy views"""
         # create views on image arrays
         image = self.image
         image[:] = self.data.image.get_chunk(idx)
