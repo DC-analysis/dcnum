@@ -8,7 +8,7 @@ from typing import Dict
 import cv2
 import numpy as np
 import scipy.ndimage as ndi
-from skimage import morphology
+from ..external import skimage_morphology
 
 from ..meta.ppid import kwargs_to_ppid, ppid_to_kwargs
 
@@ -107,7 +107,7 @@ class Segmenter(abc.ABC):
     @functools.cache
     def get_disk(radius):
         """Cached `skimage.morphology.disk(radius)`"""
-        return morphology.disk(radius)
+        return skimage_morphology.disk(radius)
 
     def get_ppid(self):
         """Return a unique segmentation pipeline identifier
@@ -223,7 +223,7 @@ class Segmenter(abc.ABC):
         labels: 2d uint16 or boolean ndarray
             Labeled input (contains blobs consisting of unique numbers)
         clear_border: bool
-            clear the image boarder using
+            clear the image boarder using an equivalent of
             :func:`skimage.segmentation.clear_border`
         fill_holes: bool
             binary-fill-holes in the binary mask image using

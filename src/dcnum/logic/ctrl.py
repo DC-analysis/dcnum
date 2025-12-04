@@ -423,7 +423,6 @@ class DCNumJobRunner(threading.Thread):
                                      "numba",
                                      "numpy",
                                      "scipy",
-                                     "skimage",
                                      "torch",
                                  ]),
                                  "version": platform.python_version(),
