@@ -1,3 +1,6 @@
+0.27.2
+ - setup: update dependency scipy >= 1.15.2
+ - setup: add upper version bound for dependencies
 0.27.1
  - enh: optimize torchsto segmentation (batch size, threshold on GPU)
  - enh: add info logging for segmenters

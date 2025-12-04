@@ -95,11 +95,18 @@ class ChunkSlotBase:
         Valid values are:
 
         - "0": construction of instance
-        - "i": image loading
-        - "s": segmentation
+        - "i": image loading (populates image, image_bg, image_corr, bg_off)
+        - "s": segmentation (populates mask or labels)
+        - "m": mask processing (takes data from mask and populates labels)
+        - "l": label processing (modifies labels in-place)
+        - "e": feature extraction (requires labels)
         - "w": writing
-        - "d": done
+        - "d": done (slot can be repurposed for next chunk)
         - "n": not specified
+
+        The pipeline workflow is:
+
+            "0" -> "i" -> "s" -> "m" or "l" -> "e" -> "w" -> "d" -> "i" ...
         """
         return self._state.value
 
