@@ -1,4 +1,5 @@
 import multiprocessing as mp
+import traceback
 
 import numpy as np
 
@@ -55,6 +56,10 @@ class SlotRegister:
 
     @property
     def chunks_loaded(self):
+        """A multiprocessing value counting the number of chunks loaded
+
+        This number increments as `ChunkSlot.task_load_all` is called.
+        """
         return self._chunks_loaded.value
 
     @chunks_loaded.setter
@@ -119,3 +124,33 @@ class SlotRegister:
         for sc in self._slots:
             time_count += sc.timers[method_name].value
         return time_count
+
+    def task_load_all(self) -> bool:
+        """Load chunk data into memory for as many slots as possible
+
+        Returns
+        -------
+        did_something : bool
+            Whether data were loaded into memory
+        """
+        did_something = False
+        lock = self.get_lock("chunks_loaded")
+        has_lock = lock.acquire(block=False)
+        if has_lock and self.chunks_loaded < self.num_chunks:
+            try:
+                for sc in self:
+                    # The number of sr.chunks_loaded is identical to the
+                    # chunk index we want to load next.
+                    if sc.state == "i" and sc.chunk <= self.chunks_loaded:
+                        if ((self.chunks_loaded < self.num_chunks - 1
+                             and not sc.is_remainder)
+                                or (self.chunks_loaded == self.num_chunks - 1
+                                    and sc.is_remainder)):
+                            sc.load(self.chunks_loaded)
+                            self.chunks_loaded += 1
+                            did_something = True
+            except BaseException:
+                print(traceback.format_exc())
+            finally:
+                lock.release()
+        return did_something

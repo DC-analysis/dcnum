@@ -1,7 +1,6 @@
 import multiprocessing as mp
 import threading
 import time
-import traceback
 
 mp_spawn = mp.get_context("spawn")
 
@@ -21,26 +20,8 @@ class UniversalWorker:
                 time.sleep(0.5)
                 continue
 
-            # Load data into memory for all slots
-            lock = sr.get_lock("chunks_loaded")
-            has_lock = lock.acquire(block=False)
-            if has_lock and sr.chunks_loaded < sr.num_chunks:
-                try:
-                    for sc in sr:
-                        # The number of sr.chunks_loaded is identical to the
-                        # chunk index we want to load next.
-                        if sc.state == "i" and sc.chunk <= sr.chunks_loaded:
-                            if ((sr.chunks_loaded < sr.num_chunks - 1
-                                 and not sc.is_remainder)
-                                or (sr.chunks_loaded == sr.num_chunks - 1
-                                    and sc.is_remainder)):
-                                sc.load(sr.chunks_loaded)
-                                sr.chunks_loaded += 1
-                                did_something = True
-                except BaseException:
-                    print(traceback.format_exc())
-                finally:
-                    lock.release()
+            # Load data into memory for all available slots
+            did_something |= sr.task_load_all()
 
             if not did_something:
                 time.sleep(.01)
