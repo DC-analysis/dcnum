@@ -186,7 +186,7 @@ class BackgroundSparseMed(Background):
         self.pool = mp_spawn.Pool(processes=self.num_cpus)
         """multiprocessing pool for parallel processing"""
 
-        self.worker_counter = mp_spawn.Value("l", 0)
+        self.worker_counter = mp_spawn.Value("q", 0)
         """counter tracking process of workers"""
 
         self.queue = mp_spawn.Queue()

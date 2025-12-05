@@ -186,11 +186,11 @@ class QueueEventExtractor:
         args["raw_queue"] = raw_queue
         args["event_queue"] = event_queue
         args["log_queue"] = log_queue
-        args["feat_nevents"] = mp_spawn.Array("i", num_frames)
+        args["feat_nevents"] = mp_spawn.Array("l", num_frames)
         args["feat_nevents"][:] = np.full(num_frames, -1)
         args["finalize_extraction"] = mp_spawn.Value("b", False)
-        args["invalid_mask_counter"] = mp_spawn.Value("L", 0)
-        args["worker_monitor"] = mp_spawn.RawArray("L", num_extractors)
+        args["invalid_mask_counter"] = mp_spawn.Value("Q", 0)
+        args["worker_monitor"] = mp_spawn.RawArray("I", num_extractors)
         args["log_level"] = log_level or logging.getLogger("dcnum").level
         return args
 

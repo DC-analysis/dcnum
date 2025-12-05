@@ -71,7 +71,7 @@ class Background(abc.ABC):
         """number of images in the input data"""
 
         self.image_proc = mp_spawn.Value("d", 0)
-        """fraction images that have been processed"""
+        """fraction of images that have been processed"""
 
         self.hdin = None
         """HDF5Data instance for input data"""

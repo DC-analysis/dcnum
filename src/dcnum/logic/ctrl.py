@@ -92,7 +92,7 @@ class DCNumJobRunner(threading.Thread):
         # segmentation frame rate
         self._segm_rate = 0
 
-        self.write_queue_size = mp_spawn.Value("L", 0)
+        self.write_queue_size = mp_spawn.Value("Q", 0)
         """Number of event chunks waiting to be written to the output file"""
 
         # Set up logging

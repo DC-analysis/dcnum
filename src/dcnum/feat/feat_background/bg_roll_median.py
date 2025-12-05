@@ -99,7 +99,7 @@ class BackgroundRollMed(Background):
         self.current_batch = 0
         """current batch index (see `self.process` and `process_next_batch`)"""
 
-        self.worker_counter = mp_spawn.Value("l", 0)
+        self.worker_counter = mp_spawn.Value("q", 0)
         """counter tracking process of workers"""
 
         self.queue = mp_spawn.Queue()

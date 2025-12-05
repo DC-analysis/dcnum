@@ -92,10 +92,10 @@ class QueueWriterBase:
         self.write_threshold = write_threshold
         """Number of frames to send to `writer_dq` at a time."""
 
-        self.written_events = mp_spawn.Value("L", 0)
+        self.written_events = mp_spawn.Value("Q", 0)
         """Number of events sent to `writer_dq`"""
 
-        self.written_frames = mp_spawn.Value("L", 0)
+        self.written_frames = mp_spawn.Value("Q", 0)
         """Number of frames from `data` written to `writer_dq`"""
 
     def get_logger(self):

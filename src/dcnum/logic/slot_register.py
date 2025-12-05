@@ -27,7 +27,7 @@ class SlotRegister:
         self.num_chunks = data.image.num_chunks
         self._slots = []
 
-        self._chunks_loaded = mp_spawn.Value("L", 0)
+        self._chunks_loaded = mp_spawn.Value("Q", 0)
 
         self._state = mp_spawn.Value("u", "w")
 

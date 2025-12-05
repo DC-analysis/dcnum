@@ -45,13 +45,13 @@ class MPOSegmenter(Segmenter, abc.ABC):
         self.slot_list = None
         """List of ChunkSlot instances"""
 
-        self.mp_slot_index = mp_spawn.Value("i", 0)
+        self.mp_slot_index = mp_spawn.Value("I", 0)
         """The slot that is currently being worked on"""
 
         self.mp_active = mp_spawn.Event()
         """Event that defines whether the workers are allowed to do work"""
 
-        self.mp_num_workers_done = mp_spawn.Value("i", 0)
+        self.mp_num_workers_done = mp_spawn.Value("I", 0)
         """Number of workers that are done processing the slot"""
 
         self.mp_shutdown = mp_spawn.Event()
