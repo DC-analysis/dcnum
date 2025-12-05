@@ -74,7 +74,7 @@ def load_model(path_or_name, device):
                 np.zeros((size, 1, sy, sx), dtype=np.float32),
                 device=device)
             data_seg = model_jit(data)
-            data_seg_bin = data_seg > 0  # noqa: F841
+            data_seg_bin = data_seg > 0.5  # noqa: F841
             torch.cuda.synchronize()
             free, total = torch.cuda.mem_get_info(device)
             if free / total < 0.1:  # leave a bit of space for other things
