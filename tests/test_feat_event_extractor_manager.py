@@ -25,13 +25,16 @@ def test_event_extractor_manager_thread():
     assert "image" in hd
     log_queue = mp_spawn.Queue()
 
+    print("Setting up pipeline job")
     job = DCNumPipelineJob(path_in=path)
     slot_register = SlotRegister(job=job, data=hd)
     write_queue_size = mp_spawn.Value("L", 0)
 
+    print("Starting universal worker")
     u_worker = UniversalWorkerThread(slot_register=slot_register)
     u_worker.start()
 
+    print("Initializing SegmenterManagerThread")
     thr_segm = SegmenterManagerThread(
         segmenter=SegmentThresh(
             kwargs_mask={"closing_disk": 0},  # otherwise no event in 1st image
@@ -40,6 +43,7 @@ def test_event_extractor_manager_thread():
     )
     thr_segm.start()
 
+    print("Initializing EventExtractorManagerThread")
     fe_kwargs = QueueEventExtractor.get_init_kwargs(
         slot_register=slot_register,
         pixel_size=hd.pixel_size,
@@ -55,6 +59,8 @@ def test_event_extractor_manager_thread():
         num_workers=1,
         write_queue_size=write_queue_size,
         debug=True)
+
+    print("Running EventExtractorManagerThread")
     thr_feat.run()
     thr_segm.join()
 

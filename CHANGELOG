@@ -1,5 +1,7 @@
 0.27.5
  - enh: Enlarge dtype for shared multiprocessing values
+ - ref: introduce `StateWarden` and `SlotRegister.reserve_slot_for_task`
+   for managing `SlotChunk.state` changes (replaces `with_state_change`)
  - ref: rename `ChunkSlotBase` to `ChunkSlotData` and put it in submodule
  - ref: move code executed by `UniversalWorker` to `SlotRegister` class
 0.27.4

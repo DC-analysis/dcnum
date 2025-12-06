@@ -9,12 +9,18 @@ mp_spawn = mp.get_context("spawn")
 class ChunkSlotData:
     def __init__(self, shape, available_features=None):
         self.shape = shape
+        """3D shape of the chunk in this slot"""
+
+        self.task_lock = mp_spawn.Lock()
+        """Lock for synchronizing chunk data modification"""
+
         available_features = available_features or []
         self.length = shape[0]
 
         self._state = mp_spawn.Value("u", "0", lock=False)
 
-        self._chunk = mp_spawn.Value("i", 0, lock=False)
+        # Initialize with negative value to avoid ambiguities with first chunk.
+        self._chunk = mp_spawn.Value("q", -1, lock=False)
 
         # Initialize all shared arrays
         if self.length:
@@ -124,3 +130,6 @@ class ChunkSlotData:
     def labels(self):
         return np.ctypeslib.as_array(
             self.mp_labels).reshape(self.shape)
+
+    def acquire_task_lock(self) -> bool:
+        return self.task_lock.acquire(block=False)

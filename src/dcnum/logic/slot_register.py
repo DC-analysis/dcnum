@@ -125,6 +125,38 @@ class SlotRegister:
             time_count += sc.timers[method_name].value
         return time_count
 
+    def reserve_slot_for_task(self,
+                              current_state: str,
+                              next_state: str,
+                              chunk_slot: ChunkSlot = None,
+                              ) -> "StateWarden | None":
+        """Return slot with the specified state and lowest chunk index
+
+        Returns
+        -------
+        state_warden
+            Context manager that enforces setting the next state or
+            None if no `ChunkSlot` could be reserved.
+            Usage:
+
+                if state_warden is not None:
+                    with state_warden as chunk_slot:
+                        perform_task(chunk_slot)
+
+            This context manager will automatically set the slot
+            state to `next_state` when the context is exits
+            without exceptions.
+        """
+        if chunk_slot is None:
+            for sc in self:
+                if sc.state == current_state and sc.acquire_task_lock():
+                    return StateWarden(sc, current_state, next_state)
+
+            # fallback to nothing found
+            return None
+        else:
+            return StateWarden(chunk_slot, current_state, next_state)
+
     def task_load_all(self) -> bool:
         """Load chunk data into memory for as many slots as possible
 
@@ -138,15 +170,18 @@ class SlotRegister:
         has_lock = lock.acquire(block=False)
         if has_lock and self.chunks_loaded < self.num_chunks:
             try:
-                for sc in self:
+                for cs in self:
                     # The number of sr.chunks_loaded is identical to the
                     # chunk index we want to load next.
-                    if sc.state == "i" and sc.chunk <= self.chunks_loaded:
+                    if cs.state == "i" and cs.chunk <= self.chunks_loaded:
                         if ((self.chunks_loaded < self.num_chunks - 1
-                             and not sc.is_remainder)
+                             and not cs.is_remainder)
                                 or (self.chunks_loaded == self.num_chunks - 1
-                                    and sc.is_remainder)):
-                            sc.load(self.chunks_loaded)
+                                    and cs.is_remainder)):
+                            with self.reserve_slot_for_task(current_state="i",
+                                                            next_state="s",
+                                                            chunk_slot=cs):
+                                cs.load(self.chunks_loaded)
                             self.chunks_loaded += 1
                             did_something = True
             except BaseException:
@@ -154,3 +189,46 @@ class SlotRegister:
             finally:
                 lock.release()
         return did_something
+
+
+class StateWarden:
+    """Context manager for changing the state a `SlotChunk`"""
+    def __init__(self, chunk_slot, current_state, next_state):
+        # Make sure the state is correct
+        if chunk_slot.state != current_state:
+            raise ValueError(
+                f"Current state of slot {chunk_slot} ({chunk_slot.state}) "
+                f"does not match expected state {current_state}.")
+        # Make sure the task lock is acquired.
+        chunk_slot.task_lock.acquire(block=False)
+
+        self.chunk_slot = chunk_slot
+        self.current_state = current_state
+        self.next_state = next_state
+
+    def __enter__(self):
+        # Make sure the state is still correct
+        if self.chunk_slot.state != self.current_state:
+            try:
+                # Release the lock if we locked it.
+                self.chunk_slot.task_lock.release()
+            except ValueError:
+                pass
+            raise ValueError(
+                f"Current state of slot {self.chunk_slot} "
+                f"({self.chunk_slot.state}) does not match "
+                f"expected state {self.current_state}.")
+        return self.chunk_slot
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if exc_type is None:
+            self.chunk_slot.state = self.next_state
+        try:
+            # Release the lock if we locked it.
+            self.chunk_slot.task_lock.release()
+        except ValueError:
+            pass
+
+    def __repr__(self):
+        return (f"<StateWarden {self.current_state}->{self.next_state} "
+                f"at {hex(id(self))}>")

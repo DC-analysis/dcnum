@@ -1,4 +1,5 @@
 from dcnum import logic
+from dcnum.logic.slot_register import StateWarden
 from dcnum import read
 
 import h5py
@@ -30,11 +31,13 @@ def test_basic_chunk_slot(chunk_size):
     assert cs.state == "i"
     for idx in range(data.image.num_chunks):
         if data.image.get_chunk_size(idx) == chunk_size_act:
-            slot_chunk = cs.load(idx)[2]
+            with StateWarden(cs, current_state="i", next_state="s"):
+                slot_chunk = cs.load(idx)[2]
             assert cs.state == "s"
         else:
             assert csr.length == 16
-            slot_chunk = csr.load(idx)[2]
+            with StateWarden(csr, current_state="i", next_state="s"):
+                slot_chunk = csr.load(idx)[2]
             assert csr.state == "s"
         assert np.all(slot_chunk == data.image_corr.get_chunk(idx))
         cs.state = "i"

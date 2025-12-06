@@ -12,21 +12,14 @@ from .chunk_slot_data import ChunkSlotData
 mp_spawn = mp.get_context("spawn")
 
 
-class with_state_change:
-    def __init__(self, before, after):
-        """Decorator for enforcing a state change in ChunkSlot class"""
-        self.before = before
-        self.after = after
+class count_time:
+    """Decorator for counting execution time"""
 
     def __call__(self, func):
         @functools.wraps(func)
         def method(inst, *args, **kwargs):
-            if inst.state != self.before:
-                raise ValueError(
-                    f"Incorrect state: {inst.state=}, {inst.before=}")
             t0 = time.perf_counter()
             data = func(inst, *args, **kwargs)
-            inst.state = self.after
             # update the time counter for this method
             fn = func.__name__
             if fn in inst.timers:
@@ -41,8 +34,8 @@ class ChunkSlot(ChunkSlotData):
     _instance_counter = 0
 
     def __init__(self, job, data, is_remainder=False):
-        self._instance_counter += 1
-        self.index = self._instance_counter
+        ChunkSlot._instance_counter += 1
+        self.index = ChunkSlot._instance_counter
 
         self.timers = {
             "load": mp_spawn.Value("d", 0.0)
@@ -57,7 +50,6 @@ class ChunkSlot(ChunkSlotData):
         self.is_remainder = is_remainder
         """Whether this slot only applies to the last chunk"""
 
-        # Determine the dtype of the input data
         self.seg_cls = get_available_segmenters()[self.job["segmenter_code"]]
         """Segmentation class"""
 
@@ -75,10 +67,11 @@ class ChunkSlot(ChunkSlotData):
             available_features=self.data.keys(),
         )
 
-    def __str__(self):
-        return f"SC-{self.index}"
+    def __repr__(self):
+        return (f"<dcnum ChunkSlot {self.index} (state {self.state}) "
+                f"at {hex(id(self))}>")
 
-    @with_state_change(before="i", after="s")
+    @count_time()
     def load(self, idx):
         """Load chunk `idx` into `self.mp_image` and return numpy views"""
         # create views on image arrays

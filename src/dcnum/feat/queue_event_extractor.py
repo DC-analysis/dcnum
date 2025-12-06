@@ -334,7 +334,13 @@ class QueueEventExtractor:
         """Process one label image, extracting masks and features"""
         chunk = index // self.slot_register.chunk_size
         sub_index = index % self.slot_register.chunk_size
-        chunk_slot = self.slot_register.find_slot(state="e", chunk=chunk)
+
+        # Fetch the chunk slot we are supposed to be working on
+        for chunk_slot in self.slot_register:
+            if chunk_slot.chunk == chunk:
+                break
+        else:
+            raise ValueError(f"Could not find slot for {chunk=}")
 
         images = chunk_slot.image
 

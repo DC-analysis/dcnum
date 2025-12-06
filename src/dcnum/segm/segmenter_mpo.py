@@ -173,7 +173,6 @@ class MPOSegmenter(Segmenter, abc.ABC):
             cs.image[:] = images
 
         cs.chunk = 0
-        cs.state = "s"
 
         self.segment_chunk(0, [cs])
         return cs.labels[:]
@@ -200,7 +199,7 @@ class MPOSegmenter(Segmenter, abc.ABC):
 
         # Find the slot that we are supposed to be working on.
         for cs in slot_list:
-            if cs.state == "s" and cs.chunk == chunk:
+            if cs.chunk == chunk:
                 break
         else:
             raise ValueError(f"Could not find slot for {chunk=}")

@@ -56,21 +56,23 @@ class SegmenterManagerThread(threading.Thread):
             while True:
                 # Find the slot that has the `chunk`
                 # (preloaded from disk by UniversalWorker)
-                cs = self.slot_register.find_slot(state="s", chunk=chunk)
-                if cs is None:
+                state_warden = self.slot_register.reserve_slot_for_task(
+                    current_state="s",
+                    next_state="e"
+                )
+                if state_warden is None:
                     time.sleep(.01)
                 else:
                     break
 
+            # We have a free slot to compute the segmentation
             t1 = time.perf_counter()
             self.t_wait += t1 - t0
 
-            # We have a free slot to compute the segmentation
-            # `segment_chunk` populates the `cs.labels` array.
-            self.segmenter.segment_chunk(cs.chunk, self.slot_register.slots)
-
-            # Let everyone know that segmentation is complete
-            cs.state = "e"
+            with state_warden as cs:
+                # `segment_chunk` populates the `cs.labels` array.
+                self.segmenter.segment_chunk(cs.chunk,
+                                             self.slot_register.slots)
             self.logger.debug(f"Segmented chunk {chunk} in slot {cs}")
 
             self.t_segm += time.perf_counter() - t1

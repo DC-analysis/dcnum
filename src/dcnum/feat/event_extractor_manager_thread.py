@@ -103,28 +103,27 @@ class EventExtractorManagerThread(threading.Thread):
 
             # Check all slots for segmented labels
             while True:
-                cs = self.slot_register.find_slot(state="e")
-                if cs is None:
+                state_warden = self.slot_register.reserve_slot_for_task(
+                    current_state="e",
+                    next_state="i")
+                if state_warden is None:
                     time.sleep(.01)
                 else:
                     break
 
+            # We have a chunk, process it!
             t1 = time.perf_counter()
             self.t_wait += t1 - t0
 
-            # We have a chunk, process it!
+            with state_warden as cs:
+                # Let the workers know there is work
+                [self.raw_queue.put((cs.chunk, ii)) for ii in range(cs.length)]
 
-            # Let the workers know there is work
-            [self.raw_queue.put((cs.chunk, ii)) for ii in range(cs.length)]
-
-            # Make sure the entire chunk has been processed.
-            while np.sum(worker_monitor) != frames_processed + cs.length:
-                time.sleep(.01)
+                # Make sure the entire chunk has been processed.
+                while np.sum(worker_monitor) != frames_processed + cs.length:
+                    time.sleep(.01)
 
             self.logger.debug(f"Extracted chunk {cs.chunk} in slot {cs}")
-
-            # We are done here. The writer gets the events via a queue.
-            cs.state = "i"
 
             self.t_extract += time.perf_counter() - t1
 
