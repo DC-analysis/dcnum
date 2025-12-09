@@ -1,5 +1,7 @@
-0.27.5
+0.28.0
+ - meta: increment DCNUM_PPID_GENERATION to 13 (torch reproducibility)
  - enh: Enlarge dtype for shared multiprocessing values
+ - enh: reproducible segmentation with torch/CUDA/CUDNN settings
  - ref: introduce `StateWarden` and `SlotRegister.reserve_slot_for_task`
    for managing `SlotChunk.state` changes (replaces `with_state_change`)
  - ref: rename `ChunkSlotBase` to `ChunkSlotData` and put it in submodule
@@ -15,7 +17,7 @@
  - enh: optimize torchsto segmentation (batch size, threshold on GPU)
  - enh: add info logging for segmenters
 0.27.0
- - meta: increment DCNUM_PPID_GENERATION (segmentation with background, #47)
+ - meta: increment DCNUM_PPID_GENERATION to 12 (segment with background, #47)
  - fix: wrong `bg_off` background correction for segmentation (#47)
  - fix: set maximum chunk size for writing to 1000 (speed)
  - enh: align `HDF5ImageCache` chunk size to the underlying `h5py.Dataset` (#5)

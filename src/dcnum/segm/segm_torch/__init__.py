@@ -1,8 +1,31 @@
 import importlib
+import os
 import warnings
+
+# Note: Any changes of the environment that we are making here affect
+# all submodules, because the Python import system imports the parent
+# modules before importing submodules (even if modules are imported with
+# "from parent import child").
+
+# https://docs.nvidia.com/cuda/cublas/#results-reproducibility
+# Make sure that all computations on the GPU with cublas are reproducible.
+# - ":16:8" may limit overall performance
+# - ":4096:8" increases memory footprint by 24MB
+os.environ["CUBLAS_WORKSPACE_CONFIG"] = ":4096:8"
 
 try:
     torch = importlib.import_module("torch")
+
+    # REPRODUCIBILITY: All of these settings, including CUBLAS_WORKSPACE_CONFIG
+    # above resulted in a segmentation performance hit of about 10% for an
+    # NVIDIA RTX 2050.
+    # Tell pytorch to only use deterministic algorithms.
+    torch.use_deterministic_algorithms(True)
+    # Disable CUDNN benchmarking for inference (just to be sure).
+    torch.backends.cudnn.benchmark = False
+    # Disable CUDNN altogether (this will free some GPU memory).
+    torch.backends.cudnn.enabled = False
+
     req_maj = 2
     req_min = 2
     ver_tuple = torch.__version__.split(".")
