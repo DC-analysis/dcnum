@@ -170,6 +170,7 @@ class HDF5Data:
                 "image_cache_size": self.image.cache_size,
                 "image_chunk_size": self.image_chunk_size,
                 "index_mapping": self.index_mapping,
+                "len": self._len,
                 }
 
     def __setstate__(self, state):
@@ -179,7 +180,7 @@ class HDF5Data:
         # Cached properties
         self._feats = None
         self._keys = None
-        self._len = None
+        self._len = state.get("len", None)
         self.image_cache_size = state["image_cache_size"]
         # Image cache
         if not hasattr(self, "_image_cache"):
