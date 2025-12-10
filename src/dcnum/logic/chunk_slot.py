@@ -19,13 +19,13 @@ class count_time:
         @functools.wraps(func)
         def method(inst, *args, **kwargs):
             t0 = time.perf_counter()
-            data = func(inst, *args, **kwargs)
+            retval = func(inst, *args, **kwargs)
             # update the time counter for this method
             fn = func.__name__
             if fn in inst.timers:
                 with inst.timers[fn].get_lock():
                     inst.timers[fn].value += time.perf_counter() - t0
-            return data
+            return retval
 
         return method
 
