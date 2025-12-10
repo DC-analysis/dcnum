@@ -19,6 +19,7 @@ try:
     # REPRODUCIBILITY: All of these settings, including CUBLAS_WORKSPACE_CONFIG
     # above resulted in a segmentation performance hit of about 10% for an
     # NVIDIA RTX 2050.
+    # https://docs.pytorch.org/docs/stable/notes/numerical_accuracy.html
     # Tell pytorch to only use deterministic algorithms.
     torch.use_deterministic_algorithms(True)
     # Disable CUDNN benchmarking for inference (just to be sure).

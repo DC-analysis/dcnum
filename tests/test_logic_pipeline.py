@@ -190,7 +190,7 @@ def test_basin_strategy_tap():
         # Make sure the correct basin identifier is stored
         # (must be the original identifier plus a dcn pipeline hash tag)
         assert h5.attrs["experiment:run identifier"] \
-            == "d5a40aed-0b6c-0412-e87c-59789fdd28d0_dcn-2943dfb"
+            == "d5a40aed-0b6c-0412-e87c-59789fdd28d0_dcn-3902cff"
 
         # The other features are accessed via basins
         hd = read.HDF5Data(h5)

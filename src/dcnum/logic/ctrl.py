@@ -208,7 +208,7 @@ class DCNumJobRunner(threading.Thread):
             # Delete temporary input file
             self.path_temp_in.unlink(missing_ok=True)
             # We don't have to delete self.path_temp_out, since this one
-            # is `rename`d to `self.jon["path_out"]`.
+            # is `rename`d to `self.job["path_out"]`.
 
     def join(self, delete_temporary_files=True, *args, **kwargs):
         super(DCNumJobRunner, self).join(*args, **kwargs)
