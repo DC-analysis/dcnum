@@ -3,6 +3,7 @@ import functools
 import inspect
 import logging
 import multiprocessing as mp
+import os
 import pathlib
 import time
 
@@ -39,7 +40,7 @@ class Background(abc.ABC):
             for faster processing.
         num_cpus: int
             Number of CPUs to use for median computation. Defaults to
-            `multiprocessing.cpu_count()`.
+            `len(os.sched_getaffinity(0))`.
         kwargs:
             Additional keyword arguments passed to the subclass.
         """
@@ -62,7 +63,7 @@ class Background(abc.ABC):
         self.kwargs.update(kwargs)
 
         if num_cpus is None:
-            num_cpus = mp_spawn.cpu_count()
+            num_cpus = len(os.sched_getaffinity(0))
 
         self.num_cpus = num_cpus
         """number of CPUs used"""

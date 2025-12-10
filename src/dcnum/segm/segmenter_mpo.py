@@ -1,5 +1,6 @@
 import abc
 import multiprocessing as mp
+import os
 import time
 import threading
 from typing import Dict
@@ -42,7 +43,7 @@ class MPOSegmenter(Segmenter, abc.ABC):
         super(MPOSegmenter, self).__init__(kwargs_mask=kwargs_mask,
                                            debug=debug,
                                            **kwargs)
-        self.num_workers = num_workers or mp.cpu_count()
+        self.num_workers = num_workers or len(os.sched_getaffinity(0))
 
         self.slot_list = None
         """List of ChunkSlot instances"""

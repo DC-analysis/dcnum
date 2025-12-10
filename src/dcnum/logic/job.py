@@ -3,7 +3,7 @@ import copy
 import hdf5plugin
 import inspect
 import logging
-import multiprocessing as mp
+import os
 import pathlib
 import re
 from typing import Dict, Literal
@@ -120,7 +120,7 @@ class DCNumPipelineJob:
         self.kwargs["segmenter_kwargs"].setdefault("kwargs_mask", {})
         # Set default number of processes
         if num_procs is None:
-            self.kwargs["num_procs"] = mp.cpu_count()
+            self.kwargs["num_procs"] = len(os.sched_getaffinity(0))
 
     def __getitem__(self, item):
         return copy.deepcopy(self.kwargs[item])

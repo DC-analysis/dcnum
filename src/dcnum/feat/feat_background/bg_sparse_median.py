@@ -78,7 +78,7 @@ class BackgroundSparseMed(Background):
             for faster processing.
         num_cpus: int
             Number of CPUs to use for median computation. Defaults to
-            `multiprocessing.cpu_count()`.
+            `len(os.sched_getaffinity(0))`.
 
         .. versionchanged:: 0.23.5
 
