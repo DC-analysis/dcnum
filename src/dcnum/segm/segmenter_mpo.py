@@ -29,6 +29,8 @@ class MPOSegmenter(Segmenter, abc.ABC):
 
         Parameters
         ----------
+        num_workers
+            Number of workers (processes) to spawn
         kwargs_mask: dict
             Keyword arguments for mask post-processing (see `process_labels`)
         debug: bool
