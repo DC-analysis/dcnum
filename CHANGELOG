@@ -2,6 +2,7 @@
  - meta: increment DCNUM_PPID_GENERATION to 13 (torch reproducibility)
  - enh: Enlarge dtype for shared multiprocessing values
  - enh: reproducible segmentation with torch/CUDA/CUDNN settings
+ - ref: lazily open `h5py.File` in `HDF5Data`
  - ref: introduce `StateWarden` and `SlotRegister.reserve_slot_for_task`
    for managing `SlotChunk.state` changes (replaces `with_state_change`)
  - ref: rename `ChunkSlotBase` to `ChunkSlotData` and put it in submodule

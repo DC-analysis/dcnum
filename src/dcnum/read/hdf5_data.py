@@ -72,8 +72,10 @@ class HDF5Data:
         # Init is in __setstate__ so we can pickle this class
         # and use it for multiprocessing.
         if isinstance(path, h5py.File):
-            self.h5 = path
+            self._h5 = path
             path = path.filename
+        else:
+            self._h5 = None
 
         # Optimize image chunk size
         with h5py.File(path, "r") as h5:
@@ -188,8 +190,8 @@ class HDF5Data:
         # Scalar feature cache
         if not hasattr(self, "_cache_scalar"):
             self._cache_scalar = {}
-        if not hasattr(self, "h5"):
-            self.h5 = None
+        if not hasattr(self, "_h5"):
+            self._h5 = None
 
         path = state["path"]
         if isinstance(path, str):
@@ -255,9 +257,6 @@ class HDF5Data:
 
         self.index_mapping = state["index_mapping"]
 
-        if self.h5 is None:
-            self.h5 = h5py.File(self.path, libver="latest")
-
     def __len__(self):
         if self._len is None:
             if self.index_mapping is not None:
@@ -265,6 +264,12 @@ class HDF5Data:
             else:
                 self._len = self.h5.attrs["experiment:event count"]
         return self._len
+
+    @property
+    def h5(self):
+        if self._h5 is None:
+            self._h5 = h5py.File(self.path, libver="latest")
+        return self._h5
 
     @property
     def image(self):
@@ -358,7 +363,9 @@ class HDF5Data:
                     bn_group.file.close()
         self._image_cache.clear()
         self._basin_data.clear()
-        self.h5.close()
+        if self._h5 is not None:
+            self._h5.close()
+            self._h5 = None
 
     def get_ppid(self):
         return self.get_ppid_from_ppkw(
