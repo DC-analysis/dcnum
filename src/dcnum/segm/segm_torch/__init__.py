@@ -26,6 +26,9 @@ try:
     torch.backends.cudnn.benchmark = False
     # Disable CUDNN altogether (this will free some GPU memory).
     torch.backends.cudnn.enabled = False
+    # We are parallelizing with mp.multiprocessing and do not want
+    # pytorch to parallelize for us.
+    torch.set_num_threads(1)
 
     req_maj = 2
     req_min = 2
