@@ -132,4 +132,27 @@ class ChunkSlotData:
             self.mp_labels).reshape(self.shape)
 
     def acquire_task_lock(self) -> bool:
+        """Acquire the lock for performing a task
+
+        Return True if the lock is acquired, False if the
+        lock has been acquired beforehand.
+        """
         return self.task_lock.acquire(block=False)
+
+    def release_task_lock(self) -> bool:
+        """Release the task lock
+
+        Releasing the task lock is done after completing the
+        task for which a lock was required. Only release the
+        task lock if you acquired it before.
+
+        Return True if the lock has been released, False
+        if the lock wasn't acquired beforehand (and thus not released).
+        """
+        try:
+            self.task_lock.release()
+        except ValueError:
+            released = False
+        else:
+            released = True
+        return released

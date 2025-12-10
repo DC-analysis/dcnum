@@ -5,7 +5,7 @@ import numpy as np
 
 from ..read import HDF5Data
 
-from .chunk_slot import ChunkSlot
+from .chunk_slot import ChunkSlot, ChunkSlotData
 from .job import DCNumPipelineJob
 
 
@@ -193,14 +193,19 @@ class SlotRegister:
 
 class StateWarden:
     """Context manager for changing the state a `SlotChunk`"""
-    def __init__(self, chunk_slot, current_state, next_state):
+    def __init__(self,
+                 chunk_slot: ChunkSlot | ChunkSlotData,
+                 current_state: str,
+                 next_state: str,
+                 batch_size: int = None,
+                 ):
         # Make sure the state is correct
         if chunk_slot.state != current_state:
             raise ValueError(
                 f"Current state of slot {chunk_slot} ({chunk_slot.state}) "
                 f"does not match expected state {current_state}.")
         # Make sure the task lock is acquired.
-        chunk_slot.task_lock.acquire(block=False)
+        chunk_slot.acquire_task_lock()
 
         self.chunk_slot = chunk_slot
         self.current_state = current_state
@@ -208,12 +213,9 @@ class StateWarden:
 
     def __enter__(self):
         # Make sure the state is still correct
+        # release the lock, because somebody else might need it
         if self.chunk_slot.state != self.current_state:
-            try:
-                # Release the lock if we locked it.
-                self.chunk_slot.task_lock.release()
-            except ValueError:
-                pass
+            self.chunk_slot.release_task_lock()
             raise ValueError(
                 f"Current state of slot {self.chunk_slot} "
                 f"({self.chunk_slot.state}) does not match "
@@ -223,11 +225,7 @@ class StateWarden:
     def __exit__(self, exc_type, exc_val, exc_tb):
         if exc_type is None:
             self.chunk_slot.state = self.next_state
-        try:
-            # Release the lock if we locked it.
-            self.chunk_slot.task_lock.release()
-        except ValueError:
-            pass
+        self.chunk_slot.release_task_lock()
 
     def __repr__(self):
         return (f"<StateWarden {self.current_state}->{self.next_state} "
