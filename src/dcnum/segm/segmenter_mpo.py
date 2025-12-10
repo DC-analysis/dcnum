@@ -256,8 +256,6 @@ class MPOSegmenter(Segmenter, abc.ABC):
 
     def close(self):
         self.join_workers()
-        if self.slot_list is not None:
-            self.slot_list.clear()
 
 
 class MPOSegmenterWorker:

@@ -9,6 +9,7 @@
  - ref: rename `ChunkSlotBase` to `ChunkSlotData` and put it in submodule
  - ref: move code executed by `UniversalWorker` to `SlotRegister` class
  - ref: `acquire_task_lock` and `release_task_lock` for `ChunkSlotData`
+ - ref: do not clear slots when exiting `MPOSegmenter`
 0.27.4
  - reg: missing external files
 0.27.3
