@@ -1,5 +1,6 @@
 0.28.1
  - ref: replace `mp.cpu_count()` with `len(os.sched_getaffinity(0))`
+ - ref: perform more cleanup when finalizing event extractor
 0.28.0
  - meta: increment DCNUM_PPID_GENERATION to 13 (torch reproducibility)
  - enh: Enlarge dtype for shared multiprocessing values

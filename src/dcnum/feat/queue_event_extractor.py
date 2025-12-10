@@ -375,7 +375,7 @@ class QueueEventExtractor:
         """Main loop of worker process"""
         confirm_single_threaded()
         self.worker_monitor[self.worker_index] = 0
-        # Don't wait for these two queues when joining workers
+        # Don't wait for the raw queue when joining workers
         self.raw_queue.cancel_join_thread()
 
         self.logger = logging.getLogger(
@@ -431,6 +431,7 @@ class QueueEventExtractor:
 
         # Make sure everything gets written to the queue.
         queue_handler.flush()
+        queue_handler.close()
 
         if close_queues:
             # Also close the logging queue. Note that not all messages might
@@ -438,6 +439,9 @@ class QueueEventExtractor:
             # earlier.
             self.log_queue.close()
             self.log_queue.join_thread()
+
+        if close_queues:
+            self.raw_queue.close()
 
 
 class EventExtractorProcess(QueueEventExtractor, mp_spawn.Process):
