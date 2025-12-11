@@ -3,12 +3,12 @@ import functools
 import inspect
 import logging
 import multiprocessing as mp
-import os
 import pathlib
 import time
 
 import h5py
 
+from ...common import cpu_count
 from ...meta import ppid
 from ...read import HDF5Data, md5sum
 from ...write import HDF5Writer, create_with_basins, set_default_filter_kwargs
@@ -40,7 +40,7 @@ class Background(abc.ABC):
             for faster processing.
         num_cpus: int
             Number of CPUs to use for median computation. Defaults to
-            `len(os.sched_getaffinity(0))`.
+            `dcnum.common.cpu_count()`.
         kwargs:
             Additional keyword arguments passed to the subclass.
         """
@@ -63,7 +63,7 @@ class Background(abc.ABC):
         self.kwargs.update(kwargs)
 
         if num_cpus is None:
-            num_cpus = len(os.sched_getaffinity(0))
+            num_cpus = cpu_count()
 
         self.num_cpus = num_cpus
         """number of CPUs used"""

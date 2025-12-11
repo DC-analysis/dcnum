@@ -49,7 +49,7 @@ class BackgroundRollMed(Background):
             for faster processing.
         num_cpus: int
             Number of CPUs to use for median computation. Defaults to
-            `len(os.sched_getaffinity(0))`.
+            `dcnum.common.cpu_count()`.
         """
         super(BackgroundRollMed, self).__init__(
             input_data=input_data,

@@ -3,11 +3,11 @@ import copy
 import hdf5plugin
 import inspect
 import logging
-import os
 import pathlib
 import re
 from typing import Dict, Literal
 
+from ..common import cpu_count
 from ..feat import QueueEventExtractor
 from ..feat.feat_background.base import get_available_background_methods
 from ..feat.gate import Gate
@@ -120,7 +120,7 @@ class DCNumPipelineJob:
         self.kwargs["segmenter_kwargs"].setdefault("kwargs_mask", {})
         # Set default number of processes
         if num_procs is None:
-            self.kwargs["num_procs"] = len(os.sched_getaffinity(0))
+            self.kwargs["num_procs"] = cpu_count()
 
     def __getitem__(self, item):
         return copy.deepcopy(self.kwargs[item])

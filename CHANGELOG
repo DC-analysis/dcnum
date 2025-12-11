@@ -1,3 +1,5 @@
+0.28.2
+ - reg: replace `len(os.sched_getaffinity(0))` with custom `cpu_count()`
 0.28.1
  - fix: feature extractor broken when invalid events were detected
  - ref: replace `mp.cpu_count()` with `len(os.sched_getaffinity(0))`
