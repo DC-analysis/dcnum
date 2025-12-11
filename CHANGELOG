@@ -1,4 +1,5 @@
 0.28.1
+ - fix: feature extractor broken when invalid events were detected
  - ref: replace `mp.cpu_count()` with `len(os.sched_getaffinity(0))`
  - ref: perform more cleanup when finalizing event extractor
 0.28.0

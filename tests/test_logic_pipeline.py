@@ -798,6 +798,36 @@ def test_get_status():
         assert final_status["state"] == "done"
 
 
+def test_invalid_events():
+    path = retrieve_data("fmt-hdf5_cytoshot_full-features_2023.zip")
+
+    # Modify the file and introduce an invalid event
+    with h5py.File(path, "a") as h5:
+        h5["events/image"][0, 40, 220:232] = 90
+
+    job = logic.DCNumPipelineJob(
+        path_in=path,
+        debug=True,
+        segmenter_kwargs={"kwargs_mask": {"closing_disk": 0}},
+    )
+
+    with logic.DCNumJobRunner(job=job) as runner:
+        assert len(runner.draw) == 40
+        runner.run()
+
+        assert job["path_out"].exists(), "output file must exist"
+        assert runner.path_temp_in.exists(), "tmp input still exists"
+
+    assert not runner.path_temp_in.exists(), "tmp input file mustn't exist"
+    assert not runner.path_temp_out.exists(), "tmp out file must not exist"
+
+    with read.HDF5Data(job["path_out"]) as hd:
+        log_string = "".join(list(hd.logs.values())[1])
+        assert "Encountered 1 invalid masks" in log_string
+        assert "Finished extraction" in log_string
+        assert "Encountered problem in feature extraction" not in log_string
+
+
 def test_logs_in_pipeline():
     path_orig = retrieve_data("fmt-hdf5_cytoshot_full-features_2023.zip")
     path = path_orig.with_name("input.rtdc")

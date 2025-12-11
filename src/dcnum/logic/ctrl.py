@@ -824,7 +824,10 @@ class DCNumJobRunner(threading.Thread):
                 f"No events found in {self.draw.path}! Please check the "
                 f"input file or revise your pipeline")
 
-        self.logger.info("Finished segmentation and feature extraction")
+        if fe_kwargs["finalize_extraction"].value:
+            self.logger.info("Finished segmentation and feature extraction")
+        else:
+            self.logger.warning("Encountered problem in feature extraction")
 
 
 def get_library_versions_dict(library_name_list):

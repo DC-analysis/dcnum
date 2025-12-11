@@ -136,7 +136,7 @@ class EventExtractorManagerThread(threading.Thread):
         inv_masks = self.fe_kwargs["invalid_mask_counter"].value
         if inv_masks:
             self.logger.info(f"Encountered {inv_masks} invalid masks")
-            inv_frac = inv_masks / len(self.slot_register.num_frames)
+            inv_frac = inv_masks / self.slot_register.num_frames
             if inv_frac > 0.005:  # warn above one half percent
                 self.logger.warning(f"Discarded {inv_frac:.1%} of the masks, "
                                     f"please check segmenter applicability")
