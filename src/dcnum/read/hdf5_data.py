@@ -358,12 +358,20 @@ class HDF5Data:
 
     def close(self):
         """Close the underlying HDF5 file"""
+        # TODO: There is a memory leak (#50).
         for bn_group, _, _ in self._basin_data.values():
             if bn_group is not None:
                 if bn_group.id.valid:
                     bn_group.file.close()
+                del bn_group
         self._image_cache.clear()
         self._basin_data.clear()
+        self._cache_scalar.clear()
+        self.basins.clear()
+        self.logs.clear()
+        self.tables.clear()
+        self.basins.clear()
+        self.meta.clear()
         if self._h5 is not None:
             self._h5.close()
             self._h5 = None
