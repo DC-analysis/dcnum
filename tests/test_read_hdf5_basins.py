@@ -341,3 +341,76 @@ def test_basin_no_inception():
         # in dcnum, so they should not be accessible.
         assert "image" not in hd2
         assert "area_um" not in hd2
+
+
+@pytest.mark.parametrize("mapping,numevents", [
+    [None, 11],
+    [np.arange(3, dtype=int), 3],
+    [np.arange(1, 5, 2, dtype=int), 2],
+])
+def test_basin_sorting(mapping, numevents):
+    path_src = retrieve_data(
+        "fmt-hdf5_cytoshot_full-features_legacy_allev_2023.zip")
+
+    path_b1 = path_src.with_name("basin1.rtdc")
+    path_b2 = path_src.with_name("basin2.rtdc")
+    path = path_src.with_name("output.rtdc")
+
+    # create basin files
+    with (h5py.File(path_src) as src,
+          h5py.File(path_b1, "w") as bn1,
+          h5py.File(path_b2, "w") as bn2):
+        # first, copy all the scalar features to the new file
+        write.copy_metadata(h5_src=src,
+                            h5_dst=bn1,
+                            )
+        # store the basin information in the new dataset
+        hw1 = write.HDF5Writer(bn1)
+        # also store feature information
+        hw1.store_feature_chunk("deform", src["events/deform"][:])
+
+        write.copy_metadata(h5_src=src,
+                            h5_dst=bn2,
+                            )
+        hw2 = write.HDF5Writer(bn2)
+        # also store feature information
+        hw2.store_feature_chunk("aspect", src["events/aspect"][:])
+
+        # sanity checks
+        assert "deform" in bn1["events"]
+        assert "aspect" in bn2["events"]
+        assert len(bn1["events/deform"]) == 11
+
+    # create basin-based dataset
+    with h5py.File(path_src) as src, h5py.File(path, "w") as dst:
+        write.copy_metadata(h5_src=src,
+                            h5_dst=dst,
+                            )
+        dst.attrs["experiment:event count"] = numevents
+        hw = write.HDF5Writer(dst)
+        hw.store_basin(name="test basin R",
+                       paths=[path_b1],
+                       mapping=mapping,
+                       )
+        hw.store_basin(name="test basin A",
+                       paths=[path_b2],
+                       mapping=mapping,
+                       )
+        # sanity check
+        if mapping is not None:
+            assert "basinmap0" in dst["events"]
+            assert "basinmap1" not in dst["events"]  # (b/c same mapping)
+
+    # create an internal basin which would otherwise be sorted at the end
+    with write.HDF5Writer(path) as hw:
+        hw.store_basin(name="zzzzzzzz9999-end",
+                       internal_data={"userdef1": np.arange(numevents)},
+                       mapping=mapping,
+                       )
+
+    with read.HDF5Data(path) as hd:
+        assert hd.basins[0]["name"] == "zzzzzzzz9999-end"
+
+        # The others should be sorted
+        assert hd.basins[1]["name"] == "test basin A"
+        assert hd.basins[2]["name"] == "test basin R"

@@ -211,11 +211,13 @@ class Background(abc.ABC):
         "bg_off" features defined in the output file `self.h5out`.
         """
         t0 = time.perf_counter()
+
         # Delete any old background data
         for ds_key in ["image_bg", "bg_off"]:
             for grp_key in ["events", "basin_events"]:
                 if grp_key in self.h5out and ds_key in self.h5out[grp_key]:
                     del self.h5out[grp_key][ds_key]
+
         # Perform the actual background computation
         self.process_approach()
         bg_ppid = self.get_ppid()

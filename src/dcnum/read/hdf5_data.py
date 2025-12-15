@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import functools
 import hashlib
 import json
 import numbers
@@ -248,7 +249,27 @@ class HDF5Data:
                         self.tables[tab] = tabdict
                 # basins
                 basins = self.extract_basin_dicts(h5)
-                self.basins = sorted(basins, key=lambda x: x["name"])
+
+                def basin_sort_cmp(a, b):
+                    """Sort internal basins before any other basins"""
+                    if a["type"] == b["type"]:
+                        an = a["name"]
+                        bn = b["name"]
+                        if an == bn:
+                            return 0
+                        if an < bn:
+                            return -1
+                        else:
+                            return 1
+                    elif a["type"] == "internal":
+                        # internal basins should come first
+                        return -1
+                    else:
+                        return 1
+
+                self.basins = sorted(basins,
+                                     key=functools.cmp_to_key(basin_sort_cmp)
+                                     )
 
         if state["pixel_size"] is not None:
             self.pixel_size = state["pixel_size"]
@@ -570,7 +591,7 @@ class HDF5Data:
                 idx_map = self.index_mapping
             else:
                 idx_map = None
-                # search all basins
+                # search all basins (internal basins are always first)
                 for idx in range(len(self.basins)):
                     bn_grp, bn_feats, bn_map = self.get_basin_data(idx)
                     if bn_feats is not None:

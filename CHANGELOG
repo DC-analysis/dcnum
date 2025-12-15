@@ -1,3 +1,5 @@
+0.28.3
+ - fix: sort internal basins before file-based basins
 0.28.2
  - reg: replace `len(os.sched_getaffinity(0))` with custom `cpu_count()`
 0.28.1
