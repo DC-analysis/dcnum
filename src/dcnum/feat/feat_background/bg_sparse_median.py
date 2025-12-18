@@ -183,9 +183,6 @@ class BackgroundSparseMed(Background):
         The First axis enumerating the events
         """
 
-        self.pool = mp_spawn.Pool(processes=self.num_cpus)
-        """multiprocessing pool for parallel processing"""
-
         self.worker_counter = mp_spawn.Value("q", 0)
         """counter tracking process of workers"""
 
@@ -207,8 +204,6 @@ class BackgroundSparseMed(Background):
     def __exit__(self, type, value, tb):
         self.worker_counter.value = -1000
         [w.join() for w in self.workers]
-        self.pool.terminate()
-        self.pool.join()
         super(BackgroundSparseMed, self).__exit__(type, value, tb)
 
     @staticmethod
