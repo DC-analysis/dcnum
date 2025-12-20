@@ -115,6 +115,7 @@ class MPOSegmenter(Segmenter, abc.ABC):
         step_size = chunk_size // self.num_workers
         rest = chunk_size % self.num_workers
         w_start = 0
+        tw0 = time.perf_counter()
         for ii in range(self.num_workers):
             # Give every worker the same-sized workload and add one
             # from the rest until there is no more.
@@ -127,6 +128,8 @@ class MPOSegmenter(Segmenter, abc.ABC):
             w.start()
             self._workers.append(w)
             w_start = w_stop
+        self.logger.info(f"{self.num_workers} worker spawn time: "
+                         f"{time.perf_counter()-tw0:.1f}s")
 
     def segment_batch(self,
                       images: np.ndarray,

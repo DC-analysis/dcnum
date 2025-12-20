@@ -719,7 +719,10 @@ class DCNumJobRunner(threading.Thread):
             worker_uni = UniversalWorkerThread(slot_register=slot_register)
         else:
             worker_uni = UniversalWorkerProcess(slot_register=slot_register)
+        tw0 = time.perf_counter()
         worker_uni.start()
+        self.logger.info(f"1 worker spawn time: "
+                         f"{time.perf_counter() - tw0:.1f}s")
 
         # Initialize segmenter manager thread
         worker_segm = SegmenterManagerThread(

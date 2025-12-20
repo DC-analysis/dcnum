@@ -71,18 +71,19 @@ class EventExtractorManagerThread(threading.Thread):
 
     def run(self):
         # Initialize all workers
-        ta = time.perf_counter()
         if self.debug:
             worker_cls = EventExtractorThread
         else:
             worker_cls = EventExtractorProcess
         workers = [worker_cls(*list(self.fe_kwargs.values()), worker_index=ii)
                    for ii in range(self.num_workers)]
-        [w.start() for w in workers]
-        worker_monitor = self.fe_kwargs["worker_monitor"]
 
-        self.logger.info(
-            f"Initialization time: {time.perf_counter() - ta:.1f}s")
+        tw0 = time.perf_counter()
+        [w.start() for w in workers]
+        self.logger.info(f"{len(workers)} worker spawn time: "
+                         f"{time.perf_counter() - tw0:.1f}s")
+
+        worker_monitor = self.fe_kwargs["worker_monitor"]
 
         chunks_processed = 0
         frames_processed = 0

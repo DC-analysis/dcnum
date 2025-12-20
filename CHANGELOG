@@ -1,6 +1,6 @@
 0.28.4
  - fix: remove unused `multiprocessing.Pool` in background computation
- - enh: print background worker creation time to logs
+ - enh: log worker spawn time throughout dcnum
 0.28.3
  - fix: sort internal basins before file-based basins
 0.28.2
