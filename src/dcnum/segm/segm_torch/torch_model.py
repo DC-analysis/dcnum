@@ -7,9 +7,10 @@ import os
 import pathlib
 
 import numpy as np
-import torch
 
 from ...meta import paths
+
+from .torch_setup import torch
 
 
 logger = logging.getLogger(__name__)

@@ -1,5 +1,4 @@
 import numpy as np
-import torch
 
 from ..segmenter_mpo import MPOSegmenter
 
@@ -7,6 +6,7 @@ from .segm_torch_base import TorchSegmenterBase
 from .torch_model import load_model
 from .torch_preproc import preprocess_images
 from .torch_postproc import postprocess_masks
+from .torch_setup import torch
 
 
 class SegmentTorchMPO(TorchSegmenterBase, MPOSegmenter):

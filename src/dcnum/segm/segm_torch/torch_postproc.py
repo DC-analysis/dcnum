@@ -1,5 +1,3 @@
-from typing import Tuple
-
 from ...common import LazyLoader
 from ..segmenter import Segmenter, STRUCTURING_ELEMENT
 
@@ -10,7 +8,7 @@ ndi = LazyLoader("scipy.ndimage")
 
 
 def postprocess_masks(masks,
-                      original_image_shape: Tuple[int, int]):
+                      original_image_shape: tuple[int, int]):
     """Postprocess mask images from ML segmenters
 
     The transformation includes:

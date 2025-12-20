@@ -1,12 +1,10 @@
-from typing import Tuple
-
 import numpy as np
 
 
 def preprocess_images(images: np.ndarray,
                       norm_mean: float | None,
                       norm_std: float | None,
-                      image_shape: Tuple[int, int] = None,
+                      image_shape: tuple[int, int] = None,
                       ):
     """Transform image data to something torch models expect
 

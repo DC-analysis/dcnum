@@ -1,7 +1,6 @@
 import functools
 import pathlib
 import re
-from typing import Dict
 
 import numpy as np
 
@@ -41,9 +40,9 @@ class TorchSegmenterBase(Segmenter):
 
     @classmethod
     def validate_applicability(cls,
-                               segmenter_kwargs: Dict,
-                               meta: Dict = None,
-                               logs: Dict = None):
+                               segmenter_kwargs: dict,
+                               meta: dict = None,
+                               logs: dict = None):
         """Validate the applicability of this segmenter for a dataset
 
         The applicability is defined by the metadata in the segmentation
