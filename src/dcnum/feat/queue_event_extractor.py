@@ -392,7 +392,7 @@ class QueueEventExtractor:
         queue_handler = QueueHandler(self.log_queue)
         queue_handler.setLevel(self.log_level)
         self.logger.addHandler(queue_handler)
-        self.logger.info("Ready")
+        self.logger.debug("Ready")
 
         # only close queues when we have created them ourselves.
         close_queues = isinstance(self, EventExtractorProcess)
