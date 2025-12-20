@@ -2,8 +2,6 @@ import logging
 import os
 
 
-logger = logging.getLogger(__name__)
-
 os_env_threading = [
     "MKL_NUM_THREADS",
     "NUMBA_NUM_THREADS",
@@ -67,6 +65,7 @@ def confirm_single_threaded():
         #
         val_act = os.environ.get(os_env)
         if val_act != "1":
+            logger = logging.getLogger(__name__)
             logger.warning(
                 f"Make sure to set the environment variable {os_env} to "
                 f"'1' (disables multithreading)! Other values will reduce "
