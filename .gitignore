@@ -160,3 +160,7 @@ cython_debug/
 .idea/
 
 _version.py
+
+_dev*.py
+*.lprof
+
