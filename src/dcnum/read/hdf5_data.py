@@ -5,7 +5,7 @@ import hashlib
 import json
 import numbers
 import pathlib
-from typing import Dict, BinaryIO, List
+from typing import BinaryIO
 import uuid
 import warnings
 
@@ -28,13 +28,13 @@ class HDF5Data:
                  path: "pathlib.Path | h5py.File | BinaryIO",
                  pixel_size: float = None,
                  md5_5m: str = None,
-                 meta: Dict = None,
-                 basins: List[Dict[List[str] | str]] = None,
-                 logs: Dict[List[str]] = None,
-                 tables: Dict[np.ndarray] = None,
+                 meta: dict = None,
+                 basins: list[dict[list[str] | str]] = None,
+                 logs: dict[list[str]] = None,
+                 tables: dict[np.ndarray] = None,
                  image_cache_size: int = 2,
                  image_chunk_size: int = 1000,
-                 index_mapping: int | slice | List | np.ndarray = None,
+                 index_mapping: int | slice | list | np.ndarray = None,
                  ):
         """
 
@@ -473,8 +473,8 @@ class HDF5Data:
 
     def get_basin_data(self, index: int) -> tuple[
             "h5py.Group",
-            List,
-            int | slice | List | np.ndarray,
+            list,
+            int | slice | list | np.ndarray,
             ]:
         """Return HDF5Data info for a basin index in `self.basins`
 

@@ -1,7 +1,6 @@
 import hashlib
 import json
 import pathlib
-from typing import Dict, List, Tuple
 import warnings
 
 import numpy as np
@@ -28,7 +27,7 @@ class HDF5Writer:
     def __init__(self,
                  obj: "h5py.File | pathlib.Path | str",
                  mode: str = "a",
-                 ds_kwds: Dict = None,
+                 ds_kwds: dict = None,
                  ):
         """Write deformability cytometry HDF5 data
 
@@ -40,7 +39,7 @@ class HDF5Writer:
             argument is passed to :class:`h5py.File`
         mode: str
             opening mode when using :class:`h5py.File`
-        ds_kwds: Dict
+        ds_kwds: dict
             keyword arguments with which to initialize new Datasets
             (e.g. compression)
         """
@@ -103,9 +102,9 @@ class HDF5Writer:
 
     def require_feature(self,
                         feat: str,
-                        item_shape: Tuple[int],
+                        item_shape: tuple[int],
                         feat_dtype: np.dtype,
-                        ds_kwds: Dict = None,
+                        ds_kwds: dict = None,
                         group_name: str = "events"):
         """Create a new feature in the "events" group
 
@@ -113,13 +112,13 @@ class HDF5Writer:
         ----------
         feat: str
             name of the feature
-        item_shape: Tuple[int]
+        item_shape: tuple[int]
             shape for one event of this feature, e.g. for a scalar
             event, the shape would be `(1,)` and for an image, the
             shape could be `(80, 300)`.
         feat_dtype: np.dtype
             dtype of the feature
-        ds_kwds: Dict
+        ds_kwds: dict
             HDF5 Dataset keyword arguments (e.g. compression, fletcher32)
         group_name: str
             name of the HDF5 group where the feature should be written to;
@@ -157,11 +156,11 @@ class HDF5Writer:
 
     def store_basin(self,
                     name: str,
-                    paths: List[str | pathlib.Path] | None = None,
-                    features: List[str] = None,
+                    paths: list[str | pathlib.Path] | None = None,
+                    features: list[str] = None,
                     description: str | None = None,
                     mapping: np.ndarray = None,
-                    internal_data: Dict | None = None,
+                    internal_data: dict | None = None,
                     identifier: str | None = None,
                     ):
         """Write an HDF5-based file basin
@@ -289,7 +288,7 @@ class HDF5Writer:
 
     def store_log(self,
                   log: str,
-                  data: List[str],
+                  data: list[str],
                   override: bool = False) -> "h5py.Dataset":
         """Store log data
 
@@ -318,7 +317,7 @@ class HDF5Writer:
 
 def create_with_basins(
         path_out: str | pathlib.Path,
-        basin_paths: List[str | pathlib.Path] | List[List[str | pathlib.Path]]
+        basin_paths: list[str | pathlib.Path] | list[list[str | pathlib.Path]]
         ):
     """Create an .rtdc file with basins
 
@@ -439,7 +438,7 @@ def copy_basins(h5_src: "h5py.File",
 
 def copy_features(h5_src: "h5py.File",
                   h5_dst: "h5py.File",
-                  features: List[str],
+                  features: list[str],
                   mapping: np.ndarray = None,
                   ds_kwds: dict = None,
                   ):
@@ -453,7 +452,7 @@ def copy_features(h5_src: "h5py.File",
         Input HDF5File containing `features` in the "events" group
     h5_dst: h5py.File
         Output HDF5File opened in write mode not containing `features`
-    features: List[str]
+    features: list[str]
         List of features to copy from source to destination
     mapping: 1D array
         If given, contains indices in the input file that should be

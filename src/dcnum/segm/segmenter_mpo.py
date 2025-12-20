@@ -2,7 +2,6 @@ import abc
 import multiprocessing as mp
 import time
 import threading
-from typing import Dict
 
 import numpy as np
 
@@ -23,7 +22,7 @@ class MPOSegmenter(Segmenter, abc.ABC):
     def __init__(self,
                  *,
                  num_workers: int = None,
-                 kwargs_mask: Dict = None,
+                 kwargs_mask: dict = None,
                  debug: bool = False,
                  **kwargs):
         """Segmenter with multiprocessing operation

@@ -1,12 +1,10 @@
-from typing import List
-
 import numpy as np
 
 
 class EventStash:
     def __init__(self,
                  index_offset: int,
-                 feat_nevents: List[int]):
+                 feat_nevents: list[int]):
         """Sort events into predefined arrays for bulk access
 
         Parameters

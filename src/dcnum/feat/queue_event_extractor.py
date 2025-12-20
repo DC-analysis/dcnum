@@ -31,13 +31,13 @@ class QueueEventExtractor:
                  slot_register: "SlotRegister",  # noqa: F821
                  pixel_size: float,
                  gate: Gate,
-                 raw_queue: mp.Queue,
-                 event_queue: mp.Queue,
-                 log_queue: mp.Queue,
-                 feat_nevents: mp.Array,
-                 finalize_extraction: mp.Value,
-                 invalid_mask_counter: mp.Value,
-                 worker_monitor: mp.RawArray,
+                 raw_queue: "mp.Queue",
+                 event_queue: "mp.Queue",
+                 log_queue: "mp.Queue",
+                 feat_nevents: "mp.Array",
+                 finalize_extraction: "mp.Value",
+                 invalid_mask_counter: "mp.Value",
+                 worker_monitor: "mp.RawArray",
                  log_level: int = None,
                  extract_kwargs: dict = None,
                  worker_index: int = None,
@@ -45,7 +45,7 @@ class QueueEventExtractor:
         """Base class for event extraction from label images
 
         This class is meant to be subclassed to run either in a
-        :class:`threading.Thread` or a :class:`multiprocessing.Process`.
+        :class:`threading.Thread` or a :class:`mp.Process`.
 
         Parameters
         ----------

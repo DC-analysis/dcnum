@@ -4,7 +4,7 @@ import inspect
 import logging
 import pathlib
 import re
-from typing import Dict, Literal
+from typing import Literal
 
 from ..common import LazyLoader, cpu_count
 from ..feat import QueueEventExtractor
@@ -23,15 +23,15 @@ class DCNumPipelineJob:
                  path_in: pathlib.Path | str,
                  path_out: pathlib.Path | str = None,
                  data_code: str = "hdf",
-                 data_kwargs: Dict = None,
+                 data_kwargs: dict = None,
                  background_code: str = "sparsemed",
-                 background_kwargs: Dict = None,
+                 background_kwargs: dict = None,
                  segmenter_code: str = "thresh",
-                 segmenter_kwargs: Dict = None,
+                 segmenter_kwargs: dict = None,
                  feature_code: str = "legacy",
-                 feature_kwargs: Dict = None,
+                 feature_kwargs: dict = None,
                  gate_code: str = "norm",
-                 gate_kwargs: Dict = None,
+                 gate_kwargs: dict = None,
                  basin_strategy: Literal["drain", "tap"] = "drain",
                  compression: str = "zstd-5",
                  num_procs: int = None,
@@ -102,7 +102,7 @@ class DCNumPipelineJob:
             if arg == "self":
                 continue
             value = locs[arg]
-            if value is None and spec.annotations[arg] is Dict:
+            if value is None and spec.annotations[arg] is dict:
                 value = {}
             self.kwargs[arg] = value
         # Set default pixel size for this job

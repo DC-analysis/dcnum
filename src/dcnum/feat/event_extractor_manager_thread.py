@@ -3,7 +3,6 @@ import logging
 import multiprocessing as mp
 import threading
 import time
-from typing import Dict
 
 import numpy as np
 
@@ -13,9 +12,9 @@ from .queue_event_extractor import EventExtractorThread, EventExtractorProcess
 class EventExtractorManagerThread(threading.Thread):
     def __init__(self,
                  slot_register: "SlotRegister",  # noqa: F821
-                 fe_kwargs: Dict,
+                 fe_kwargs: dict,
                  num_workers: int,
-                 write_queue_size: mp.Value,
+                 write_queue_size: "mp.Value",
                  debug: bool = False,
                  *args, **kwargs):
         """Manage event extraction threads or precesses

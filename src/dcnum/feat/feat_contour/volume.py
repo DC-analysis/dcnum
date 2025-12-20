@@ -1,10 +1,8 @@
-from typing import List
-
 import numpy as np
 
 
 def volume_from_contours(
-        contour: List[np.ndarray],
+        contour: list[np.ndarray],
         pos_x: np.ndarray,
         pos_y: np.ndarray,
         pixel_size: float):

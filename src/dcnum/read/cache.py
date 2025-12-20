@@ -3,7 +3,6 @@ import collections
 import functools
 import hashlib
 import pathlib
-from typing import Tuple
 import warnings
 
 import numpy as np
@@ -20,7 +19,7 @@ class EmptyDatasetWarning(UserWarning):
 
 class BaseImageChunkCache(abc.ABC):
     def __init__(self,
-                 shape: Tuple[int],
+                 shape: tuple[int],
                  chunk_size: int = 1000,
                  cache_size: int = 2,
                  ):

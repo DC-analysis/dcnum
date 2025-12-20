@@ -4,7 +4,7 @@ import collections
 import hashlib
 import inspect
 import pathlib
-from typing import Dict, List, Protocol
+from typing import Protocol
 import warnings
 
 import numpy as np
@@ -30,7 +30,7 @@ class ClassWithPPIDCapabilities(Protocol):
         """pipeline identifier from specific pipeline keywords (classmethod)"""
         pass
 
-    def get_ppkw_from_ppid(self) -> Dict:
+    def get_ppkw_from_ppid(self) -> dict:
         """class keywords from full pipeline identifier (staticmethod)"""
         pass
 
@@ -63,8 +63,8 @@ def convert_to_dtype(value, dtype):
 
 
 def get_class_method_info(class_obj: ClassWithPPIDCapabilities,
-                          static_kw_methods: List = None,
-                          static_kw_defaults: Dict = None,
+                          static_kw_methods: list = None,
+                          static_kw_defaults: dict = None,
                           ):
     """Return dictionary of class info with static keyword methods docs
 
@@ -109,7 +109,7 @@ def get_class_method_info(class_obj: ClassWithPPIDCapabilities,
 
 def kwargs_to_ppid(cls: ClassWithPPIDCapabilities,
                    method: str,
-                   kwargs: Dict,
+                   kwargs: dict,
                    allow_invalid_keys: bool = True):
     info = get_class_method_info(cls, [method, "__init__"])
 

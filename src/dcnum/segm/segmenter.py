@@ -3,7 +3,6 @@ import copy
 import functools
 import inspect
 import logging
-from typing import Dict
 
 import numpy as np
 
@@ -52,7 +51,7 @@ class Segmenter(abc.ABC):
 
     def __init__(self,
                  *,
-                 kwargs_mask: Dict = None,
+                 kwargs_mask: dict = None,
                  debug: bool = False,
                  **kwargs):
         """Base segmenter class
@@ -386,9 +385,9 @@ class Segmenter(abc.ABC):
 
     @classmethod
     def validate_applicability(cls,
-                               segmenter_kwargs: Dict,
-                               meta: Dict = None,
-                               logs: Dict = None):
+                               segmenter_kwargs: dict,
+                               meta: dict = None,
+                               logs: dict = None):
         """Validate the applicability of this segmenter for a dataset
 
         Parameters
