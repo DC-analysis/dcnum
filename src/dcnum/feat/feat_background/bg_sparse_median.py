@@ -197,9 +197,10 @@ class BackgroundSparseMed(Background):
                         for _ in range(self.num_cpus)]
         """list of workers (processes)"""
 
-        t0 = time.perf_counter()
+        tw0 = time.perf_counter()
         [w.start() for w in self.workers]
-        self.logger.info(f"Worker spawn time: {time.perf_counter() - t0:.1}s")
+        self.logger.info(f"{len(self.workers)} worker spawn time: "
+                         f"{time.perf_counter() - tw0:.1}s")
 
     def __enter__(self):
         return self
