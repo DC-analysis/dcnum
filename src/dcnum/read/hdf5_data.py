@@ -9,8 +9,9 @@ from typing import Dict, BinaryIO, List
 import uuid
 import warnings
 
-import h5py
 import numpy as np
+
+from ..common import h5py
 
 from .cache import HDF5ImageCache, ImageCorrCache, md5sum
 from .const import PROTECTED_FEATURES
@@ -24,7 +25,7 @@ class BasinIdentifierMismatchError(BaseException):
 class HDF5Data:
     """HDF5 (.rtdc) input file data instance"""
     def __init__(self,
-                 path: pathlib.Path | h5py.File | BinaryIO,
+                 path: "pathlib.Path | h5py.File | BinaryIO",
                  pixel_size: float = None,
                  md5_5m: str = None,
                  meta: Dict = None,
@@ -470,11 +471,11 @@ class HDF5Data:
                 raise ValueError(f"Invalid parameter '{var}'!")
         return kwargs
 
-    def get_basin_data(self, index: int) -> (
-            h5py.Group,
+    def get_basin_data(self, index: int) -> tuple[
+            "h5py.Group",
             List,
             int | slice | List | np.ndarray,
-            ):
+            ]:
         """Return HDF5Data info for a basin index in `self.basins`
 
         Parameters
@@ -639,7 +640,7 @@ def concatenated_hdf5_data(*args, **kwargs):
     return hdf5_concat.concatenated_hdf5_data(*args, **kwargs)
 
 
-def get_measurement_identifier(h5: h5py.Group) -> str | None:
+def get_measurement_identifier(h5: "h5py.Group") -> str | None:
     """Return the measurement identifier for the given H5File object
 
     The basin identifier is taken from the HDF5 attributes. If the

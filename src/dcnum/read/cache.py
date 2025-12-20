@@ -6,8 +6,9 @@ import pathlib
 from typing import Tuple
 import warnings
 
-import h5py
 import numpy as np
+
+from ..common import h5py
 
 from .mapped import MappedHDF5Dataset
 
@@ -121,7 +122,7 @@ class BaseImageChunkCache(abc.ABC):
 
 class HDF5ImageCache(BaseImageChunkCache):
     def __init__(self,
-                 h5ds: h5py.Dataset | MappedHDF5Dataset,
+                 h5ds: "h5py.Dataset | MappedHDF5Dataset",
                  chunk_size: int = 1000,
                  cache_size: int = 2,
                  boolean: bool = False):

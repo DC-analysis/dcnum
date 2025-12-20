@@ -13,10 +13,9 @@ import time
 import traceback
 import uuid
 
-import h5py
 import numpy as np
 
-from ..common import join_worker
+from ..common import h5py, join_worker
 from ..feat.feat_background.base import get_available_background_methods
 from ..feat.queue_event_extractor import QueueEventExtractor
 from ..feat import gate

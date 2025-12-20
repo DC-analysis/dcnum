@@ -1,4 +1,4 @@
-import h5py
+from ...common import h5py
 
 from .base import Background
 

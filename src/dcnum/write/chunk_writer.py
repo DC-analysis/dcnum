@@ -5,14 +5,14 @@ import pathlib
 import threading
 import time
 
-import h5py
+from ..common import h5py
 
 from .writer import HDF5Writer
 
 
 class ChunkWriter(threading.Thread):
     def __init__(self,
-                 path_out: pathlib.Path | h5py.File,
+                 path_out: "pathlib.Path | h5py.File",
                  dq: collections.deque,
                  write_queue_size: mp.Value,
                  ds_kwds: dict = None,

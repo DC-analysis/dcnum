@@ -1,19 +1,21 @@
 import collections
 import copy
-import hdf5plugin
 import inspect
 import logging
 import pathlib
 import re
 from typing import Dict, Literal
 
-from ..common import cpu_count
+from ..common import LazyLoader, cpu_count
 from ..feat import QueueEventExtractor
 from ..feat.feat_background.base import get_available_background_methods
 from ..feat.gate import Gate
 from ..meta.ppid import compute_pipeline_hash, DCNUM_PPID_GENERATION
 from ..read import HDF5Data
 from ..segm import get_available_segmenters
+
+
+hdf5plugin = LazyLoader("hdf5plugin")
 
 
 class DCNumPipelineJob:

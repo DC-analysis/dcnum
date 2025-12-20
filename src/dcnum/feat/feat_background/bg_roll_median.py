@@ -2,11 +2,14 @@ import queue
 import time
 
 import numpy as np
-from scipy import ndimage
 
+from ...common import LazyLoader
 from ...os_env_st import RequestSingleThreaded, confirm_single_threaded
 
 from .base import mp_spawn, Background
+
+
+ndi = LazyLoader('scipy.ndimage')
 
 
 class BackgroundRollMed(Background):
@@ -315,7 +318,7 @@ def compute_median_for_slice(shared_input, shared_output, kernel_size,
     # write median data into output array. Nnote that the values at
     # filtered[-kernel_size:] are just junk data, but we keep it to
     # make the code simpler.
-    shared_output[:output_size, job_slice] = ndimage.median_filter(
+    shared_output[:output_size, job_slice] = ndi.median_filter(
         input=shared_input[:input_size, job_slice],
         size=(kernel_size, 1),
         mode="constant",

@@ -2,13 +2,14 @@ import queue
 import time
 
 import numpy as np
-from scipy import ndimage
 
+from ...common import LazyLoader
+from ...os_env_st import RequestSingleThreaded, confirm_single_threaded
 from ...read import HDF5Data
 
-from ...os_env_st import RequestSingleThreaded, confirm_single_threaded
-
 from .base import mp_spawn, Background
+
+ndi = LazyLoader('scipy.ndimage')
 
 
 class BackgroundSparseMed(Background):
@@ -295,7 +296,7 @@ class BackgroundSparseMed(Background):
             # of 10 is just a best-guess and makes sense since it's time-based
             # and not frame-based. This would most-likely not work if you
             # applied this in `BackgroundRollMed`.
-            bg_profiles_norm_cent_med = ndimage.median_filter(
+            bg_profiles_norm_cent_med = ndi.median_filter(
                 bg_prof_norm_cent, size=10)
             # Until now, we are basically looking at the peak-to-peak grayscale
             # values from which a median was subtracted.

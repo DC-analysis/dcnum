@@ -1,5 +1,64 @@
+import importlib
 import multiprocessing as mp
 import os
+from typing import Callable
+
+
+class LazyLoader:
+    def __init__(self,
+                 modname: str,
+                 sibling: str = None,
+                 action: Callable = None,
+                 ):
+        """Lazily load a module
+
+        Parameters
+        ----------
+        modname: str
+            The name of the module (e.g. ``"scipy.ndimage"``)
+        sibling: str
+            The ``__name__`` of a sibling of the module. This is useful
+            for performing relative imports. Consider this module
+            structure:
+
+            - ``module``
+              - ``submod_1``
+              - ``submod_2``
+
+            If ``submod_1`` would like to lazily import ``submod_2``::
+
+                submod_2 = LazyLoader("submod_2", sibling==__name__)
+        action: Callable
+            Method that should be called after the actual import.
+            Must accept the module as an argument. This is useful
+            if any setup steps need to be made after import (e.g.
+            for ensuring reproducibility).
+        """
+        if sibling:
+            sibling = sibling.rsplit(".", 1)[0]
+            modname = f"{sibling}.{modname}"
+        self._modname = modname
+        self._mod = None
+        self._action = action
+
+    def __getattr__(self, attr):
+        """If the module is accessed, load it and return what was asked for"""
+        try:
+            return getattr(self._mod, attr)
+        except BaseException:
+            if self._mod is None:
+                # module is unset, load it
+                self._mod = importlib.import_module(self._modname)
+                # call the action method
+                if self._action is not None:
+                    self._action(self._mod)
+            else:
+                # Module is loaded, exception unrelated to LazyLoader
+                raise
+
+        # retry getattr if module was just loaded for first time
+        # call this outside exception handler in case it raises new exception
+        return getattr(self._mod, attr)
 
 
 def cpu_count() -> int:
@@ -38,3 +97,13 @@ def join_worker(worker, timeout, retries, logger, name):
         logger.error(f"Failed to join thread '{name}'")
         raise ValueError(f"Thread '{name}' ({worker}) did not join"
                          f"within {timeout * retries}s!")
+
+
+def setup_h5py(h5py):
+    """Hook for LazyLoader that imports hdf5plugin"""
+    # Make sure hdf5plugin is loaded so we can access zstd-compressed data
+    import hdf5plugin  # noqa: F401
+
+
+h5py = LazyLoader("h5py", action=setup_h5py)
+"""Lazily loaded h5py module"""

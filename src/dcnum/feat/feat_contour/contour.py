@@ -1,5 +1,9 @@
 import numpy as np
-import cv2
+
+from ...common import LazyLoader
+
+
+cv2 = LazyLoader("cv2")
 
 
 def contour_single_opencv(mask):

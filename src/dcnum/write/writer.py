@@ -4,12 +4,14 @@ import pathlib
 from typing import Dict, List, Tuple
 import warnings
 
-import h5py
-import hdf5plugin
 import numpy as np
 
+from ..common import LazyLoader, h5py
 from ..read import HDF5Data, get_measurement_identifier
 from .._version import version
+
+
+hdf5plugin = LazyLoader("hdf5plugin")
 
 
 class CreatingFileWithoutBasinWarning(UserWarning):
@@ -24,7 +26,7 @@ class IgnoringBasinTypeWarning(UserWarning):
 
 class HDF5Writer:
     def __init__(self,
-                 obj: h5py.File | pathlib.Path | str,
+                 obj: "h5py.File | pathlib.Path | str",
                  mode: str = "a",
                  ds_kwds: Dict = None,
                  ):
@@ -288,7 +290,7 @@ class HDF5Writer:
     def store_log(self,
                   log: str,
                   data: List[str],
-                  override: bool = False) -> h5py.Dataset:
+                  override: bool = False) -> "h5py.Dataset":
         """Store log data
 
         Store the log data under the key `log`. The `data`
@@ -392,8 +394,8 @@ def create_with_basins(
                            )
 
 
-def copy_basins(h5_src: h5py.File,
-                h5_dst: h5py.File,
+def copy_basins(h5_src: "h5py.File",
+                h5_dst: "h5py.File",
                 internal_basins: bool = True
                 ):
     """Reassemble basin data in the output file
@@ -435,8 +437,8 @@ def copy_basins(h5_src: h5py.File,
                               IgnoringBasinTypeWarning)
 
 
-def copy_features(h5_src: h5py.File,
-                  h5_dst: h5py.File,
+def copy_features(h5_src: "h5py.File",
+                  h5_dst: "h5py.File",
                   features: List[str],
                   mapping: np.ndarray = None,
                   ds_kwds: dict = None,
@@ -509,8 +511,8 @@ def copy_features(h5_src: h5py.File,
                 start = stop
 
 
-def copy_metadata(h5_src: h5py.File,
-                  h5_dst: h5py.File
+def copy_metadata(h5_src: "h5py.File",
+                  h5_dst: "h5py.File"
                   ):
     """Copy attributes, tables, and logs from one H5File to another
 

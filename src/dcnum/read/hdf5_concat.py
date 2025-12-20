@@ -3,9 +3,9 @@ import pathlib
 import tempfile
 import warnings
 
-import h5py
 import numpy as np
 
+from ..common import h5py
 
 from .hdf5_data import HDF5Data
 

@@ -1,8 +1,10 @@
-import cv2
 import numpy as np
 
-
+from ...common import LazyLoader
 from .contour import contour_single_opencv
+
+
+cv2 = LazyLoader("cv2")
 
 
 def moments_based_features(

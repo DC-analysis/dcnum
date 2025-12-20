@@ -6,9 +6,7 @@ import multiprocessing as mp
 import pathlib
 import time
 
-import h5py
-
-from ...common import cpu_count
+from ...common import cpu_count, h5py
 from ...meta import ppid
 from ...read import HDF5Data, md5sum
 from ...write import HDF5Writer, create_with_basins, set_default_filter_kwargs

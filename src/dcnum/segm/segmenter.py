@@ -5,13 +5,16 @@ import inspect
 import logging
 from typing import Dict
 
-import cv2
 import numpy as np
-import scipy.ndimage as ndi
+
+from ..common import LazyLoader
 from ..external import skimage_morphology
 
 from ..meta.ppid import kwargs_to_ppid, ppid_to_kwargs
 
+
+cv2 = LazyLoader("cv2")
+ndi = LazyLoader("scipy.ndimage")
 
 STRUCTURING_ELEMENT = ndi.generate_binary_structure(2, 2)
 

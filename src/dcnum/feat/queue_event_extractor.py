@@ -10,14 +10,16 @@ import traceback
 
 import numpy as np
 
+from ..common import LazyLoader
 from ..os_env_st import RequestSingleThreaded, confirm_single_threaded
 from ..meta.ppid import kwargs_to_ppid, ppid_to_kwargs
 
-from .feat_brightness import brightness_features
-from .feat_contour import moments_based_features, volume_from_contours
-from .feat_texture import haralick_texture_features
 from .gate import Gate
 
+
+feat_brightness = LazyLoader("feat_brightness", __name__)
+feat_contour = LazyLoader("feat_contour", __name__)
+feat_texture = LazyLoader("feat_texture", __name__)
 
 # All subprocesses should use 'spawn' to avoid issues with threads
 # and 'fork' on POSIX systems.
@@ -214,14 +216,14 @@ class QueueEventExtractor:
             bg_off = None
 
         events.update(
-            moments_based_features(
+            feat_contour.moments_based_features(
                 masks,
                 pixel_size=self.pixel_size,
                 ret_contour=volume,
                 ))
 
         if brightness:
-            events.update(brightness_features(
+            events.update(feat_brightness.brightness_features(
                 mask=masks,
                 image=image,
                 image_bg=image_bg,
@@ -229,14 +231,14 @@ class QueueEventExtractor:
                 image_corr=image_corr
             ))
         if haralick:
-            events.update(haralick_texture_features(
+            events.update(feat_texture.haralick_texture_features(
                 mask=masks,
                 image=image,
                 image_corr=image_corr,
             ))
 
         if volume:
-            events.update(volume_from_contours(
+            events.update(feat_contour.volume_from_contours(
                 contour=events.pop("contour"),  # remove contour from events!
                 pos_x=events["pos_x"],
                 pos_y=events["pos_y"],

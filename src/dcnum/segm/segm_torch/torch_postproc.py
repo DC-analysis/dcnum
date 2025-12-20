@@ -1,9 +1,12 @@
 from typing import Tuple
 
+from ...common import LazyLoader
 from ..segmenter import Segmenter, STRUCTURING_ELEMENT
 
 import numpy as np
-from scipy import ndimage as ndi
+
+
+ndi = LazyLoader("scipy.ndimage")
 
 
 def postprocess_masks(masks,

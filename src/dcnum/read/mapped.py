@@ -1,14 +1,14 @@
 import functools
-
 import numbers
 
-import h5py
 import numpy as np
+
+from ..common import h5py
 
 
 class MappedHDF5Dataset:
     def __init__(self,
-                 h5ds: h5py.Dataset,
+                 h5ds: "h5py.Dataset",
                  mapping_indices: np.ndarray):
         """An index-mapped object for accessing an HDF5 dataset
 
