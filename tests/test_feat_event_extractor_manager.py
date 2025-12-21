@@ -31,7 +31,10 @@ def test_event_extractor_manager_thread():
     write_queue_size = mp_spawn.Value("L", 0)
 
     print("Starting universal worker")
-    u_worker = UniversalWorkerThread(slot_register=slot_register)
+    u_worker = UniversalWorkerThread(slot_register=slot_register,
+                                     log_queue=log_queue,
+                                     log_level=logging.DEBUG,
+                                     )
     u_worker.start()
 
     print("Initializing SegmenterManagerThread")

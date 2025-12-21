@@ -1,3 +1,4 @@
+import logging
 import multiprocessing as mp
 import traceback
 
@@ -157,7 +158,7 @@ class SlotRegister:
         else:
             return StateWarden(chunk_slot, current_state, next_state)
 
-    def task_load_all(self) -> bool:
+    def task_load_all(self, logger: logging.Logger = None) -> bool:
         """Load chunk data into memory for as many slots as possible
 
         Returns
@@ -185,7 +186,8 @@ class SlotRegister:
                             self.chunks_loaded += 1
                             did_something = True
             except BaseException:
-                print(traceback.format_exc())
+                if logger is not None:
+                    logger.error(traceback.format_exc())
             finally:
                 lock.release()
         return did_something

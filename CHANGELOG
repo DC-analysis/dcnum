@@ -2,6 +2,7 @@
  - fix: remove unused `multiprocessing.Pool` in background computation
  - enh: log worker spawn time throughout dcnum
  - enh: lazy-load cv2, h5py, numba-compiled functions, scipy, and torch (#26)
+ - enh: introduce logging with queues in `UniversalWorker`
  - ref: `SegmentTorchSTO` is now always visible, even if CUDA is not available
    This was necessary, because we want to lazy-load torch.
 0.28.3

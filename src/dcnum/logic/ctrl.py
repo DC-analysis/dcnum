@@ -715,9 +715,14 @@ class DCNumJobRunner(threading.Thread):
         self.logger.debug(f"Number of extractors: {num_extractors}")
 
         if self.job["debug"]:
-            worker_uni = UniversalWorkerThread(slot_register=slot_register)
+            worker_uni_cls = UniversalWorkerThread
         else:
-            worker_uni = UniversalWorkerProcess(slot_register=slot_register)
+            worker_uni_cls = UniversalWorkerProcess
+
+        worker_uni = worker_uni_cls(slot_register=slot_register,
+                                    log_queue=self.log_queue,
+                                    log_level=self.logger.level,
+                                    )
         tw0 = time.perf_counter()
         worker_uni.start()
         self.logger.info(f"1 worker spawn time: "
