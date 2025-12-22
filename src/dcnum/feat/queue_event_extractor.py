@@ -34,7 +34,6 @@ class QueueEventExtractor:
                  raw_queue: "mp.Queue",
                  event_queue: "mp.Queue",
                  log_queue: "mp.Queue",
-                 feat_nevents: "mp.Array",
                  finalize_extraction: "mp.Value",
                  worker_monitor: "mp.RawArray",
                  log_level: int = None,
@@ -62,10 +61,6 @@ class QueueEventExtractor:
             data.
         log_queue:
             Logging queue, used for sending messages to the main Process.
-        feat_nevents:
-            Shared array of same length as data into which the number of
-            events per input frame is written. This array must be initialized
-            with -1 (all values minus one).
         finalize_extraction:
             Shared value indicating whether this worker should stop as
             soon as the `raw_queue` is empty.
@@ -112,12 +107,6 @@ class QueueEventExtractor:
         # are setting up logging in `run`.
         self.logger = None
         self.log_level = log_level or logging.getLogger("dcnum").level
-
-        self.feat_nevents = feat_nevents
-        """Number of events per frame
-        Shared array of length `len(data)` into which the number of
-        events per frame is written.
-        """
 
         self.finalize_extraction = finalize_extraction
         """Set to True to let worker join when `raw_queue` is empty."""
@@ -172,8 +161,6 @@ class QueueEventExtractor:
         # queue with event-wise feature dictionaries
         event_queue = mp_spawn.Queue()
 
-        num_frames = slot_register.num_frames
-
         # Note that the order must be identical to  __init__
         args = collections.OrderedDict()
         args["slot_register"] = slot_register
@@ -182,8 +169,6 @@ class QueueEventExtractor:
         args["raw_queue"] = raw_queue
         args["event_queue"] = event_queue
         args["log_queue"] = log_queue
-        args["feat_nevents"] = mp_spawn.Array("l", num_frames)
-        args["feat_nevents"][:] = np.full(num_frames, -1)
         args["finalize_extraction"] = mp_spawn.Value("b", False)
         args["worker_monitor"] = mp_spawn.RawArray("I", num_extractors)
         args["log_level"] = log_level or logging.getLogger("dcnum").level
@@ -413,9 +398,10 @@ class QueueEventExtractor:
                 else:
                     if events:
                         key0 = list(events.keys())[0]
-                        self.feat_nevents[index] = len(events[key0])
+                        nevents = len(events[key0])
+                        self.slot_register.feat_nevents[index] = nevents
                     else:
-                        self.feat_nevents[index] = 0
+                        self.slot_register.feat_nevents[index] = 0
                     self.event_queue.put((index, events))
                 self.worker_monitor[self.worker_index] += 1
 

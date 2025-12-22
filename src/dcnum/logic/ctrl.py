@@ -756,7 +756,7 @@ class DCNumJobRunner(threading.Thread):
             worker_write = QueueWriterThread(
                 event_queue=fe_kwargs["event_queue"],
                 write_queue_size=slot_register.counters["write_queue_size"],
-                feat_nevents=fe_kwargs["feat_nevents"],
+                feat_nevents=slot_register.feat_nevents,
                 path_out=self.path_temp_out,
                 hdf5_dataset_kwargs=self.job.get_hdf5_dataset_kwargs(),
                 write_threshold=500,
@@ -765,7 +765,7 @@ class DCNumJobRunner(threading.Thread):
             worker_write = QueueWriterProcess(
                 event_queue=fe_kwargs["event_queue"],
                 write_queue_size=slot_register.counters["write_queue_size"],
-                feat_nevents=fe_kwargs["feat_nevents"],
+                feat_nevents=slot_register.feat_nevents,
                 path_out=self.path_temp_out,
                 hdf5_dataset_kwargs=self.job.get_hdf5_dataset_kwargs(),
                 write_threshold=500,

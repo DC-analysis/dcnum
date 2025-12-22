@@ -9,6 +9,7 @@
  - ref: generalized interface for counters in `SlotRegister`
  - ref: move invalid mask notification to `DCNumJobRunner`
  - ref: migrate `write_queue_size` from `DCNumJobRunner` to `SlotRegister`
+ - ref: migrate `feat_nevents` from `QueueEventExtractor` to `SlotRegister`
 0.28.3
  - fix: sort internal basins before file-based basins
 0.28.2

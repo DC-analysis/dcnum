@@ -43,6 +43,14 @@ class SlotRegister:
         self.num_frames = len(self.data)
         """Total number of frames to process"""
 
+        self.feat_nevents = mp_spawn.RawArray("l", self.num_frames)
+        """Number of events per frame
+        Shared RawArray of length `len(data)` into which the number of
+        events per frame is written.
+        """
+        # Initialize feat_nevents with -1
+        self.feat_nevents[:] = np.full(self.num_frames, -1)
+
         # generate all slots
         for ii in range(num_slots):
             self._slots.append(ChunkSlot(job=job, data=data))
