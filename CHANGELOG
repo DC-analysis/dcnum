@@ -5,6 +5,8 @@
  - enh: introduce logging with queues in `UniversalWorker`
  - ref: `SegmentTorchSTO` is now always visible, even if CUDA is not available
    This was necessary, because we want to lazy-load torch.
+ - ref: rename `get_lock` to ``get_counter_lock` in `SlotRegister`
+ - ref: generalized interface for counters in `SlotRegister`
 0.28.3
  - fix: sort internal basins before file-based basins
 0.28.2

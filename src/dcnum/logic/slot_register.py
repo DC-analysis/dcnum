@@ -28,7 +28,13 @@ class SlotRegister:
         self.num_chunks = data.image.num_chunks
         self._slots = []
 
-        self._chunks_loaded = mp_spawn.Value("Q", 0)
+        # Counters are created with recursive locks, which means that the
+        # same process may acquire multiple locks on the object, and only
+        # after releasing all of them, may the lock be acquired by another
+        # process.
+        self._counters = {
+            "chunks_loaded": mp_spawn.Value("Q", 0)
+        }
 
         self._state = mp_spawn.Value("u", "w")
 
@@ -57,15 +63,15 @@ class SlotRegister:
 
     @property
     def chunks_loaded(self):
-        """A multiprocessing value counting the number of chunks loaded
+        """A process-safe counter for the number of chunks loaded
 
-        This number increments as `ChunkSlot.task_load_all` is called.
+        This number increments as `SlotRegister.task_load_all` is called.
         """
-        return self._chunks_loaded.value
+        return self._counters["chunks_loaded"].value
 
     @chunks_loaded.setter
     def chunks_loaded(self, value):
-        self._chunks_loaded.value = value
+        self._counters["chunks_loaded"].value = value
 
     @property
     def slots(self):
@@ -110,11 +116,11 @@ class SlotRegister:
         # fallback to nothing found
         return None
 
-    def get_lock(self, name):
-        if name == "chunks_loaded":
-            return self._chunks_loaded.get_lock()
+    def get_counter_lock(self, name):
+        if name in self._counters:
+            return self._counters[name].get_lock()
         else:
-            raise KeyError(f"No lock defined for {name}")
+            raise KeyError(f"No counter lock defined for {name}")
 
     def get_time(self, method_name):
         """Return accumulative time for the given method
@@ -167,7 +173,7 @@ class SlotRegister:
             Whether data were loaded into memory
         """
         did_something = False
-        lock = self.get_lock("chunks_loaded")
+        lock = self.get_counter_lock("chunks_loaded")
         has_lock = lock.acquire(block=False)
         if has_lock and self.chunks_loaded < self.num_chunks:
             try:
