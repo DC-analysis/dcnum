@@ -194,7 +194,7 @@ class SlotRegister:
 
 
 class StateWarden:
-    """Context manager for changing the state a `SlotChunk`"""
+    """Context manager for changing the state of a `ChunkSlot`"""
     def __init__(self,
                  chunk_slot: ChunkSlot | ChunkSlotData,
                  current_state: str,
