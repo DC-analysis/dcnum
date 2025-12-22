@@ -796,6 +796,14 @@ class DCNumJobRunner(threading.Thread):
         self.logger.info(
             f"Data load time: {slot_register.get_time('load'):.1f}s")
 
+        inv_masks = slot_register.masks_dropped
+        if inv_masks:
+            self.logger.info(f"Encountered {inv_masks} invalid masks")
+            inv_frac = inv_masks / slot_register.num_frames
+            if inv_frac > 0.005:  # warn above one half percent
+                self.logger.warning(f"Discarded {inv_frac:.1%} of the masks, "
+                                    f"please check segmenter applicability")
+
         self.logger.debug("Flushing data to disk")
 
         slot_register.close()

@@ -36,7 +36,6 @@ class QueueEventExtractor:
                  log_queue: "mp.Queue",
                  feat_nevents: "mp.Array",
                  finalize_extraction: "mp.Value",
-                 invalid_mask_counter: "mp.Value",
                  worker_monitor: "mp.RawArray",
                  log_level: int = None,
                  extract_kwargs: dict = None,
@@ -70,8 +69,6 @@ class QueueEventExtractor:
         finalize_extraction:
             Shared value indicating whether this worker should stop as
             soon as the `raw_queue` is empty.
-        invalid_mask_counter:
-            Counts masks labeled as invalid by the feature extractor
         worker_monitor:
             Monitors the frames each worker has processed. Only the
             value in `worker_monitor[worker_index]` is modified.
@@ -106,9 +103,6 @@ class QueueEventExtractor:
 
         self.log_queue = log_queue
         """queue for logging"""
-
-        self.invalid_mask_counter = invalid_mask_counter
-        """invalid mask counter"""
 
         self.worker_monitor = worker_monitor
         """worker busy counter"""
@@ -191,7 +185,6 @@ class QueueEventExtractor:
         args["feat_nevents"] = mp_spawn.Array("l", num_frames)
         args["feat_nevents"][:] = np.full(num_frames, -1)
         args["finalize_extraction"] = mp_spawn.Value("b", False)
-        args["invalid_mask_counter"] = mp_spawn.Value("Q", 0)
         args["worker_monitor"] = mp_spawn.RawArray("I", num_extractors)
         args["log_level"] = log_level or logging.getLogger("dcnum").level
         return args
@@ -263,10 +256,12 @@ class QueueEventExtractor:
         invalid = ~valid
         # The following might lead to a computational overhead, if only a few
         # events are invalid, because then all 2d-features need to be copied
-        # over from gated_events to valid_events. According to our experience
-        # invalid events happen rarely though.
+        # over from gated_events to valid_events. In our experience, and
+        # especially with U-Net-based segmentation, invalid events happen
+        # rarely.
         if np.any(invalid):
-            self.invalid_mask_counter.value += np.sum(invalid)
+            with self.slot_register.get_counter_lock("masks_dropped"):
+                self.slot_register.masks_dropped += np.sum(invalid)
             for key in gated_events:
                 valid_events[key] = gated_events[key][valid]
         else:

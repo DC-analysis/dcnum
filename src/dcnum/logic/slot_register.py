@@ -33,7 +33,8 @@ class SlotRegister:
         # after releasing all of them, may the lock be acquired by another
         # process.
         self._counters = {
-            "chunks_loaded": mp_spawn.Value("Q", 0)
+            "chunks_loaded": mp_spawn.Value("Q", 0),
+            "masks_dropped": mp_spawn.Value("Q", 0),
         }
 
         self._state = mp_spawn.Value("u", "w")
@@ -72,6 +73,18 @@ class SlotRegister:
     @chunks_loaded.setter
     def chunks_loaded(self, value):
         self._counters["chunks_loaded"].value = value
+
+    @property
+    def masks_dropped(self):
+        """A process-safe counter for the number of masks dropped
+
+        Segmentation may drop invalid masks/events.
+        """
+        return self._counters["masks_dropped"].value
+
+    @masks_dropped.setter
+    def masks_dropped(self, value):
+        self._counters["masks_dropped"].value = value
 
     @property
     def slots(self):
