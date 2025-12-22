@@ -19,9 +19,9 @@ mp_spawn = mp.get_context("spawn")
 
 class QueueWriterBase:
     def __init__(self,
-                 event_queue: mp.Queue,
-                 write_queue_size: mp.Value,
-                 feat_nevents: mp.Array,
+                 event_queue: "mp.Queue",
+                 write_queue_size: "mp.Value",
+                 feat_nevents: "mp.Array",
                  path_out: pathlib.Path,
                  hdf5_dataset_kwargs: dict = None,
                  write_threshold: int = 500,

@@ -32,9 +32,10 @@ class SlotRegister:
         # same process may acquire multiple locks on the object, and only
         # after releasing all of them, may the lock be acquired by another
         # process.
-        self._counters = {
+        self.counters = {
             "chunks_loaded": mp_spawn.Value("Q", 0),
             "masks_dropped": mp_spawn.Value("Q", 0),
+            "write_queue_size": mp_spawn.Value("Q", 0),
         }
 
         self._state = mp_spawn.Value("u", "w")
@@ -68,11 +69,11 @@ class SlotRegister:
 
         This number increments as `SlotRegister.task_load_all` is called.
         """
-        return self._counters["chunks_loaded"].value
+        return self.counters["chunks_loaded"].value
 
     @chunks_loaded.setter
     def chunks_loaded(self, value):
-        self._counters["chunks_loaded"].value = value
+        self.counters["chunks_loaded"].value = value
 
     @property
     def masks_dropped(self):
@@ -80,11 +81,22 @@ class SlotRegister:
 
         Segmentation may drop invalid masks/events.
         """
-        return self._counters["masks_dropped"].value
+        return self.counters["masks_dropped"].value
 
     @masks_dropped.setter
     def masks_dropped(self, value):
-        self._counters["masks_dropped"].value = value
+        self.counters["masks_dropped"].value = value
+
+    @property
+    def write_queue_size(self):
+        """A process-safe counter for the number of chunks in the writer queue
+
+        A large number indicates a slow writer which can be
+        a result of a slow hard disk or a slow CPU (since
+        is used compression). Used for preventing
+        OOM events by stalling data processing when the writer is slow
+        """
+        return self.counters["write_queue_size"].value
 
     @property
     def slots(self):
@@ -130,8 +142,8 @@ class SlotRegister:
         return None
 
     def get_counter_lock(self, name):
-        if name in self._counters:
-            return self._counters[name].get_lock()
+        if name in self.counters:
+            return self.counters[name].get_lock()
         else:
             raise KeyError(f"No counter lock defined for {name}")
 

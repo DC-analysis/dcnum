@@ -91,9 +91,6 @@ class DCNumJobRunner(threading.Thread):
         # segmentation frame rate
         self._segm_rate = 0
 
-        self.write_queue_size = mp_spawn.Value("Q", 0)
-        """Number of event chunks waiting to be written to the output file"""
-
         # Set up logging
         # General logger for this job
         self.main_logger = logging.getLogger("dcnum")
@@ -751,7 +748,6 @@ class DCNumJobRunner(threading.Thread):
             slot_register=slot_register,
             fe_kwargs=fe_kwargs,
             num_workers=num_extractors,
-            write_queue_size=self.write_queue_size,
             debug=self.job["debug"])
         worker_feat.start()
 
@@ -759,7 +755,7 @@ class DCNumJobRunner(threading.Thread):
         if self.job["debug"]:
             worker_write = QueueWriterThread(
                 event_queue=fe_kwargs["event_queue"],
-                write_queue_size=self.write_queue_size,
+                write_queue_size=slot_register.counters["write_queue_size"],
                 feat_nevents=fe_kwargs["feat_nevents"],
                 path_out=self.path_temp_out,
                 hdf5_dataset_kwargs=self.job.get_hdf5_dataset_kwargs(),
@@ -768,7 +764,7 @@ class DCNumJobRunner(threading.Thread):
         else:
             worker_write = QueueWriterProcess(
                 event_queue=fe_kwargs["event_queue"],
-                write_queue_size=self.write_queue_size,
+                write_queue_size=slot_register.counters["write_queue_size"],
                 feat_nevents=fe_kwargs["feat_nevents"],
                 path_out=self.path_temp_out,
                 hdf5_dataset_kwargs=self.job.get_hdf5_dataset_kwargs(),

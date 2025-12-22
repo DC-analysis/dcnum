@@ -28,7 +28,6 @@ def test_event_extractor_manager_thread():
     print("Setting up pipeline job")
     job = DCNumPipelineJob(path_in=path)
     slot_register = SlotRegister(job=job, data=hd)
-    write_queue_size = mp_spawn.Value("L", 0)
 
     print("Starting universal worker")
     u_worker = UniversalWorkerThread(slot_register=slot_register,
@@ -60,7 +59,6 @@ def test_event_extractor_manager_thread():
         slot_register=slot_register,
         fe_kwargs=fe_kwargs,
         num_workers=1,
-        write_queue_size=write_queue_size,
         debug=True)
 
     print("Running EventExtractorManagerThread")
