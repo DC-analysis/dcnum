@@ -1,3 +1,4 @@
+import ctypes
 import multiprocessing as mp
 
 import numpy as np
@@ -20,40 +21,37 @@ class ChunkSlotData:
         self._state = mp_spawn.Value("u", "0", lock=False)
 
         # Initialize with negative value to avoid ambiguities with first chunk.
-        self._chunk = mp_spawn.Value("q", -1, lock=False)
+        self._chunk = mp_spawn.Value(ctypes.c_long, -1, lock=False)
 
         # Initialize all shared arrays
         if self.length:
             array_length = int(np.prod(self.shape))
 
             # Image data
-            self.mp_image = mp_spawn.RawArray(
-                np.ctypeslib.as_ctypes_type(np.uint8), array_length)
+            self.mp_image = mp_spawn.RawArray(ctypes.c_uint8, array_length)
 
             if "image_bg" in available_features:
-                self.mp_image_bg = mp_spawn.RawArray(
-                    np.ctypeslib.as_ctypes_type(np.uint8), array_length)
+                self.mp_image_bg = mp_spawn.RawArray(ctypes.c_uint8,
+                                                     array_length)
 
-                self.mp_image_corr = mp_spawn.RawArray(
-                    np.ctypeslib.as_ctypes_type(np.int16), array_length)
+                self.mp_image_corr = mp_spawn.RawArray(ctypes.c_int16,
+                                                       array_length)
             else:
                 self.mp_image_bg = None
                 self.mp_image_corr = None
 
             if "bg_off" in available_features:
                 # background offset data
-                self.mp_bg_off = mp_spawn.RawArray(
-                    np.ctypeslib.as_ctypes_type(np.float64), self.length)
+                self.mp_bg_off = mp_spawn.RawArray(ctypes.c_double,
+                                                   self.length)
             else:
                 self.mp_bg_off = None
 
             # Mask data
-            self.mp_mask = mp_spawn.RawArray(
-                np.ctypeslib.as_ctypes_type(np.bool), array_length)
+            self.mp_mask = mp_spawn.RawArray(ctypes.c_bool, array_length)
 
             # Label data
-            self.mp_labels = mp_spawn.RawArray(
-                np.ctypeslib.as_ctypes_type(np.uint16), array_length)
+            self.mp_labels = mp_spawn.RawArray(ctypes.c_uint16, array_length)
 
         self._state.value = "i"
 
