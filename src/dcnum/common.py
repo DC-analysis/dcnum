@@ -95,7 +95,7 @@ def join_worker(worker, timeout, retries, logger, name):
             break
     else:
         logger.error(f"Failed to join thread '{name}'")
-        raise ValueError(f"Thread '{name}' ({worker}) did not join"
+        raise ValueError(f"Thread '{name}' ({worker}) did not join "
                          f"within {timeout * retries}s!")
 
 
