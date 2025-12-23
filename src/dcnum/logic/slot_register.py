@@ -290,15 +290,11 @@ class StateWarden:
                  next_state: str,
                  batch_size: int = None,
                  ):
-        # Make sure the state is correct
-        if chunk_slot.state != current_state:
-            raise ValueError(
-                f"Current state of slot {chunk_slot} ({chunk_slot.state}) "
-                f"does not match expected state {current_state}.")
         # Make sure the task lock is acquired.
-        self.batch_range = chunk_slot.acquire_task_lock(batch_size=batch_size)
+        self.batch_range = chunk_slot.acquire_task_lock(
+            req_state=current_state,
+            batch_size=batch_size)
         self.batch_size = self.batch_range[1] - self.batch_range[0]
-
         self.chunk_slot = chunk_slot
         self.current_state = current_state
         self.next_state = next_state

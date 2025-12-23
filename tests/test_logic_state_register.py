@@ -48,10 +48,10 @@ def test_state_warden_changes_state():
         assert cs is cs2
         assert b_range == (0, 100)
         # cannot acquire a lock when it is already acquired
-        start, stop = cs.acquire_task_lock()
+        start, stop = cs.acquire_task_lock("i")
         assert start == stop == 0
     assert cs.state == "s"
-    start, stop = cs.acquire_task_lock()
+    start, stop = cs.acquire_task_lock("s")
     # acquiring new lock for next state must be possible
     assert start == 0
     assert stop == cs.length
@@ -64,7 +64,7 @@ def test_state_warden_changes_state_wrong_initial():
         with StateWarden(cs, current_state="s", next_state="e"):
             pass
     assert cs.state == "i"
-    start, stop = cs.acquire_task_lock()
+    start, stop = cs.acquire_task_lock("i")
     # acquiring new lock for next state must be possible
     assert start == 0
     assert stop == cs.length
@@ -73,10 +73,10 @@ def test_state_warden_changes_state_wrong_initial():
 def test_state_warden_changes_state_wrong_initial_2():
     cs = ChunkSlotData((100, 80, 320))
     assert cs.state == "i"
-    with pytest.raises(ValueError, match="does not match"):
-        StateWarden(cs, current_state="s", next_state="e")
+    sw = StateWarden(cs, current_state="s", next_state="e")
+    assert sw.batch_size == 0
     assert cs.state == "i"
-    start, stop = cs.acquire_task_lock()
+    start, stop = cs.acquire_task_lock("i")
     # acquiring new lock for next state must be possible
     assert start == 0
     assert stop == cs.length
@@ -88,14 +88,14 @@ def test_state_warden_changes_state_wrong_initial_3():
     warden = StateWarden(cs, current_state="s", next_state="e")
     assert warden.batch_size == 100
     assert warden.batch_range == (0, 100)
-    start, stop = cs.acquire_task_lock()
+    start, stop = cs.acquire_task_lock("s")
     assert start == stop == 0
     cs.state = "i"
     with pytest.raises(ValueError, match="does not match"):
         with warden:
             pass
     assert cs.state == "i"
-    start, stop = cs.acquire_task_lock()
+    start, stop = cs.acquire_task_lock("i")
     # acquiring new lock for next state must be possible
     assert start == 0
     assert stop == cs.length
@@ -120,7 +120,7 @@ def test_state_warden_no_change_on_error():
         with StateWarden(cs, current_state="i", next_state="s"):
             raise ValueError("custom test error")
     assert cs.state == "i"
-    start, stop = cs.acquire_task_lock()
+    start, stop = cs.acquire_task_lock("i")
     # acquiring new lock for next state must be possible
     assert start == 0
     assert stop == cs.length

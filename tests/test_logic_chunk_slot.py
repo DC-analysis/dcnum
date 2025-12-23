@@ -108,22 +108,22 @@ def test_task_lock_batches():
     cs = logic.ChunkSlot(job=job, data=data)
 
     # reserve batches
-    batch_range = cs.acquire_task_lock(batch_size=11)
+    batch_range = cs.acquire_task_lock(cs.state, batch_size=11)
     assert batch_range == (0, 11)
 
-    batch_range = cs.acquire_task_lock(batch_size=11)
+    batch_range = cs.acquire_task_lock(cs.state, batch_size=11)
     assert batch_range == (11, 22)
 
-    batch_range = cs.acquire_task_lock(batch_size=11)
+    batch_range = cs.acquire_task_lock(cs.state, batch_size=11)
     assert batch_range == (22, 33)
 
-    batch_range = cs.acquire_task_lock(batch_size=11)
+    batch_range = cs.acquire_task_lock(cs.state, batch_size=11)
     assert batch_range == (33, 44)
 
-    batch_range = cs.acquire_task_lock(batch_size=11)
+    batch_range = cs.acquire_task_lock(cs.state, batch_size=11)
     assert batch_range == (44, 50)
 
-    batch_range = cs.acquire_task_lock(batch_size=11)
+    batch_range = cs.acquire_task_lock(cs.state, batch_size=11)
     assert batch_range == (0, 0), "nothing left"
 
     assert cs.get_progress() == 0
@@ -155,13 +155,13 @@ def test_task_lock_batch_and_then_full():
     cs = logic.ChunkSlot(job=job, data=data)
 
     # reserve batches
-    batch_range = cs.acquire_task_lock(batch_size=11)
+    batch_range = cs.acquire_task_lock(cs.state, batch_size=11)
     assert batch_range == (0, 11)
 
-    batch_range = cs.acquire_task_lock()
+    batch_range = cs.acquire_task_lock(cs.state)
     assert batch_range == (11, 50)
 
-    batch_range = cs.acquire_task_lock(batch_size=11)
+    batch_range = cs.acquire_task_lock(cs.state, batch_size=11)
     assert batch_range == (0, 0), "nothing left"
 
     assert cs.get_progress() == 0
@@ -191,19 +191,19 @@ def test_task_lock_batches_with_progress():
     cs = logic.ChunkSlot(job=job, data=data)
 
     # complete one task
-    batch_range = cs.acquire_task_lock(batch_size=11)
+    batch_range = cs.acquire_task_lock(cs.state, batch_size=11)
     cs.release_task_lock(*batch_range)
     assert cs.get_progress() == 11 / 50
 
-    batch_range2 = cs.acquire_task_lock(batch_size=11)
+    batch_range2 = cs.acquire_task_lock(cs.state, batch_size=11)
     assert batch_range2 == (11, 22)
 
-    batch_range3 = cs.acquire_task_lock(batch_size=11)
+    batch_range3 = cs.acquire_task_lock(cs.state, batch_size=11)
     assert batch_range3 == (22, 33)
     cs.release_task_lock(*batch_range3)
 
     assert cs.get_progress() == 22 / 50
 
-    batch_range4 = cs.acquire_task_lock(batch_size=11)
+    batch_range4 = cs.acquire_task_lock(cs.state, batch_size=11)
     assert batch_range4 == (33, 44)
     assert cs.get_progress() == 22 / 50

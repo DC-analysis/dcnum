@@ -92,7 +92,7 @@ class ChunkSlotData:
 
     @state.setter
     def state(self, value):
-        with self._state.get_lock():
+        with self._state.get_lock(), self._task_reserve_lock:
             if self._state.value != value:
                 self._state.value = value
                 # reset the progress
@@ -138,7 +138,10 @@ class ChunkSlotData:
         return np.ctypeslib.as_array(
             self.mp_labels).reshape(self.shape)
 
-    def acquire_task_lock(self, batch_size: int = None) -> tuple[int, int]:
+    def acquire_task_lock(self,
+                          req_state: str,
+                          batch_size: int = None
+                          ) -> tuple[int, int]:
         """Acquire the lock for performing a task
 
         Return the start and stop indices for which the lock was acquired.
@@ -151,21 +154,25 @@ class ChunkSlotData:
         # combined array with frames are completed or are in use
         used_array = np.logical_or(reserve_array, progress_array)
         with self._task_reserve_lock:
-            # determine how many frames are locked
-            num_locked = np.sum(used_array)
-            if num_locked == self.length:
-                # all frames are locked
+            if self._state.value != req_state:
+                # wrong state
                 start = stop = 0
             else:
-                if batch_size is None:
-                    # reserve everything else
-                    start = num_locked
-                    stop = self.length
+                # determine how many frames are locked
+                num_locked = np.sum(used_array)
+                if num_locked == self.length:
+                    # all frames are locked
+                    start = stop = 0
                 else:
-                    # find the first non-zero element
-                    start = num_locked
-                    stop = min(num_locked + batch_size, self.length)
-                reserve_array[start:stop] = True
+                    if batch_size is None:
+                        # reserve everything else
+                        start = num_locked
+                        stop = self.length
+                    else:
+                        # find the first non-zero element
+                        start = num_locked
+                        stop = min(num_locked + batch_size, self.length)
+                    reserve_array[start:stop] = True
         return start, stop
 
     def release_task_lock(self, start, stop, task_done=True):
