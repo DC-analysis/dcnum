@@ -1,6 +1,4 @@
-import functools
 import multiprocessing as mp
-import time
 
 import numpy as np
 
@@ -12,34 +10,12 @@ from .chunk_slot_data import ChunkSlotData
 mp_spawn = mp.get_context("spawn")
 
 
-class count_time:
-    """Decorator for counting execution time"""
-
-    def __call__(self, func):
-        @functools.wraps(func)
-        def method(inst, *args, **kwargs):
-            t0 = time.perf_counter()
-            retval = func(inst, *args, **kwargs)
-            # update the time counter for this method
-            fn = func.__name__
-            if fn in inst.timers:
-                with inst.timers[fn].get_lock():
-                    inst.timers[fn].value += time.perf_counter() - t0
-            return retval
-
-        return method
-
-
 class ChunkSlot(ChunkSlotData):
     _instance_counter = 0
 
     def __init__(self, job, data, is_remainder=False):
         ChunkSlot._instance_counter += 1
         self.index = ChunkSlot._instance_counter
-
-        self.timers = {
-            "load": mp_spawn.Value("d", 0.0)
-        }
 
         self.job = job
         """Job information object"""
@@ -71,7 +47,6 @@ class ChunkSlot(ChunkSlotData):
         return (f"<dcnum ChunkSlot {self.index} (state {self.state}) "
                 f"at {hex(id(self))}>")
 
-    @count_time()
     def load(self, idx):
         """Load chunk `idx` into `self.mp_image` and return numpy views"""
         # create views on image arrays

@@ -12,6 +12,7 @@
  - ref: migrate `feat_nevents` from `QueueEventExtractor` to `SlotRegister`
  - ref: `StateWarden` context manager returns batch range alongside `ChunkSlot`
  - ref: `ChunkSlot` task lock acquisition with frame resolution
+ - ref: move `count_time` from `ChunkSlot` to `SlotRegister`
 0.28.3
  - fix: sort internal basins before file-based basins
 0.28.2

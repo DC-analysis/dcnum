@@ -1,5 +1,7 @@
+import functools
 import logging
 import multiprocessing as mp
+import time
 import traceback
 
 import numpy as np
@@ -11,6 +13,24 @@ from .job import DCNumPipelineJob
 
 
 mp_spawn = mp.get_context("spawn")
+
+
+class count_time:
+    """Decorator for counting execution time"""
+
+    def __call__(self, func):
+        @functools.wraps(func)
+        def method(inst, *args, **kwargs):
+            t0 = time.perf_counter()
+            retval = func(inst, *args, **kwargs)
+            # update the time counter for this method
+            fn = func.__name__
+            if fn in inst.timers:
+                with inst.timers[fn].get_lock():
+                    inst.timers[fn].value += time.perf_counter() - t0
+            return retval
+
+        return method
 
 
 class SlotRegister:
@@ -27,6 +47,11 @@ class SlotRegister:
         self.chunk_size = data.image.chunk_size
         self.num_chunks = data.image.num_chunks
         self._slots = []
+
+        self.timers = {
+            "task_extract_features": mp_spawn.Value("d", 0.0),
+            "task_load_all": mp_spawn.Value("d", 0.0)
+        }
 
         # Counters are created with recursive locks, which means that the
         # same process may acquire multiple locks on the object, and only
@@ -156,14 +181,8 @@ class SlotRegister:
             raise KeyError(f"No counter lock defined for {name}")
 
     def get_time(self, method_name):
-        """Return accumulative time for the given method
-
-        The times are extracted from each slot's `timers` values.
-        """
-        time_count = 0.0
-        for sc in self._slots:
-            time_count += sc.timers[method_name].value
-        return time_count
+        """Return accumulative time for the given method"""
+        return self.timers[method_name].value
 
     def reserve_slot_for_task(self,
                               current_state: str,
