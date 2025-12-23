@@ -69,7 +69,7 @@ class SegmenterManagerThread(threading.Thread):
             t1 = time.perf_counter()
             self.t_wait += t1 - t0
 
-            with state_warden as cs:
+            with state_warden as (cs, _):
                 # `segment_chunk` populates the `cs.labels` array.
                 self.segmenter.segment_chunk(cs.chunk,
                                              self.slot_register.slots)

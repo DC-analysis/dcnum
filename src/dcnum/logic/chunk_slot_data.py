@@ -12,13 +12,17 @@ class ChunkSlotData:
         self.shape = shape
         """3D shape of the chunk in this slot"""
 
-        self.task_lock = mp_spawn.Lock()
-        """Lock for synchronizing chunk data modification"""
-
         available_features = available_features or []
         self.length = shape[0]
 
-        self._state = mp_spawn.Value("u", "0", lock=False)
+        self._task_reserve_array = mp_spawn.RawArray(ctypes.c_bool,
+                                                     self.length)
+        self._task_reserve_lock = mp_spawn.Lock()
+
+        self._task_progress_array = mp_spawn.RawArray(ctypes.c_bool,
+                                                      self.length)
+
+        self._state = mp_spawn.Value("u", "0")
 
         # Initialize with negative value to avoid ambiguities with first chunk.
         self._chunk = mp_spawn.Value(ctypes.c_long, -1, lock=False)
@@ -88,7 +92,12 @@ class ChunkSlotData:
 
     @state.setter
     def state(self, value):
-        self._state.value = value
+        with self._state.get_lock():
+            if self._state.value != value:
+                self._state.value = value
+                # reset the progress
+                progress_arr = np.ctypeslib.as_array(self._task_progress_array)
+                progress_arr[:] = False
 
     @property
     def bg_off(self):
@@ -129,28 +138,59 @@ class ChunkSlotData:
         return np.ctypeslib.as_array(
             self.mp_labels).reshape(self.shape)
 
-    def acquire_task_lock(self) -> bool:
+    def acquire_task_lock(self, batch_size: int = None) -> tuple[int, int]:
         """Acquire the lock for performing a task
 
-        Return True if the lock is acquired, False if the
-        lock has been acquired beforehand.
+        Return the start and stop indices for which the lock was acquired.
+        If no lock could be acquired, return `(0, 0)`.
         """
-        return self.task_lock.acquire(block=False)
+        # array for reserving a new batch
+        reserve_array = np.ctypeslib.as_array(self._task_reserve_array)
+        # array that monitors the progress of the current state
+        progress_array = np.ctypeslib.as_array(self._task_progress_array)
+        # combined array with frames are completed or are in use
+        used_array = np.logical_or(reserve_array, progress_array)
+        with self._task_reserve_lock:
+            # determine how many frames are locked
+            num_locked = np.sum(used_array)
+            if num_locked == self.length:
+                # all frames are locked
+                start = stop = 0
+            else:
+                if batch_size is None:
+                    # reserve everything else
+                    start = num_locked
+                    stop = self.length
+                else:
+                    # find the first non-zero element
+                    start = num_locked
+                    stop = min(num_locked + batch_size, self.length)
+                reserve_array[start:stop] = True
+        return start, stop
 
-    def release_task_lock(self) -> bool:
-        """Release the task lock
+    def release_task_lock(self, start, stop, task_done=True):
+        """Release the task lock for a batch range
 
         Releasing the task lock is done after completing the
-        task for which a lock was required. Only release the
-        task lock if you acquired it before.
-
-        Return True if the lock has been released, False
-        if the lock wasn't acquired beforehand (and thus not released).
+        task for which a lock was required. This method also updates the
+        progress (see `get_progress`) for the current task. Only release
+        the task lock if you acquired it before.
         """
-        try:
-            self.task_lock.release()
-        except ValueError:
-            released = False
-        else:
-            released = True
-        return released
+        if task_done:
+            progress_array = np.ctypeslib.as_array(self._task_progress_array)
+            progress_array[start:stop] = True
+
+        reserve_array = np.ctypeslib.as_array(self._task_reserve_array)
+        with self._task_reserve_lock:
+            reserve_array[start:stop] = False
+
+    def get_progress(self):
+        """Return the progress of the current task
+
+        Return a value between 0 and 1. If processing is done in batches
+        (`batch_size` set in `acquire_task_lock`), this returns the
+        fraction of frames for which `release_task_lock` was called
+        with `task_done=True`.
+        """
+        progress_array = np.ctypeslib.as_array(self._task_progress_array)
+        return float(np.sum(progress_array)) / self.length

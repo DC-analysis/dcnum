@@ -169,8 +169,22 @@ class SlotRegister:
                               current_state: str,
                               next_state: str,
                               chunk_slot: ChunkSlot = None,
+                              batch_size: int = None,
                               ) -> "StateWarden | None":
         """Return slot with the specified state and lowest chunk index
+
+        Parameters
+        ----------
+        current_state:
+            State requried for the task to start
+        next_state:
+            State that will be set after the task is done
+        chunk_slot:
+            Optional `ChunkSlot` to operate on; if set to None, search
+            for a matching one, and if none can be found, return None
+        batch_size:
+            Number of frames to reserve for performing the task. Defaults
+            to the entire chunk.
 
         Returns
         -------
@@ -180,8 +194,14 @@ class SlotRegister:
             Usage:
 
                 if state_warden is not None:
-                    with state_warden as chunk_slot:
-                        perform_task(chunk_slot)
+                    with state_warden as (chunk_slot, batch_range):
+                        perform_task(chunk_slot,
+                                     start_index=batch_range[0],
+                                     stop_index=batch_range[1]
+                                     )
+
+            The `batch_range` indices are defined by the `batch_size`
+            parameter.
 
             This context manager will automatically set the slot
             state to `next_state` when the context is exits
@@ -189,13 +209,24 @@ class SlotRegister:
         """
         if chunk_slot is None:
             for sc in self:
-                if sc.state == current_state and sc.acquire_task_lock():
-                    return StateWarden(sc, current_state, next_state)
+                if sc.state == current_state:
+                    sw = StateWarden(sc,
+                                     current_state=current_state,
+                                     next_state=next_state,
+                                     batch_size=batch_size)
+                    if sw.batch_size:
+                        return sw
+                    else:
+                        # nothing could be reserved
+                        return None
 
             # fallback to nothing found
             return None
         else:
-            return StateWarden(chunk_slot, current_state, next_state)
+            return StateWarden(chunk_slot,
+                               current_state=current_state,
+                               next_state=next_state,
+                               batch_size=batch_size)
 
     def task_load_all(self, logger: logging.Logger = None) -> bool:
         """Load chunk data into memory for as many slots as possible
@@ -246,7 +277,8 @@ class StateWarden:
                 f"Current state of slot {chunk_slot} ({chunk_slot.state}) "
                 f"does not match expected state {current_state}.")
         # Make sure the task lock is acquired.
-        chunk_slot.acquire_task_lock()
+        self.batch_range = chunk_slot.acquire_task_lock(batch_size=batch_size)
+        self.batch_size = self.batch_range[1] - self.batch_range[0]
 
         self.chunk_slot = chunk_slot
         self.current_state = current_state
@@ -256,17 +288,21 @@ class StateWarden:
         # Make sure the state is still correct
         # release the lock, because somebody else might need it
         if self.chunk_slot.state != self.current_state:
-            self.chunk_slot.release_task_lock()
+            self.chunk_slot.release_task_lock(*self.batch_range,
+                                              task_done=False)
             raise ValueError(
                 f"Current state of slot {self.chunk_slot} "
                 f"({self.chunk_slot.state}) does not match "
                 f"expected state {self.current_state}.")
-        return self.chunk_slot
+        return self.chunk_slot, self.batch_range
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        if exc_type is None:
+        self.chunk_slot.release_task_lock(
+            *self.batch_range,
+            # only set batch to done if no exception occurred
+            task_done=exc_type is None)
+        if self.chunk_slot.get_progress() == 1:
             self.chunk_slot.state = self.next_state
-        self.chunk_slot.release_task_lock()
 
     def __repr__(self):
         return (f"<StateWarden {self.current_state}->{self.next_state} "

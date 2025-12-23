@@ -106,7 +106,7 @@ class EventExtractorManagerThread(threading.Thread):
             t1 = time.perf_counter()
             self.t_wait += t1 - t0
 
-            with state_warden as cs:
+            with state_warden as (cs, _):
                 # Let the workers know there is work
                 [self.raw_queue.put((cs.chunk, ii)) for ii in range(cs.length)]
 

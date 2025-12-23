@@ -88,3 +88,122 @@ def test_read_bg_off():
     assert np.all(csr.bg_off == bg_off[-40:])
     assert np.all(csr.image == cr_image)
     assert np.all(csr.image == image[-40:])
+
+
+def test_task_lock_batches():
+    chunk_size = 50
+    h5path = retrieve_data("fmt-hdf5_cytoshot_full-features_2023.zip")
+    path = h5path.with_name("test.hdf5")
+    with read.concatenated_hdf5_data(10 * [h5path], path_out=path):
+        # This creates HDF5 chunks of size 32. Total length is 400.
+        # There will be one "remainder" chunk of size `400 % 32 = 16`.
+        pass
+
+    job = logic.DCNumPipelineJob(path_in=path)
+    data = read.HDF5Data(path, image_chunk_size=chunk_size)
+    chunk_size_act = min(chunk_size, len(data.image))
+    assert data.image_chunk_size == chunk_size
+    assert data.image.chunk_size == chunk_size_act
+    # Normal chunk
+    cs = logic.ChunkSlot(job=job, data=data)
+
+    # reserve batches
+    batch_range = cs.acquire_task_lock(batch_size=11)
+    assert batch_range == (0, 11)
+
+    batch_range = cs.acquire_task_lock(batch_size=11)
+    assert batch_range == (11, 22)
+
+    batch_range = cs.acquire_task_lock(batch_size=11)
+    assert batch_range == (22, 33)
+
+    batch_range = cs.acquire_task_lock(batch_size=11)
+    assert batch_range == (33, 44)
+
+    batch_range = cs.acquire_task_lock(batch_size=11)
+    assert batch_range == (44, 50)
+
+    batch_range = cs.acquire_task_lock(batch_size=11)
+    assert batch_range == (0, 0), "nothing left"
+
+    assert cs.get_progress() == 0
+
+    # release batches
+    cs.release_task_lock(0, 11)
+    assert cs.get_progress() == 11 / 50
+    cs.release_task_lock(11, 22, task_done=False)
+    assert cs.get_progress() == 11 / 50
+    cs.release_task_lock(11, 50, task_done=True)
+    assert cs.get_progress() == 1
+
+
+def test_task_lock_batch_and_then_full():
+    chunk_size = 50
+    h5path = retrieve_data("fmt-hdf5_cytoshot_full-features_2023.zip")
+    path = h5path.with_name("test.hdf5")
+    with read.concatenated_hdf5_data(10 * [h5path], path_out=path):
+        # This creates HDF5 chunks of size 32. Total length is 400.
+        # There will be one "remainder" chunk of size `400 % 32 = 16`.
+        pass
+
+    job = logic.DCNumPipelineJob(path_in=path)
+    data = read.HDF5Data(path, image_chunk_size=chunk_size)
+    chunk_size_act = min(chunk_size, len(data.image))
+    assert data.image_chunk_size == chunk_size
+    assert data.image.chunk_size == chunk_size_act
+    # Normal chunk
+    cs = logic.ChunkSlot(job=job, data=data)
+
+    # reserve batches
+    batch_range = cs.acquire_task_lock(batch_size=11)
+    assert batch_range == (0, 11)
+
+    batch_range = cs.acquire_task_lock()
+    assert batch_range == (11, 50)
+
+    batch_range = cs.acquire_task_lock(batch_size=11)
+    assert batch_range == (0, 0), "nothing left"
+
+    assert cs.get_progress() == 0
+
+    # release batches
+    cs.release_task_lock(0, 11)
+    assert cs.get_progress() == 11 / 50
+    cs.release_task_lock(0, 50)
+    assert cs.get_progress() == 1
+
+
+def test_task_lock_batches_with_progress():
+    chunk_size = 50
+    h5path = retrieve_data("fmt-hdf5_cytoshot_full-features_2023.zip")
+    path = h5path.with_name("test.hdf5")
+    with read.concatenated_hdf5_data(10 * [h5path], path_out=path):
+        # This creates HDF5 chunks of size 32. Total length is 400.
+        # There will be one "remainder" chunk of size `400 % 32 = 16`.
+        pass
+
+    job = logic.DCNumPipelineJob(path_in=path)
+    data = read.HDF5Data(path, image_chunk_size=chunk_size)
+    chunk_size_act = min(chunk_size, len(data.image))
+    assert data.image_chunk_size == chunk_size
+    assert data.image.chunk_size == chunk_size_act
+    # Normal chunk
+    cs = logic.ChunkSlot(job=job, data=data)
+
+    # complete one task
+    batch_range = cs.acquire_task_lock(batch_size=11)
+    cs.release_task_lock(*batch_range)
+    assert cs.get_progress() == 11 / 50
+
+    batch_range2 = cs.acquire_task_lock(batch_size=11)
+    assert batch_range2 == (11, 22)
+
+    batch_range3 = cs.acquire_task_lock(batch_size=11)
+    assert batch_range3 == (22, 33)
+    cs.release_task_lock(*batch_range3)
+
+    assert cs.get_progress() == 22 / 50
+
+    batch_range4 = cs.acquire_task_lock(batch_size=11)
+    assert batch_range4 == (33, 44)
+    assert cs.get_progress() == 22 / 50
