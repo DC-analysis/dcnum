@@ -1,4 +1,5 @@
 import logging
+import traceback
 from logging.handlers import QueueHandler
 import multiprocessing as mp
 import os
@@ -51,6 +52,7 @@ class UniversalWorker:
 
         # only close queues when we have created them ourselves.
         close_queues = isinstance(self, mp_spawn.Process)
+        wait_time_writer = 0
 
         sr = self.slot_register
         while sr.state != "q":
@@ -60,12 +62,33 @@ class UniversalWorker:
                 time.sleep(0.5)
                 continue
 
-            # Load data into memory for all available slots
-            did_something |= sr.task_load_all(logger=logger)
+            try:
+                # Check whether the writer is overloaded
+                if (ldq := self.slot_register.write_queue_size) > 1000:
+                    stalled_sec = 0.
+                    for ii in range(60):
+                        if self.slot_register.write_queue_size > 200:
+                            time.sleep(.5)
+                            stalled_sec += .5
+                    wait_time_writer += stalled_sec
+                    logger.debug(
+                        f"Stalled {stalled_sec:.1f}s due to slow writer "
+                        f"({ldq} chunks queued)")
+
+                # Load data into memory for all available slots
+                did_something |= sr.task_load_all(logger=logger)
+
+                # Perform feature extraction
+                did_something |= sr.task_extract_features(logger=logger)
+            except BaseException:
+                logger.error(traceback.format_exc())
 
             if not did_something:
                 time.sleep(.01)
 
+        if wait_time_writer > 10:
+            logger.warning(f"Waited a total of {wait_time_writer:.1f}s "
+                           f"due to slow writer")
         logger.debug("Finalizing")
 
         # Make sure everything gets written to the queue.

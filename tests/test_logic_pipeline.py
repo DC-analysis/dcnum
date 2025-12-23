@@ -824,7 +824,6 @@ def test_invalid_events():
     with read.HDF5Data(job["path_out"]) as hd:
         log_string = "".join(list(hd.logs.values())[1])
         assert "Encountered 1 invalid masks" in log_string
-        assert "Finished extraction" in log_string
         assert "Encountered problem in feature extraction" not in log_string
 
 

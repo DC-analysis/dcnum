@@ -17,9 +17,6 @@ import numpy as np
 
 from ..common import h5py, join_worker
 from ..feat.feat_background.base import get_available_background_methods
-from ..feat.queue_event_extractor import QueueEventExtractor
-from ..feat import gate
-from ..feat import EventExtractorManagerThread
 from ..segm import SegmenterManagerThread, get_available_segmenters
 from ..meta import ppid
 from ..read import HDF5Data, get_measurement_identifier, get_mapping_indices
@@ -676,20 +673,20 @@ class DCNumJobRunner(threading.Thread):
         seg_cls = get_available_segmenters()[self.job["segmenter_code"]]
 
         if self.job["debug"]:
-            num_extractors = 1
+            num_universal = 1
             num_segmenters = 1
         elif seg_cls.hardware_processor == "cpu":  # MPO segmenter
             # Split segmentation and feature extraction workers evenly.
-            num_extractors = self.job["num_procs"] // 2
-            num_segmenters = self.job["num_procs"] - num_extractors
+            num_universal = self.job["num_procs"] // 2
+            num_segmenters = self.job["num_procs"] - num_universal
             # Leave one CPU for the writer and the other threads.
             num_segmenters -= 1
         else:  # GPU segmenter
-            num_extractors = self.job["num_procs"]
+            num_universal = self.job["num_procs"]
             # Leave one CPU for the writer and the other threads.
-            num_extractors -= 1
+            num_universal -= 1
             num_segmenters = 1
-        num_extractors = max(1, num_extractors)
+        num_universal = max(1, num_universal)
         num_segmenters = max(1, num_segmenters)
         self.job.kwargs["segmenter_kwargs"]["num_workers"] = num_segmenters
 
@@ -703,26 +700,30 @@ class DCNumJobRunner(threading.Thread):
         else:
             num_slots = 7
 
+        event_queue = mp_spawn.Queue()
         slot_register = SlotRegister(job=self.job,
                                      data=self.dtin,
+                                     event_queue=event_queue,
                                      num_slots=num_slots)
 
         self.logger.debug(f"Number of slots: {num_slots}")
         self.logger.debug(f"Number of segmenters: {num_segmenters}")
-        self.logger.debug(f"Number of extractors: {num_extractors}")
+        self.logger.debug(f"Number of universal workers: {num_universal}")
 
         if self.job["debug"]:
             worker_uni_cls = UniversalWorkerThread
         else:
             worker_uni_cls = UniversalWorkerProcess
 
-        worker_uni = worker_uni_cls(slot_register=slot_register,
-                                    log_queue=self.log_queue,
-                                    log_level=self.logger.level,
-                                    )
+        uni_workers = []
+        for _ in range(num_universal):
+            uni_workers.append(worker_uni_cls(slot_register=slot_register,
+                                              log_queue=self.log_queue,
+                                              log_level=self.logger.level,
+                                              ))
         tw0 = time.perf_counter()
-        worker_uni.start()
-        self.logger.info(f"1 worker spawn time: "
+        [w.start() for w in uni_workers]
+        self.logger.info(f"{len(uni_workers)} worker spawn time: "
                          f"{time.perf_counter() - tw0:.1f}s")
 
         # Initialize segmenter manager thread
@@ -733,28 +734,10 @@ class DCNumJobRunner(threading.Thread):
         )
         worker_segm.start()
 
-        # Start feature extractor thread
-        fe_kwargs = QueueEventExtractor.get_init_kwargs(
-            slot_register=slot_register,
-            pixel_size=self.dtin.pixel_size,
-            gate=gate.Gate(self.dtin, **self.job["gate_kwargs"]),
-            num_extractors=num_extractors,
-            log_queue=self.log_queue,
-            log_level=self.logger.level,
-            )
-        fe_kwargs["extract_kwargs"] = self.job["feature_kwargs"]
-
-        worker_feat = EventExtractorManagerThread(
-            slot_register=slot_register,
-            fe_kwargs=fe_kwargs,
-            num_workers=num_extractors,
-            debug=self.job["debug"])
-        worker_feat.start()
-
         # Start the data collection thread
         if self.job["debug"]:
             worker_write = QueueWriterThread(
-                event_queue=fe_kwargs["event_queue"],
+                event_queue=event_queue,
                 write_queue_size=slot_register.counters["write_queue_size"],
                 feat_nevents=slot_register.feat_nevents,
                 path_out=self.path_temp_out,
@@ -763,7 +746,7 @@ class DCNumJobRunner(threading.Thread):
                 )
         else:
             worker_write = QueueWriterProcess(
-                event_queue=fe_kwargs["event_queue"],
+                event_queue=event_queue,
                 write_queue_size=slot_register.counters["write_queue_size"],
                 feat_nevents=slot_register.feat_nevents,
                 path_out=self.path_temp_out,
@@ -789,8 +772,15 @@ class DCNumJobRunner(threading.Thread):
             if counted_frames == data_size:
                 break
 
+        slot_register.state = "q"
+
         self.logger.info(
-            f"Data load time: {slot_register.get_time('load'):.1f}s")
+            f"Data load time: "
+            f"{slot_register.get_time('task_load_all'):.1f}s")
+
+        self.logger.info(
+            f"Feature extraction time: "
+            f"{slot_register.get_time('task_extract_features'):.1f}s")
 
         inv_masks = slot_register.masks_dropped
         if inv_masks:
@@ -818,27 +808,20 @@ class DCNumJobRunner(threading.Thread):
                     retries=10,
                     logger=self.logger,
                     name="collector for writer")
-        join_worker(worker=worker_feat,
-                    timeout=30,
-                    retries=10,
-                    logger=self.logger,
-                    name="feature extraction")
-        join_worker(worker=worker_uni,
-                    timeout=30,
-                    retries=10,
-                    logger=self.logger,
-                    name="universal worker")
+        for worker_uni in uni_workers:
+            join_worker(worker=worker_uni,
+                        timeout=30,
+                        retries=10,
+                        logger=self.logger,
+                        name="universal worker")
 
         self.event_count = worker_write.written_events.value
         if self.event_count == 0:
             self.logger.error(
                 f"No events found in {self.draw.path}! Please check the "
                 f"input file or revise your pipeline")
-
-        if fe_kwargs["finalize_extraction"].value:
-            self.logger.info("Finished segmentation and feature extraction")
         else:
-            self.logger.warning("Encountered problem in feature extraction")
+            self.logger.info("Finished segmentation and feature extraction")
 
 
 def get_library_versions_dict(library_name_list):

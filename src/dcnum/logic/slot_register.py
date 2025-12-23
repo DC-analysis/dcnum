@@ -6,6 +6,7 @@ import traceback
 
 import numpy as np
 
+from ..feat import Gate, QueueEventExtractor
 from ..read import HDF5Data
 
 from .chunk_slot import ChunkSlot, ChunkSlotData
@@ -37,13 +38,16 @@ class SlotRegister:
     def __init__(self,
                  job: DCNumPipelineJob,
                  data: HDF5Data,
+                 event_queue: "mp.Queue" = None,
                  num_slots: int = 3):
         """A register for `ChunkSlot`s for shared memory access
 
         The `SlotRegister` manages all `ChunkSlot` instances and
         implements methods to interact with individual `ChunkSlot`s.
         """
+        self.job = job
         self.data = data
+        self.event_queue = event_queue
         self.chunk_size = data.image.chunk_size
         self.num_chunks = data.image.num_chunks
         self._slots = []
@@ -247,6 +251,63 @@ class SlotRegister:
                                next_state=next_state,
                                batch_size=batch_size)
 
+    @count_time()
+    def task_extract_features(self, logger: logging.Logger = None) -> bool:
+        """Perform feature extraction for a `ChunkSlot`
+
+        This method is process-safe. Multiple processes may call it
+        concurrently, working on the same `ChunkSlot`.
+
+        Returns
+        -------
+        did_something : bool
+            Whether events were extracted
+        """
+        did_something = False
+        cs = self.find_slot(state="e")
+
+        # Extract all features from this ChunkSlot
+        batch_size = 10
+        if cs is not None and cs.state == "e":
+            extractor = QueueEventExtractor(
+                slot_register=self,
+                pixel_size=self.data.pixel_size,
+                gate=Gate(self.data, **self.job["gate_kwargs"]),
+                event_queue=self.event_queue,
+                extract_kwargs=self.job["feature_kwargs"],
+                logger=logger,
+            )
+
+            while True:
+                state_warden = self.reserve_slot_for_task(
+                    current_state="e",
+                    next_state="i",
+                    chunk_slot=cs,
+                    batch_size=batch_size)
+                if state_warden is not None and state_warden.batch_size:
+                    with state_warden as (_, batch_range):
+                        for idx in range(*batch_range):
+                            index = cs.chunk * self.chunk_size + idx
+                            try:
+                                events = extractor.process_label(index=index)
+                            except BaseException:
+                                logger.error(traceback.format_exc())
+                            else:
+                                if events:
+                                    key0 = list(events.keys())[0]
+                                    nevents = len(events[key0])
+                                    self.feat_nevents[index] = nevents
+                                else:
+                                    self.feat_nevents[index] = 0
+                                self.event_queue.put((index, events))
+
+                    did_something = True
+                else:
+                    break
+
+        return did_something
+
+    @count_time()
     def task_load_all(self, logger: logging.Logger = None) -> bool:
         """Load chunk data into memory for as many slots as possible
 
