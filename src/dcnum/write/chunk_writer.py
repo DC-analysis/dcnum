@@ -4,6 +4,7 @@ import multiprocessing as mp
 import pathlib
 import threading
 import time
+import traceback
 
 from ..common import h5py
 
@@ -62,22 +63,25 @@ class ChunkWriter(threading.Thread):
 
     def run(self):
         time_tot = 0
-        while True:
-            ldq = len(self.dq)
-            self.write_queue_size.value = ldq
-            if self.must_stop_loop:
-                break
-            elif ldq:
-                t0 = time.perf_counter()
-                for _ in range(ldq):
-                    feat, data = self.dq.popleft()
-                    self.writer.store_feature_chunk(feat=feat, data=data)
-                    self.write_queue_size.value -= 1
-                time_tot += time.perf_counter() - t0
-            elif self.may_stop_loop:
-                break
-            else:
-                # wait for the next item to arrive
-                time.sleep(.1)
+        try:
+            while True:
+                ldq = len(self.dq)
+                self.write_queue_size.value = ldq
+                if self.must_stop_loop:
+                    break
+                elif ldq:
+                    t0 = time.perf_counter()
+                    for _ in range(ldq):
+                        feat, data = self.dq.popleft()
+                        self.writer.store_feature_chunk(feat=feat, data=data)
+                        self.write_queue_size.value -= 1
+                    time_tot += time.perf_counter() - t0
+                elif self.may_stop_loop:
+                    break
+                else:
+                    # wait for the next item to arrive
+                    time.sleep(.1)
+        except BaseException:
+            self.logger.error(traceback.format_exc())
         self.logger.info(f"Disk time: {time_tot:.1f}s")
         self.writer.close()
