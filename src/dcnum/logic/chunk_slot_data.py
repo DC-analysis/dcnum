@@ -151,9 +151,9 @@ class ChunkSlotData:
         reserve_array = np.ctypeslib.as_array(self._task_reserve_array)
         # array that monitors the progress of the current state
         progress_array = np.ctypeslib.as_array(self._task_progress_array)
-        # combined array with frames are completed or are in use
-        used_array = np.logical_or(reserve_array, progress_array)
         with self._task_reserve_lock:
+            # combined array with frames are completed or are in use
+            used_array = np.logical_or(reserve_array, progress_array)
             if self._state.value != req_state:
                 # wrong state
                 start = stop = 0
