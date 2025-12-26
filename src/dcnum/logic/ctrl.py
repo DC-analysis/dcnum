@@ -734,7 +734,7 @@ class DCNumJobRunner(threading.Thread):
         )
         worker_segm.start()
 
-        # Start the data collection thread
+        # Start the data collection and writer thread
         if self.job["debug"]:
             worker_write = QueueWriterThread(
                 event_queue=event_queue,
@@ -795,23 +795,23 @@ class DCNumJobRunner(threading.Thread):
         slot_register.close()
 
         # join threads
+        join_worker(worker=thr_uw,
+                    logger=self.logger,
+                    name="worker starter"
+                    )
         join_worker(worker=worker_segm,
-                    timeout=30,
-                    retries=10,
                     logger=self.logger,
                     name="segmentation")
-        # Join the collector thread before the feature extractors. On
-        # compute clusters, we had problems with joining the feature
-        # extractors, maybe because the event_queue was not depleted.
         join_worker(worker=worker_write,
                     timeout=600,
-                    retries=10,
                     logger=self.logger,
                     name="collector for writer")
+        # Join universal workers after writer, because the writer will make
+        # sure that all frames are accounted for, and there might be
+        # a problem with joining the universal workers when the queues are
+        # not empty.
         for worker_uni in uni_workers:
             join_worker(worker=worker_uni,
-                        timeout=30,
-                        retries=10,
                         logger=self.logger,
                         name="universal worker")
 

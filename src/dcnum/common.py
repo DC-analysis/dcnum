@@ -85,8 +85,13 @@ def cpu_count() -> int:
     return num_cpus
 
 
-def join_worker(worker, timeout, retries, logger, name):
+def join_worker(worker,
+                timeout=30,
+                retries=10,
+                logger=None,
+                name=None):
     """Patiently join a worker (Thread or Process)"""
+    logger = logger or logging.getLogger(__name__)
     for _ in range(retries):
         worker.join(timeout=timeout)
         if worker.is_alive():

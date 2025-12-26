@@ -15,6 +15,7 @@
  - ref: `StateWarden` context manager returns batch range alongside `ChunkSlot`
  - ref: `ChunkSlot` task lock acquisition with frame resolution
  - ref: move `count_time` from `ChunkSlot` to `SlotRegister`
+ - ref: default kwargs for `join_worker`
 0.28.3
  - fix: sort internal basins before file-based basins
 0.28.2
