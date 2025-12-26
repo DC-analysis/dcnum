@@ -1,3 +1,4 @@
+import traceback
 from logging.handlers import QueueHandler
 import multiprocessing as mp
 
@@ -37,10 +38,14 @@ class QueueWriterProcess(QueueWriterBase, mp_spawn.Process):
                 logger.warning(f"Specifying `{kw}` in "
                                f"`QueueWriterProcess.run` has no effect.")
 
-        super(QueueWriterProcess, self).run(logger=logger)
+        try:
+            super(QueueWriterProcess, self).run(logger=logger)
+        except BaseException:
+            self.logger.error(traceback.format_exc())
 
         # Make sure everything gets written to the queue.
         queue_handler.flush()
+        queue_handler.close()
 
         # Close the logging queue.
         self.log_queue.close()
