@@ -173,6 +173,48 @@ def test_task_lock_batch_and_then_full():
     assert cs.get_progress() == 1
 
 
+def test_task_lock_batches_with_gaps():
+    chunk_size = 50
+    h5path = retrieve_data("fmt-hdf5_cytoshot_full-features_2023.zip")
+    path = h5path.with_name("test.hdf5")
+    with read.concatenated_hdf5_data(10 * [h5path], path_out=path):
+        # This creates HDF5 chunks of size 32. Total length is 400.
+        # There will be one "remainder" chunk of size `400 % 32 = 16`.
+        pass
+
+    job = logic.DCNumPipelineJob(path_in=path)
+    data = read.HDF5Data(path, image_chunk_size=chunk_size)
+    chunk_size_act = min(chunk_size, len(data.image))
+    assert data.image_chunk_size == chunk_size
+    assert data.image.chunk_size == chunk_size_act
+    # Normal chunk
+    cs = logic.ChunkSlot(job=job, data=data)
+
+    # reserve batches
+    batch_range = cs.acquire_task_lock(cs.state, batch_size=11)
+    assert batch_range == (0, 11)
+
+    batch_range = cs.acquire_task_lock(cs.state, batch_size=4)
+    assert batch_range == (11, 15)
+
+    batch_range = cs.acquire_task_lock(cs.state, batch_size=10)
+    assert batch_range == (15, 25)
+
+    # release the second batch without letting the task complete
+    cs.release_task_lock(11, 15, task_done=False)
+
+    # request a new batch which will match the second batch
+    batch_range = cs.acquire_task_lock(cs.state, batch_size=10)
+    assert batch_range == (11, 15)
+
+    # release the first batch, completing the task
+    cs.release_task_lock(0, 11)
+
+    # request a new batch, it should not match the first batch
+    batch_range = cs.acquire_task_lock(cs.state, batch_size=10)
+    assert batch_range == (25, 35)
+
+
 def test_task_lock_batches_with_progress():
     chunk_size = 50
     h5path = retrieve_data("fmt-hdf5_cytoshot_full-features_2023.zip")

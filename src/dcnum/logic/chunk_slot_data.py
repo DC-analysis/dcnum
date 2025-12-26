@@ -145,7 +145,9 @@ class ChunkSlotData:
         """Acquire the lock for performing a task
 
         Return the start and stop indices for which the lock was acquired.
-        If no lock could be acquired, return `(0, 0)`.
+        If no lock could be acquired, return `(0, 0)`. The returned
+        indices might not match the input batch size: Locks for
+        contiguous indices are returned based on availability.
         """
         # array for reserving a new batch
         reserve_array = np.ctypeslib.as_array(self._task_reserve_array)
@@ -164,14 +166,25 @@ class ChunkSlotData:
                     # all frames are locked
                     start = stop = 0
                 else:
-                    if batch_size is None:
-                        # reserve everything else
-                        start = num_locked
-                        stop = self.length
+                    # We have at least one zero value
+                    first_zero = np.where(~used_array)[0][0]
+                    # Do we have a non-zero value after that?
+                    pot_end = np.where(used_array[first_zero:])[0]
+                    if pot_end.size:
+                        # limit the array lock up until this value
+                        max_size = first_zero + pot_end[0]
                     else:
-                        # find the first non-zero element
-                        start = num_locked
-                        stop = min(num_locked + batch_size, self.length)
+                        # we may use the entire chunk
+                        max_size = self.length
+
+                    start = first_zero
+
+                    if batch_size is None:
+                        # reserve the rest of the chunk or this batch
+                        stop = max_size
+                    else:
+                        # stop at the next non-zero element or the batch size
+                        stop = min(start + batch_size, max_size)
                     reserve_array[start:stop] = True
         return start, stop
 
