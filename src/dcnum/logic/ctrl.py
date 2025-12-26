@@ -15,7 +15,7 @@ import uuid
 
 import numpy as np
 
-from ..common import h5py, join_worker
+from ..common import h5py, join_worker, start_workers_threaded
 from ..feat.feat_background.base import get_available_background_methods
 from ..segm import SegmenterManagerThread, get_available_segmenters
 from ..meta import ppid
@@ -721,10 +721,10 @@ class DCNumJobRunner(threading.Thread):
                                               log_queue=self.log_queue,
                                               log_level=self.logger.level,
                                               ))
-        tw0 = time.perf_counter()
-        [w.start() for w in uni_workers]
-        self.logger.info(f"{len(uni_workers)} worker spawn time: "
-                         f"{time.perf_counter() - tw0:.1f}s")
+        thr_uw = start_workers_threaded(worker_list=uni_workers,
+                                        logger=self.logger,
+                                        name="UniversalWorker",
+                                        )
 
         # Initialize segmenter manager thread
         worker_segm = SegmenterManagerThread(

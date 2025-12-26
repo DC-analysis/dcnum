@@ -1,6 +1,9 @@
 import importlib
+import logging
 import multiprocessing as mp
 import os
+import threading
+import time
 from typing import Callable
 
 
@@ -97,6 +100,19 @@ def join_worker(worker, timeout, retries, logger, name):
         logger.error(f"Failed to join thread '{name}'")
         raise ValueError(f"Thread '{name}' ({worker}) did not join "
                          f"within {timeout * retries}s!")
+
+
+def start_workers_threaded(worker_list, logger, name):
+    def target(worker_list, logger, name):
+        tw0 = time.perf_counter()
+        for w in worker_list:
+            w.start()
+        logger.info(f"{len(worker_list)} {name} spawn time: "
+                    f"{time.perf_counter() - tw0:.1f}s")
+
+    thr = threading.Thread(target=target, args=(worker_list, logger, name))
+    thr.start()
+    return thr
 
 
 def setup_h5py(h5py):
