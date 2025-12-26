@@ -45,7 +45,7 @@ class ChunkSlot(ChunkSlotData):
 
     def __repr__(self):
         return (f"<dcnum ChunkSlot {self.index} (state {self.state}) "
-                f"at {hex(id(self))}>")
+                f"with chunk {self.chunk} at {hex(id(self))}>")
 
     def load(self, idx):
         """Load chunk `idx` into `self.mp_image` and return numpy views"""
