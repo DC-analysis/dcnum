@@ -322,19 +322,39 @@ class SlotRegister:
         if has_lock and self.chunks_loaded < self.num_chunks:
             try:
                 for cs in self:
-                    # The number of sr.chunks_loaded is identical to the
+                    # The number of self.chunks_loaded is identical to the
                     # chunk index we want to load next.
-                    if cs.state == "i" and cs.chunk <= self.chunks_loaded:
+                    # The cs.chunk number will be set to the new chunk. All
+                    # ChunkSlots have a cs.chunk number that is smaller than
+                    # `self.chunks_loaded`.
+                    # We are interested in chunks with the state "i" and
+                    # will transform them into chunks in state "s".
+                    if cs.state == "i":
+                        # We have at least two chunk slots: One
+                        # or more that handle the majority of the frames,
+                        # and one that handles the final (remainder) chunk.
                         if ((self.chunks_loaded < self.num_chunks - 1
                              and not cs.is_remainder)
-                                or (self.chunks_loaded == self.num_chunks - 1
-                                    and cs.is_remainder)):
-                            with self.reserve_slot_for_task(current_state="i",
-                                                            next_state="s",
-                                                            chunk_slot=cs):
-                                cs.load(self.chunks_loaded)
-                            self.chunks_loaded += 1
-                            did_something = True
+                            or (self.chunks_loaded == self.num_chunks - 1
+                                and cs.is_remainder)):
+                            state_warden = self.reserve_slot_for_task(
+                                current_state="i",
+                                next_state="s",
+                                chunk_slot=cs)
+
+                            if (state_warden is not None
+                                    and state_warden.batch_size):
+
+                                if state_warden.batch_size != cs.length:
+                                    raise ValueError(
+                                        f"Batch size must match chunk size "
+                                        f"({state_warden.batch_range=} vs. "
+                                        f"{cs.length=}) for {cs=}")
+
+                                with state_warden:
+                                    cs.load(self.chunks_loaded)
+                                    self.chunks_loaded += 1
+                                    did_something = True
             except BaseException:
                 if logger is not None:
                     logger.error(traceback.format_exc())

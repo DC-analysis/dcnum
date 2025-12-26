@@ -6,6 +6,7 @@
  - enh: move feature extraction to `UniversalWorker` (#48)
  - enh: start `UniversalWorker`s in background thread
  - enh: add `HDF5Data.image_num_chunks`
+ - enh: mitigate race conditions with `StateWarden`
  - ref: `SegmentTorchSTO` is now always visible, even if CUDA is not available
    This was necessary, because we want to lazy-load torch.
  - ref: rename `get_lock` to ``get_counter_lock` in `SlotRegister`
