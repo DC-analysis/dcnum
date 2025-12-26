@@ -5,7 +5,7 @@ import threading
 
 import numpy as np
 
-from ..common import cpu_count
+from ..common import cpu_count, start_workers_threaded
 from ..os_env_st import RequestSingleThreaded, confirm_single_threaded
 
 from .segmenter import Segmenter, assert_labels
@@ -60,6 +60,7 @@ class MPOSegmenter(Segmenter, abc.ABC):
         """Shutdown event tells workers to stop when set to != 0"""
 
         # workers
+        self._worker_starter = None
         self._workers = []
 
     def __enter__(self):
@@ -79,6 +80,7 @@ class MPOSegmenter(Segmenter, abc.ABC):
         # Remove the unpicklable entries.
         del state["logger"]
         del state["_workers"]
+        del state["_worker_starter"]
         return state
 
     def __setstate__(self, state):
@@ -87,6 +89,8 @@ class MPOSegmenter(Segmenter, abc.ABC):
 
     def join_workers(self):
         """Ask all workers to stop and join them"""
+        if self._worker_starter is not None:
+            self._worker_starter.join()
         if self._workers:
             self.mp_shutdown.set()
             for w in self._workers:
@@ -114,7 +118,7 @@ class MPOSegmenter(Segmenter, abc.ABC):
         step_size = chunk_size // self.num_workers
         rest = chunk_size % self.num_workers
         w_start = 0
-        tw0 = time.perf_counter()
+
         for ii in range(self.num_workers):
             # Give every worker the same-sized workload and add one
             # from the rest until there is no more.
@@ -124,11 +128,13 @@ class MPOSegmenter(Segmenter, abc.ABC):
                 rest -= 1
             args = [self, w_start, w_stop]
             w = worker_cls(*args)
-            w.start()
             self._workers.append(w)
             w_start = w_stop
-        self.logger.info(f"{self.num_workers} worker spawn time: "
-                         f"{time.perf_counter()-tw0:.1f}s")
+
+        self._worker_starter = start_workers_threaded(
+            worker_list=self._workers,
+            logger=self.logger,
+            name="SegmenterWorker")
 
     def segment_batch(self,
                       images: np.ndarray,
