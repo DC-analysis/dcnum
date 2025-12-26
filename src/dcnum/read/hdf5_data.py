@@ -169,7 +169,7 @@ class HDF5Data:
                 "logs": self.logs,
                 "tables": self.tables,
                 "basins": self.basins,
-                "image_cache_size": self.image.cache_size,
+                "image_cache_size": self.image_cache_size,
                 "image_chunk_size": self.image_chunk_size,
                 "index_mapping": self.index_mapping,
                 "len": self._len,
