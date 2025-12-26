@@ -183,7 +183,6 @@ class HDF5Data:
         self._feats = None
         self._keys = None
         self._len = state.get("len", None)
-        self.image_cache_size = state["image_cache_size"]
         # Image cache
         if not hasattr(self, "_image_cache"):
             self._image_cache = {}
@@ -311,6 +310,11 @@ class HDF5Data:
                 image_corr = None
             self._image_cache["image_corr"] = image_corr
         return self._image_cache["image_corr"]
+
+    @property
+    def image_num_chunks(self):
+        """Number of image chunks given `self.image_chunk_size`"""
+        return int(np.ceil(len(self) / self.image_chunk_size))
 
     @property
     def mask(self):

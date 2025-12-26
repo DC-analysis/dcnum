@@ -14,8 +14,6 @@ def test_chunk_size_identical():
     h5path = retrieve_data("fmt-hdf5_cytoshot_full-features_2023.zip")
     path = h5path.with_name("test.hdf5")
     with read.concatenated_hdf5_data(101 * [h5path], path_out=path):
-        # This creates HDF5 chunks of size 32. Total length is 400.
-        # There will be one "remainder" chunk of size `400 % 32 = 16`.
         pass
 
     with h5py.File(path, "a") as h5:
@@ -36,6 +34,65 @@ def test_chunk_size_identical():
         assert hd.image_chunk_size == 900
         assert hd.image.get_chunk_size(0) == 900
         assert hd.image_bg.get_chunk_size(0) == 900
+
+
+def test_image_num_chunks_even():
+    """Test number of chunks"""
+    h5path = retrieve_data("fmt-hdf5_cytoshot_full-features_2023.zip")
+    path = h5path.with_name("test.hdf5")
+    with read.concatenated_hdf5_data(50 * [h5path], path_out=path):
+        pass
+
+    with h5py.File(path, "a") as h5:
+        # rewrite the image column, making it chunk-less
+        images = h5["events/image"][:]
+        images_bg = h5["events/image_bg"][:]
+        del h5["events/image"]
+        del h5["events/image_bg"]
+        h5.create_dataset("events/image",
+                          data=images,
+                          chunks=(50, 80, 320))
+        h5.create_dataset("events/image_bg",
+                          data=images_bg,
+                          # Different chunks!
+                          chunks=(50, 80, 320))
+
+    with read.HDF5Data(path) as hd:
+        assert len(hd) == 2000
+        assert hd.image_chunk_size == 1000
+        assert hd.image_num_chunks == 2
+        assert hd.image.get_chunk_size(0) == 1000
+        assert hd.image.get_chunk_size(1) == 1000
+
+
+def test_image_num_chunks_odd():
+    """Test number of chunks"""
+    h5path = retrieve_data("fmt-hdf5_cytoshot_full-features_2023.zip")
+    path = h5path.with_name("test.hdf5")
+    with read.concatenated_hdf5_data(50 * [h5path], path_out=path):
+        pass
+
+    with h5py.File(path, "a") as h5:
+        # rewrite the image column, making it chunk-less
+        images = h5["events/image"][:]
+        images_bg = h5["events/image_bg"][:]
+        del h5["events/image"]
+        del h5["events/image_bg"]
+        h5.create_dataset("events/image",
+                          data=images,
+                          chunks=(49, 80, 320))
+        h5.create_dataset("events/image_bg",
+                          data=images_bg,
+                          # Different chunks!
+                          chunks=(49, 80, 320))
+
+    with read.HDF5Data(path) as hd:
+        assert len(hd) == 2000
+        assert hd.image_chunk_size == 980
+        assert hd.image_num_chunks == 3
+        assert hd.image.get_chunk_size(0) == 980
+        assert hd.image.get_chunk_size(1) == 980
+        assert hd.image.get_chunk_size(2) == 40
 
 
 def test_features_scalar_frame():
