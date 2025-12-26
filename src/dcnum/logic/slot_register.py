@@ -48,8 +48,8 @@ class SlotRegister:
         self.job = job
         self.data = data
         self.event_queue = event_queue
-        self.chunk_size = data.image.chunk_size
-        self.num_chunks = data.image.num_chunks
+        self.chunk_size = data.image_chunk_size
+        self.num_chunks = data.image_num_chunks
         self._slots = []
 
         self.timers = {
@@ -80,13 +80,13 @@ class SlotRegister:
         # Initialize feat_nevents with -1
         self.feat_nevents[:] = np.full(self.num_frames, -1)
 
-        # generate all slots
-        for ii in range(num_slots):
+        # Generate all requested slots.
+        for ii in range(max(1, num_slots)):
             self._slots.append(ChunkSlot(job=job, data=data))
-        # we might need a slot for the remainder
+        # Add a slot for the remainder. The size of the remainder chunks
+        # slot is smaller or equal to the others.
         chunk_slot_remainder = ChunkSlot(job=job, data=data, is_remainder=True)
-        if chunk_slot_remainder.length != 0:
-            self._slots.append(chunk_slot_remainder)
+        self._slots.append(chunk_slot_remainder)
 
     def __getitem__(self, idx):
         return self.slots[idx]

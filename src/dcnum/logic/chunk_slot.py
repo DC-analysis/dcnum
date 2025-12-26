@@ -30,11 +30,8 @@ class ChunkSlot(ChunkSlotData):
         """Segmentation class"""
 
         if self.is_remainder:
-            try:
-                length = self.data.image.get_chunk_size(
+            length = self.data.image.get_chunk_size(
                     chunk_index=self.data.image.num_chunks - 1)
-            except IndexError:
-                length = 0
         else:
             length = self.data.image.chunk_size
 
