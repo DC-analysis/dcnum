@@ -22,7 +22,7 @@ class ChunkSlotData:
         self._task_progress_array = mp_spawn.RawArray(ctypes.c_bool,
                                                       self.length)
 
-        self._state = mp_spawn.Value("u", "0")
+        self._state = mp_spawn.RawValue("u", "0")
 
         # Initialize with negative value to avoid ambiguities with first chunk.
         self._chunk = mp_spawn.Value(ctypes.c_long, -1, lock=False)
@@ -92,7 +92,7 @@ class ChunkSlotData:
 
     @state.setter
     def state(self, value):
-        with self._state.get_lock(), self._task_reserve_lock:
+        with self._task_reserve_lock:
             if self._state.value != value:
                 self._state.value = value
                 # reset the progress
