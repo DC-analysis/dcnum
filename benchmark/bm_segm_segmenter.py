@@ -36,11 +36,16 @@ class Benchmark:
         self.runner = logic.DCNumJobRunner(job=self.job)
         self.runner.task_background()
 
+        log_queue = mp_spawn.Queue()
+        log_queue.cancel_join_thread()
+
         self.slot_register = logic.SlotRegister(job=self.job,
                                                 data=self.runner.dtin,
                                                 num_slots=2)
         self.u_worker = logic.UniversalWorkerThread(
-            slot_register=self.slot_register)
+            slot_register=self.slot_register,
+            log_queue=log_queue,
+        )
         self.u_worker.start()
 
     def benchmark(self):

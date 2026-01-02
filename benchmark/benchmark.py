@@ -5,7 +5,10 @@ import sys
 import time
 import timeit
 
-import numpy as np
+from dcnum.os_env_st import request_single_threaded
+request_single_threaded()
+
+import numpy as np  # noqa: E402
 
 
 here = pathlib.Path(__file__).parent
