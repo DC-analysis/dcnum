@@ -186,9 +186,9 @@ class Segmenter(abc.ABC):
         code = ppid_parts[0]
         pp_kwargs = ppid_parts[1]
 
-        for cls_code in get_available_segmenters():
+        for cls_code in get_segmenters():
             if cls_code == code:
-                cls = get_available_segmenters()[cls_code]
+                cls = get_segmenters()[cls_code]
                 break
         else:
             raise ValueError(
@@ -202,6 +202,11 @@ class Segmenter(abc.ABC):
                                                    method="process_labels",
                                                    ppid=pp_kwargs_mask)
         return kwargs
+
+    @staticmethod
+    def is_available():
+        """Subclasses may override this method e.g. if dependencies exist"""
+        return True
 
     def log_info(self, logger):
         """Allow segmenter to write informative log messages"""
@@ -430,10 +435,19 @@ def assert_labels(arr):
 
 
 @functools.cache
-def get_available_segmenters():
-    """Return dictionary of available segmenters"""
+def get_segmenters():
     segmenters = {}
     for scls in Segmenter.__subclasses__():
         for cls in scls.__subclasses__():
             segmenters[cls.get_ppid_code()] = cls
+    return segmenters
+
+
+@functools.cache
+def get_available_segmenters():
+    """Return dictionary of available segmenters"""
+    segmenters = {}
+    for code, cls in get_segmenters().items():
+        if cls.is_available():
+            segmenters[code] = cls
     return segmenters

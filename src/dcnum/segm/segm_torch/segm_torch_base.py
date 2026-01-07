@@ -9,6 +9,7 @@ from ...meta import paths
 from ..segmenter import Segmenter, SegmenterNotApplicableError
 
 from .torch_model import load_model
+from .torch_setup import torch
 
 
 class TorchSegmenterBase(Segmenter):
@@ -130,3 +131,13 @@ class TorchSegmenterBase(Segmenter):
                 reasons_list.append(item.get("reason", "unknown reason"))
         elif not item.get("allow-missing-key", False):
             reasons_list.append(f"Key '{key}' missing in {item['type']}")
+
+    @staticmethod
+    def is_available():
+        try:
+            torch.__version__
+        except BaseException:
+            available = False
+        else:
+            available = True
+        return available

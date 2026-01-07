@@ -17,7 +17,7 @@ import numpy as np
 
 from ..common import h5py, join_worker, start_workers_threaded
 from ..feat.feat_background.base import get_available_background_methods
-from ..segm import SegmenterManagerThread, get_available_segmenters
+from ..segm import SegmenterManagerThread, get_segmenters
 from ..meta import ppid
 from ..read import HDF5Data, get_measurement_identifier, get_mapping_indices
 from .._version import version, version_tuple
@@ -670,7 +670,7 @@ class DCNumJobRunner(threading.Thread):
         self.logger.info("Starting segmentation and feature extraction")
 
         # Start segmentation thread
-        seg_cls = get_available_segmenters()[self.job["segmenter_code"]]
+        seg_cls = get_segmenters()[self.job["segmenter_code"]]
 
         if self.job["debug"]:
             num_universal = 1

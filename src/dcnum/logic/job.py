@@ -12,7 +12,7 @@ from ..feat.feat_background.base import get_available_background_methods
 from ..feat.gate import Gate
 from ..meta.ppid import compute_pipeline_hash, DCNUM_PPID_GENERATION
 from ..read import HDF5Data
-from ..segm import get_available_segmenters
+from ..segm import get_segmenters
 
 
 hdf5plugin = LazyLoader("hdf5plugin")
@@ -153,7 +153,7 @@ class DCNumPipelineJob:
         # PPID classes with multiple options
         for options, key in [
             (get_available_background_methods(), "background_code"),
-            (get_available_segmenters(), "segmenter_code"),
+            (get_segmenters(), "segmenter_code"),
         ]:
             code_act = self.kwargs[key]
             if code_act not in options:
@@ -190,7 +190,7 @@ class DCNumPipelineJob:
                  self.kwargs["background_code"]],
              "background_kwargs"),
             ("seg_id",
-             get_available_segmenters()[self.kwargs["segmenter_code"]],
+             get_segmenters()[self.kwargs["segmenter_code"]],
              "segmenter_kwargs"),
             ("feat_id", QueueEventExtractor, "feature_kwargs"),
             ("gate_id", Gate, "gate_kwargs"),
@@ -223,7 +223,7 @@ class DCNumPipelineJob:
             the segmenter is incompatible with the input path
         """
         # Check segmenter applicability applicability
-        seg_cls = get_available_segmenters()[self.kwargs["segmenter_code"]]
+        seg_cls = get_segmenters()[self.kwargs["segmenter_code"]]
         with HDF5Data(self.kwargs["path_in"]) as hd:
             seg_cls.validate_applicability(
                 segmenter_kwargs=self.kwargs["segmenter_kwargs"],

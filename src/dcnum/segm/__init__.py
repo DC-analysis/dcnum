@@ -1,6 +1,9 @@
 # flake8: noqa: F401
 from .segmenter import (
-    Segmenter, SegmenterNotApplicableError, get_available_segmenters
+    Segmenter,
+    SegmenterNotApplicableError,
+    get_segmenters,
+    get_available_segmenters
 )
 from .segmenter_mpo import MPOSegmenter
 from .segmenter_sto import STOSegmenter

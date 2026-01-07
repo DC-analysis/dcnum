@@ -2,7 +2,7 @@ import multiprocessing as mp
 
 import numpy as np
 
-from ..segm import get_available_segmenters
+from ..segm import get_segmenters
 
 from .chunk_slot_data import ChunkSlotData
 
@@ -26,7 +26,7 @@ class ChunkSlot(ChunkSlotData):
         self.is_remainder = is_remainder
         """Whether this slot only applies to the last chunk"""
 
-        self.seg_cls = get_available_segmenters()[self.job["segmenter_code"]]
+        self.seg_cls = get_segmenters()[self.job["segmenter_code"]]
         """Segmentation class"""
 
         if self.is_remainder:

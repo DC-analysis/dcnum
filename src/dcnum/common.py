@@ -56,7 +56,8 @@ class LazyLoader:
                 if self._action is not None:
                     self._action(self._mod)
             else:
-                # Module is loaded, exception unrelated to LazyLoader
+                # Module is loaded or does not exist,
+                # exception unrelated to LazyLoader.
                 raise
 
         # retry getattr if module was just loaded for first time
