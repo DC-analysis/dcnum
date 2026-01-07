@@ -21,6 +21,7 @@ def test_ppid_nomask_segmenter():
             return image < thresh
 
     segm.get_available_segmenters.cache_clear()
+    segm.get_segmenters.cache_clear()
 
     ppid1 = SegmentNoMask.get_ppid_from_ppkw({"thresh": -3})
     assert ppid1 == "nomask:t=-3"
@@ -39,6 +40,7 @@ def test_ppid_nomask_segmenter():
     # cleanup
     del SegmentNoMask
     segm.get_available_segmenters.cache_clear()
+    segm.get_segmenters.cache_clear()
 
 
 def test_ppid_nomask_segmenter_control():

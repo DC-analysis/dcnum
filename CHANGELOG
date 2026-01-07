@@ -1,3 +1,5 @@
+0.29.1
+ - tests: fix segmenter test
 0.29.0
  - fix: remove unused `multiprocessing.Pool` in background computation
  - enh: log worker spawn time throughout dcnum
