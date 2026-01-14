@@ -1,4 +1,5 @@
 0.29.1
+ - enh: add more library versions to output job log
  - tests: fix segmenter test
 0.29.0
  - fix: remove unused `multiprocessing.Pool` in background computation
