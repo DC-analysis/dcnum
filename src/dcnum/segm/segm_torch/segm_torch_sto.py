@@ -14,13 +14,20 @@ class SegmentTorchSTO(TorchSegmenterBase, STOSegmenter):
     def log_info(self, logger, gpu_id=None):
         model_file = self.kwargs["model_file"]
         device = torch.device(gpu_id if gpu_id is not None else "cuda")
+
+        logger.info(f"CUDA version {torch.version.cuda}")
+
+        compute_capability = ".".join(
+            str(cc) for cc in torch.cuda.get_device_capability(device))
+        logger.info(f"GPU compute capability: {compute_capability}")
+
         _, total = torch.cuda.mem_get_info(device)
+        logger.info(f"Available GPU memory: {total/1024**3:.1f}GB")
+
         model, model_meta = load_model(model_file, device)
         batch_size = model_meta["estimated_batch_size_cuda"]
-        logger.info(f"Available GPU memory: {total/1024**3:.1f}GB")
         logger.info(f"GPU segmentation batch size: {batch_size}")
-        compute_capability = ".".join(torch.cuda.get_device_capability(device))
-        logger.info(f"GPU compute capability: {compute_capability}")
+
 
     @staticmethod
     def is_available():
