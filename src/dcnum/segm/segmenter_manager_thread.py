@@ -1,6 +1,7 @@
 import logging
 import time
 import threading
+import traceback
 
 from .segmenter import Segmenter
 from .segmenter_mpo import MPOSegmenter
@@ -48,7 +49,12 @@ class SegmenterManagerThread(threading.Thread):
         """Waiting time counter"""
 
     def run(self):
-        self.segmenter.log_info(self.logger)
+        try:
+            self.segmenter.log_info(self.logger)
+        except BaseException:
+            self.logger.error("Failed to log device information")
+            self.logger.info(traceback.format_exc())
+
         # We iterate over all the chunks of the image data.
         for chunk in range(self.slot_register.num_chunks):
             t0 = time.perf_counter()
