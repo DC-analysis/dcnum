@@ -1,5 +1,5 @@
 0.29.2
- - enh: log GPU device CUDA compute capability
+ - enh: log GPU device name and CUDA compute capability
  - enh: log CUDA version
  - enh: guard logging device information with try-except
 0.29.1

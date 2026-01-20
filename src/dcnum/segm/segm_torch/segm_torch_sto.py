@@ -15,7 +15,9 @@ class SegmentTorchSTO(TorchSegmenterBase, STOSegmenter):
         model_file = self.kwargs["model_file"]
         device = torch.device(gpu_id if gpu_id is not None else "cuda")
 
-        logger.info(f"CUDA version {torch.version.cuda}")
+        logger.info(f"CUDA version: {torch.version.cuda}")
+
+        logger.info(f"GPU name: {torch.cuda.get_device_name()}")
 
         compute_capability = ".".join(
             str(cc) for cc in torch.cuda.get_device_capability(device))
