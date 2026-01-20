@@ -28,7 +28,6 @@ class SegmentTorchSTO(TorchSegmenterBase, STOSegmenter):
         batch_size = model_meta["estimated_batch_size_cuda"]
         logger.info(f"GPU segmentation batch size: {batch_size}")
 
-
     @staticmethod
     def is_available():
         available = False
