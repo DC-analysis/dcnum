@@ -4,7 +4,8 @@ import collections
 import hashlib
 import inspect
 import pathlib
-from typing import Protocol, Union
+import types
+import typing
 import warnings
 
 import numpy as np
@@ -17,22 +18,22 @@ previous pipelines unreproducible.
 """
 
 
-class ClassWithPPIDCapabilities(Protocol):
+class ClassWithPPIDCapabilities(typing.Protocol):
     def get_ppid(self) -> str:
         """full pipeline identifier for the class (instance method)"""
-        pass
+        return ""
 
     def get_ppid_code(self) -> str:
         """string representing the class in the pipeline (classmethod)"""
-        pass
+        return ""
 
     def get_ppid_from_ppkw(self) -> str:
         """pipeline identifier from specific pipeline keywords (classmethod)"""
-        pass
+        return ""
 
     def get_ppkw_from_ppid(self) -> dict:
         """class keywords from full pipeline identifier (staticmethod)"""
-        pass
+        return {}
 
 
 def compute_pipeline_hash(*, bg_id, seg_id, feat_id, gate_id,
@@ -60,7 +61,7 @@ def convert_to_dtype(value, dtype):
     elif dtype in [pathlib.Path, pathlib.Path | str]:
         value = str(value)
     else:
-        if isinstance(dtype, Union):
+        if typing.get_origin(dtype) in {typing.Union, types.UnionType}:
             dtype = dtype.__args__
         if isinstance(dtype, (list, tuple)):
             for dtarg in dtype:
@@ -81,7 +82,7 @@ def convert_to_dtype(value, dtype):
 def get_class_method_info(class_obj: ClassWithPPIDCapabilities,
                           static_kw_methods: list | None = None,
                           static_kw_defaults: dict | None = None,
-                          ):
+                          ) -> dict[str, typing.Any]:
     """Return dictionary of class info with static keyword methods docs
 
     Parameters
@@ -102,7 +103,7 @@ def get_class_method_info(class_obj: ClassWithPPIDCapabilities,
     if static_kw_defaults is None:
         static_kw_defaults = {}
     doc = class_obj.__doc__ or class_obj.__init__.__doc__ or ""
-    info = {
+    info: dict[str, typing.Any] = {
         "code": class_obj.get_ppid_code(),
         "doc": doc,
         "title": doc.split("\n")[0],
