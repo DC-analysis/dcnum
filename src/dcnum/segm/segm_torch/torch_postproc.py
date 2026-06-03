@@ -34,6 +34,12 @@ def postprocess_masks(masks,
         An integer array with the same dimensions as the original image
         data passed to :func:`.preprocess_images`. The shape of this array
         is (batch_size, original_image_shape[0], original_image_shape[1]).
+
+    Notes
+    -----
+    This method is only called by the overarching logic when the
+    preprocessing/model output produces images of different shape.
+    It causes an obvious overhead that we want to avoid.
     """
     # If output of model is 4d, remove channel axis
     if len(masks.shape) == 4:
