@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import functools
 import logging
 import multiprocessing as mp
@@ -38,7 +40,7 @@ class SlotRegister:
     def __init__(self,
                  job: DCNumPipelineJob,
                  data: HDF5Data,
-                 event_queue: "mp.Queue" = None,
+                 event_queue: mp.Queue | None = None,
                  num_slots: int = 3):
         """A register for `ChunkSlot`s for shared memory access
 
@@ -47,7 +49,7 @@ class SlotRegister:
         """
         self.job = job
         self.data = data
-        self.event_queue = event_queue
+        self.event_queue = event_queue or mp_spawn.Queue()
         self.chunk_size = data.image_chunk_size
         self.num_chunks = data.image_num_chunks
         self._slots = []
@@ -158,7 +160,10 @@ class SlotRegister:
         # Let everyone know we are closing
         self._state.value = "q"
 
-    def find_slot(self, state: str, chunk: int = None) -> ChunkSlot | None:
+    def find_slot(self,
+                  state: str,
+                  chunk: int | None = None
+                  ) -> ChunkSlot | None:
         """Return the first `ChunkSlot` that has the given state
 
         We sort the slots according to the slot chunks so that we
@@ -191,8 +196,8 @@ class SlotRegister:
     def reserve_slot_for_task(self,
                               current_state: str,
                               next_state: str,
-                              chunk_slot: ChunkSlot = None,
-                              batch_size: int = None,
+                              chunk_slot: ChunkSlot | None = None,
+                              batch_size: int | None = None,
                               ) -> "StateWarden | None":
         """Return slot with the specified state and lowest chunk index
 
@@ -252,7 +257,9 @@ class SlotRegister:
                                batch_size=batch_size)
 
     @count_time()
-    def task_extract_features(self, logger: logging.Logger = None) -> bool:
+    def task_extract_features(self,
+                              logger: logging.Logger | None = None
+                              ) -> bool:
         """Perform feature extraction for a `ChunkSlot`
 
         This method is process-safe. Multiple processes may call it
@@ -265,6 +272,8 @@ class SlotRegister:
         """
         did_something = False
         cs = self.find_slot(state="e")
+
+        logger = logger or logging.getLogger(__name__)
 
         # Extract all features from this ChunkSlot
         batch_size = 10
@@ -308,7 +317,9 @@ class SlotRegister:
         return did_something
 
     @count_time()
-    def task_load_all(self, logger: logging.Logger = None) -> bool:
+    def task_load_all(self,
+                      logger: logging.Logger | None = None
+                      ) -> bool:
         """Load chunk data into memory for as many slots as possible
 
         Returns
@@ -369,7 +380,7 @@ class StateWarden:
                  chunk_slot: ChunkSlot | ChunkSlotData,
                  current_state: str,
                  next_state: str,
-                 batch_size: int = None,
+                 batch_size: int | None = None,
                  ):
         # Make sure the task lock is acquired.
         self.batch_range = chunk_slot.acquire_task_lock(

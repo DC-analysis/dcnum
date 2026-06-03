@@ -1,4 +1,6 @@
 """Feature gating"""
+from __future__ import annotations
+
 import copy
 import numbers
 import warnings
@@ -14,7 +16,7 @@ class Gate:
 
     def __init__(self, data, *,
                  online_gates: bool = False,
-                 size_thresh_mask: int = None):
+                 size_thresh_mask: int | None = None):
         """Gate feature data
 
         Parameters

@@ -1,4 +1,5 @@
 import inspect
+from typing import Union
 
 import numpy as np
 
@@ -43,6 +44,25 @@ def test_compute_pipeline_hash():
     assert pp_hash == "4f3a850410b9801393ab5738afe69e9a"
 
 
+@pytest.mark.parametrize("value_in,dtype,value_out", [
+    ["bub", str, "bub"],
+    ["2", int, 2],
+    ["2", float, 2.0],
+    ["2.0", float, 2.0],
+    ["true", bool, True],
+    ["2", Union[None, int], 2],
+    ["2", Union[int, None], 2],
+    ["2", [None, int], 2],
+    ["2", [int, None], 2],
+    ["2", [int, type(None)], 2],
+    ["2", [type(None), int], 2],
+])
+def test_convert_to_dtype(value_in, dtype, value_out):
+    converted = ppid.convert_to_dtype(value_in, dtype)
+    assert converted == value_out
+    assert type(converted) is type(value_out)
+
+
 @pytest.mark.parametrize("in_list,out_list", [
     (["camera", "campus"],
      ["came", "camp"]),
@@ -75,6 +95,20 @@ def test_unique_prefix_ordered(in_list, out_list):
 def test_unique_prefix_unordered(in_list, out_list):
     t_list = ppid.get_unique_prefix(in_list)
     assert t_list == out_list
+
+
+@pytest.mark.parametrize("type_in,type_out", [
+    ["str", str],
+    ["int", int],
+    ["float", float],
+    ["dict", dict],
+    ["UnknownClass", "UnknownClass"],  # string passed through
+    ["str | int", [str, int]],  # converted to list
+    [str, str],  # type pass-through
+    [Union[str, float], Union[str, float]],
+])
+def test_simple_type_eval(type_in, type_out):
+    assert type_out == ppid.simple_type_eval(type_in)
 
 
 @pytest.mark.parametrize("kwargs, pid", [

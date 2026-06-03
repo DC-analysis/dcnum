@@ -1,16 +1,23 @@
+from __future__ import annotations
+
 import logging
 import time
 import threading
 import traceback
+import typing
 
 from .segmenter import Segmenter
 from .segmenter_mpo import MPOSegmenter
 
 
+if typing.TYPE_CHECKING:
+    from ..logic import SlotRegister
+
+
 class SegmenterManagerThread(threading.Thread):
     def __init__(self,
                  segmenter: Segmenter,
-                 slot_register: "SlotRegister",  # noqa: F821
+                 slot_register: SlotRegister,  # noqa: F821
                  *args, **kwargs):
         """Manage the segmentation of image data
 

@@ -10,8 +10,8 @@ class STOSegmenter(Segmenter, abc.ABC):
 
     def __init__(self,
                  *,
-                 num_workers: int = None,
-                 kwargs_mask: dict = None,
+                 num_workers: int | None = None,
+                 kwargs_mask: dict | None = None,
                  debug: bool = False,
                  **kwargs
                  ):
@@ -36,7 +36,7 @@ class STOSegmenter(Segmenter, abc.ABC):
 
     def segment_batch(self,
                       images: np.ndarray,
-                      bg_off: np.ndarray = None,
+                      bg_off: np.ndarray | None = None,
                       ):
         """Perform batch segmentation of `images`
 
@@ -90,7 +90,7 @@ class STOSegmenter(Segmenter, abc.ABC):
 
         return labels
 
-    def segment_single(self, image, bg_off: float = None):
+    def segment_single(self, image, bg_off: float | None = None):
         """This is a convenience-wrapper around `segment_batch`"""
         if bg_off is None:
             bg_off_batch = None

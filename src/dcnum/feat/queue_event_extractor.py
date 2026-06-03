@@ -1,6 +1,9 @@
 """Feature Extraction: event extractor worker"""
+from __future__ import annotations
+
 import logging
 import multiprocessing as mp
+import typing
 
 import numpy as np
 
@@ -10,6 +13,10 @@ from ..meta.ppid import kwargs_to_ppid, ppid_to_kwargs
 from .gate import Gate
 
 
+if typing.TYPE_CHECKING:
+    from ..logic import SlotRegister
+
+
 feat_brightness = LazyLoader("feat_brightness", __name__)
 feat_contour = LazyLoader("feat_contour", __name__)
 feat_texture = LazyLoader("feat_texture", __name__)
@@ -17,12 +24,12 @@ feat_texture = LazyLoader("feat_texture", __name__)
 
 class QueueEventExtractor:
     def __init__(self,
-                 slot_register: "SlotRegister",  # noqa: F821
+                 slot_register: SlotRegister,
                  pixel_size: float,
                  gate: Gate,
-                 event_queue: "mp.Queue",
-                 extract_kwargs: dict = None,
-                 logger: logging.Logger = None):
+                 event_queue: mp.Queue,
+                 extract_kwargs: dict | None = None,
+                 logger: logging.Logger | None = None):
         """Event extraction from label images
 
         This class is used for extracting events from label images.

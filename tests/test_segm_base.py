@@ -1,9 +1,4 @@
-import types
-
-import pytest
-
 from dcnum import segm
-from dcnum.meta import ppid
 import numpy as np
 
 
@@ -15,22 +10,6 @@ def test_segmenter_properties():
     assert segm.MPOSegmenter.mask_postprocessing  # sanity check
     assert segm.STOSegmenter.mask_postprocessing  # fixed in 0.21.0
     assert segm.Segmenter.mask_postprocessing  # new default in 0.21.0
-
-
-@pytest.mark.parametrize("segm_method", SEGM_KEYS)
-def test_ppid_no_union_kwonlykwargs(segm_method):
-    """Segmenters should define kw-only keyword arguements clear type hint
-
-    This test makes sure that no `UnionType` is used
-    (e.g. `str | pathlib.Path`).
-    """
-    segm_cls = SEGM_METH[segm_method]
-    meta = ppid.get_class_method_info(segm_cls,
-                                      static_kw_methods=["segment_algorithm"])
-    assert meta["code"] == segm_method
-    annot = meta["annotations"]["segment_algorithm"]
-    for key in annot:
-        assert not isinstance(annot[key], types.UnionType), segm_method
 
 
 def test_segmenter_process_labels_clear_border():

@@ -42,8 +42,8 @@ class TorchSegmenterBase(Segmenter):
     @classmethod
     def validate_applicability(cls,
                                segmenter_kwargs: dict,
-                               meta: dict = None,
-                               logs: dict = None):
+                               meta: dict | None = None,
+                               logs: dict | None = None):
         """Validate the applicability of this segmenter for a dataset
 
         The applicability is defined by the metadata in the segmentation
@@ -72,6 +72,7 @@ class TorchSegmenterBase(Segmenter):
         if "model_file" not in segmenter_kwargs:
             raise ValueError("A `model_file` must be provided in the "
                              "`segmenter_kwargs` to validate applicability")
+        logs = logs or {}
 
         model_file = segmenter_kwargs["model_file"]
         _, model_meta = load_model(model_file, device="cpu")

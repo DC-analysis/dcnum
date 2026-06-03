@@ -1,3 +1,7 @@
+0.29.3
+ - ref: improve type annotations
+ - ref: clarify a few minor ambiguities
+ - ref: support string type hints from future
 0.29.2
  - enh: log GPU device name and CUDA compute capability
  - enh: log CUDA version

@@ -1,6 +1,8 @@
+from __future__ import annotations
+
 import collections
 import logging
-import multiprocessing as mp
+from multiprocessing.sharedctypes import Synchronized
 import pathlib
 import threading
 import time
@@ -13,12 +15,12 @@ from .writer import HDF5Writer
 
 class ChunkWriter(threading.Thread):
     def __init__(self,
-                 path_out: "pathlib.Path | h5py.File",
+                 path_out: pathlib.Path | h5py.File,  # type: ignore
                  dq: collections.deque,
-                 write_queue_size: mp.Value,
-                 ds_kwds: dict = None,
+                 write_queue_size: Synchronized,
+                 ds_kwds: dict | None = None,
                  mode: str = "a",
-                 parent_logger: logging.Logger = None,
+                 parent_logger: logging.Logger | None = None,
                  *args, **kwargs):
         """Convenience class for writing to data outside the main loop
 

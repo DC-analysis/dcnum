@@ -39,9 +39,13 @@ def haralick_texture_features(
     size = mask.shape[0]
 
     # compute features if necessary
-    if image_bg is not None and image is not None and image_corr is None:
-        # Background-corrected brightness values
-        image_corr = np.asarray(image, dtype=np.int16) - image_bg
+    if image_corr is None:
+        if image_bg is not None and image is not None:
+            # Background-corrected brightness values
+            image_corr = np.asarray(image, dtype=np.int16) - image_bg
+        else:
+            raise ValueError("Please specify either `image_cor` or both "
+                             "`image` and `image_bg`")
 
     tex_dict = {}
     empty = np.full(size, np.nan, dtype=np.float64)

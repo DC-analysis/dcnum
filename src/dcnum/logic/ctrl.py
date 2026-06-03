@@ -55,7 +55,7 @@ The states must be in logical order, not in alphabetical order.
 class DCNumJobRunner(threading.Thread):
     def __init__(self,
                  job: DCNumPipelineJob,
-                 tmp_suffix: str = None,
+                 tmp_suffix: str | None = None,
                  *args, **kwargs):
         """Run a pipeline as defined by a :class:`.job.DCNumPipelineJob`
 

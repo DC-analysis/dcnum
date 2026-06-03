@@ -4,7 +4,7 @@ import collections
 import hashlib
 import inspect
 import pathlib
-from typing import Protocol
+from typing import Protocol, Union
 import warnings
 
 import numpy as np
@@ -45,10 +45,12 @@ def compute_pipeline_hash(*, bg_id, seg_id, feat_id, gate_id,
 
 
 def convert_to_dtype(value, dtype):
-    if isinstance(dtype, str):
-        raise ValueError("Annotations are strings, pleace make sure to not "
-                         "import __annotations__ from future!")
-    elif dtype is bool:
+    """Convert an object to the correct dtype
+
+    If `dtype` is a Union of types, or a list of types, the first
+    non-NoneType type is used for conversion.
+    """
+    if dtype is bool:
         if isinstance(value, str):
             if value.lower() in ["true", "yes"]:
                 value = True
@@ -58,13 +60,27 @@ def convert_to_dtype(value, dtype):
     elif dtype in [pathlib.Path, pathlib.Path | str]:
         value = str(value)
     else:
-        value = dtype(value)
+        if isinstance(dtype, Union):
+            dtype = dtype.__args__
+        if isinstance(dtype, (list, tuple)):
+            for dtarg in dtype:
+                if dtarg is type(None) or dtarg is None:
+                    continue
+                else:
+                    value = dtarg(value)
+                    break
+            else:
+                raise ValueError(
+                    f"Could not convert {value=} of type {type(value)} "
+                    f"to type {dtype}")
+        else:
+            value = dtype(value)
     return value
 
 
 def get_class_method_info(class_obj: ClassWithPPIDCapabilities,
-                          static_kw_methods: list = None,
-                          static_kw_defaults: dict = None,
+                          static_kw_methods: list | None = None,
+                          static_kw_defaults: dict | None = None,
                           ):
     """Return dictionary of class info with static keyword methods docs
 
@@ -85,7 +101,7 @@ def get_class_method_info(class_obj: ClassWithPPIDCapabilities,
     """
     if static_kw_defaults is None:
         static_kw_defaults = {}
-    doc = class_obj.__doc__ or class_obj.__init__.__doc__
+    doc = class_obj.__doc__ or class_obj.__init__.__doc__ or ""
     info = {
         "code": class_obj.get_ppid_code(),
         "doc": doc,
@@ -102,6 +118,8 @@ def get_class_method_info(class_obj: ClassWithPPIDCapabilities,
             else:
                 defau[mm] = spec.kwonlydefaults or {}
             annot[mm] = spec.annotations
+            for k, v in annot[mm].items():
+                annot[mm][k] = simple_type_eval(v)
         info["defaults"] = defau
         info["annotations"] = annot
     return info
@@ -194,6 +212,30 @@ def ppid_to_kwargs(cls, method, ppid):
             else:
                 raise ValueError(f"Unknown abbreviated key '{abr_key}'!")
     return kwargs
+
+
+def simple_type_eval(type_string: str | type) -> str | type | list:
+    """Return the type encoded by a string, e.g. "bool" -> bool
+
+    If `type_string` is already a type, it is passed through.
+    If there is no rule to convert `type_string` to a type,
+    `type_string` is returned as-is.
+    If `type_string` represents a union of types (using '|'), then
+    a list of types is returned.
+    """
+    if isinstance(type_string, str):
+        type_string = type_string.strip()
+        if type_string.count("|"):
+            try:
+                return [simple_type_eval(ts) for ts in type_string.split("|")]
+            except BaseException:
+                pass
+        if type_string in ["bool", "dict", "float", "int", "str"]:
+            return eval(type_string)
+        elif type_string == "None":
+            return type(None)
+
+    return type_string
 
 
 class AbrvStr:

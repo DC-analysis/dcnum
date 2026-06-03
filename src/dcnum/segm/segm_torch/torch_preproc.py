@@ -4,7 +4,7 @@ import numpy as np
 def preprocess_images(images: np.ndarray,
                       norm_mean: float | None,
                       norm_std: float | None,
-                      image_shape: tuple[int, int] = None,
+                      image_shape: tuple[int, int] | None = None,
                       ):
     """Transform image data to something torch models expect
 
@@ -47,7 +47,7 @@ def preprocess_images(images: np.ndarray,
     batch_size = images.shape[0]
 
     # crop and pad the images based on what the model expects
-    image_shape_act = images.shape[1:]
+    image_shape_act: tuple[int, int] = images.shape[1:]
     if image_shape is None:
         # model fits perfectly to input data
         image_shape = image_shape_act

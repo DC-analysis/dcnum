@@ -66,9 +66,6 @@ class Background(abc.ABC):
         self.num_cpus = num_cpus
         """number of CPUs used"""
 
-        self.image_count = None
-        """number of images in the input data"""
-
         self.image_proc = mp_spawn.Value("d", 0)
         """fraction of images that have been processed"""
 
@@ -109,7 +106,7 @@ class Background(abc.ABC):
         """shape of event images"""
 
         self.image_count = len(self.input_data)
-        """total number of events"""
+        """number of images in the input data"""
 
         if self.h5out is None:
             if not output_path.exists():

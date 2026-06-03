@@ -14,7 +14,7 @@ class SegmentTorchMPO(TorchSegmenterBase, MPOSegmenter):
 
     @staticmethod
     def segment_algorithm(image, *,
-                          model_file: str = None):
+                          model_file: str | None = None):
         """
         Parameters
         ----------

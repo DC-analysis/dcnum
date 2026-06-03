@@ -1,14 +1,17 @@
+from __future__ import annotations
+
 from numba import njit, prange, bool_, float64, int16, uint8
 import numpy as np
+import numpy.typing as npt
 
 from .common import brightness_names
 
 
-def brightness_features(image: np.ndarray[np.uint8],
-                        mask: np.ndarray[np.bool_],
-                        image_bg: np.ndarray[np.uint8] = None,
-                        image_corr: np.ndarray[np.int16] = None,
-                        bg_off: float = None,
+def brightness_features(image: npt.NDArray[np.uint8],
+                        mask: npt.NDArray[np.bool_],
+                        image_bg: npt.NDArray[np.uint8] | None = None,
+                        image_corr: npt.NDArray[np.int16] | None = None,
+                        bg_off: float | None = None,
                         ):
     """Compute brightness features
 

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import abc
 import collections
 import functools
@@ -121,7 +123,7 @@ class BaseImageChunkCache(abc.ABC):
 
 class HDF5ImageCache(BaseImageChunkCache):
     def __init__(self,
-                 h5ds: "h5py.Dataset | MappedHDF5Dataset",
+                 h5ds: h5py.Dataset | MappedHDF5Dataset,  # type: ignore
                  chunk_size: int = 1000,
                  cache_size: int = 2,
                  boolean: bool = False):

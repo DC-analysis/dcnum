@@ -1,20 +1,26 @@
+from __future__ import annotations
+
 import logging
-import traceback
 from logging.handlers import QueueHandler
 import multiprocessing as mp
 import os
 import threading
 import time
+import traceback
+import typing
 
 from ..os_env_st import confirm_single_threaded
 
+
+if typing.TYPE_CHECKING:
+    from .slot_register import SlotRegister
 
 mp_spawn = mp.get_context("spawn")
 
 
 class UniversalWorker:
     def __init__(self,
-                 slot_register: "SlotRegister",  # noqa: F821
+                 slot_register: SlotRegister,
                  log_queue: "mp.Queue",
                  log_level: int = logging.INFO,
                  *args, **kwargs):

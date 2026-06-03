@@ -21,8 +21,8 @@ class MPOSegmenter(Segmenter, abc.ABC):
 
     def __init__(self,
                  *,
-                 num_workers: int = None,
-                 kwargs_mask: dict = None,
+                 num_workers: int | None = None,
+                 kwargs_mask: dict | None = None,
                  debug: bool = False,
                  **kwargs):
         """Segmenter with multiprocessing operation
@@ -138,7 +138,7 @@ class MPOSegmenter(Segmenter, abc.ABC):
 
     def segment_batch(self,
                       images: np.ndarray,
-                      bg_off: np.ndarray = None,
+                      bg_off: np.ndarray | None = None,
                       ):
         """Perform batch segmentation of `images`
 

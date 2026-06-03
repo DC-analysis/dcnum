@@ -51,7 +51,7 @@ class Segmenter(abc.ABC):
 
     def __init__(self,
                  *,
-                 kwargs_mask: dict = None,
+                 kwargs_mask: dict | None = None,
                  debug: bool = False,
                  **kwargs):
         """Base segmenter class
@@ -307,7 +307,7 @@ class Segmenter(abc.ABC):
 
     @staticmethod
     @abc.abstractmethod
-    def segment_algorithm(image):
+    def segment_algorithm(image) -> np.ndarray:
         """The segmentation algorithm implemented in the subclass
 
         Perform segmentation and return integer label or binary mask image
@@ -391,8 +391,8 @@ class Segmenter(abc.ABC):
     @classmethod
     def validate_applicability(cls,
                                segmenter_kwargs: dict,
-                               meta: dict = None,
-                               logs: dict = None):
+                               meta: dict | None = None,
+                               logs: dict | None = None):
         """Validate the applicability of this segmenter for a dataset
 
         Parameters

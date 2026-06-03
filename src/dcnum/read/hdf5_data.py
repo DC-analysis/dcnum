@@ -25,16 +25,16 @@ class BasinIdentifierMismatchError(BaseException):
 class HDF5Data:
     """HDF5 (.rtdc) input file data instance"""
     def __init__(self,
-                 path: "pathlib.Path | h5py.File | BinaryIO",
-                 pixel_size: float = None,
-                 md5_5m: str = None,
-                 meta: dict = None,
-                 basins: list[dict[list[str] | str]] = None,
-                 logs: dict[list[str]] = None,
-                 tables: dict[np.ndarray] = None,
+                 path: pathlib.Path | h5py.File | BinaryIO,  # type: ignore
+                 pixel_size: float | None = None,
+                 md5_5m: str | None = None,
+                 meta: dict | None = None,
+                 basins: list[dict[str, list[str] | str]] | None = None,
+                 logs: dict[str, list[str]] | None = None,
+                 tables: dict[str, np.ndarray] | None = None,
                  image_cache_size: int = 2,
                  image_chunk_size: int = 1000,
-                 index_mapping: int | slice | list | np.ndarray = None,
+                 index_mapping: int | slice | list | np.ndarray | None = None,
                  ):
         """
 
@@ -476,7 +476,7 @@ class HDF5Data:
         return kwargs
 
     def get_basin_data(self, index: int) -> tuple[
-            "h5py.Group",
+            h5py.Group,  # type: ignore
             list,
             int | slice | list | np.ndarray,
             ]:
@@ -644,7 +644,8 @@ def concatenated_hdf5_data(*args, **kwargs):
     return hdf5_concat.concatenated_hdf5_data(*args, **kwargs)
 
 
-def get_measurement_identifier(h5: "h5py.Group") -> str | None:
+def get_measurement_identifier(h5: h5py.Group  # type: ignore
+                               ) -> str | None:
     """Return the measurement identifier for the given H5File object
 
     The basin identifier is taken from the HDF5 attributes. If the

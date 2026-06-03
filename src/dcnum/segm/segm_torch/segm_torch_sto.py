@@ -99,9 +99,9 @@ class SegmentTorchSTO(TorchSegmenterBase, STOSegmenter):
 
     @staticmethod
     def segment_algorithm(images,
-                          gpu_id=None,
+                          gpu_id: str | None = None,
                           *,
-                          model_file: str = None):
+                          model_file: str | None = None):
         """
         Parameters
         ----------

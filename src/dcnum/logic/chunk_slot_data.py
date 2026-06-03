@@ -140,7 +140,7 @@ class ChunkSlotData:
 
     def acquire_task_lock(self,
                           req_state: str,
-                          batch_size: int = None
+                          batch_size: int | None = None
                           ) -> tuple[int, int]:
         """Acquire the lock for performing a task
 
