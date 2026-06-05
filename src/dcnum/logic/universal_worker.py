@@ -9,7 +9,7 @@ import time
 import traceback
 import typing
 
-from ..os_env_st import confirm_single_threaded
+from ..os_env_st import RequestSingleThreaded, confirm_single_threaded
 
 
 if typing.TYPE_CHECKING:
@@ -84,7 +84,15 @@ class UniversalWorker:
                 # Load data into memory for all available slots
                 did_something |= sr.task_load_all(logger=logger)
 
-                # Perform feature extraction
+                # Segmentation is not handled by UniversalWorker
+
+                # After segmentation, perform mask to label conversion
+                did_something |= sr.task_label_masks(logger=logger)
+
+                # After labeling, perform label processing
+                did_something |= sr.task_process_labels(logger=logger)
+
+                # Finally, perform feature extraction
                 did_something |= sr.task_extract_features(logger=logger)
             except BaseException:
                 logger.error(traceback.format_exc())
@@ -119,3 +127,9 @@ class UniversalWorkerProcess(UniversalWorker, mp_spawn.Process):
     def __init__(self, *args, **kwargs):
         super(UniversalWorkerProcess, self).__init__(
             name="UniversalWorkerProcess", *args, **kwargs)
+
+    def start(self):
+        # Set all relevant os environment variables such libraries in the
+        # new process only use single-threaded computation.
+        with RequestSingleThreaded():
+            mp_spawn.Process.start(self)

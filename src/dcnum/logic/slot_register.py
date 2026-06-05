@@ -8,13 +8,16 @@ import traceback
 
 import numpy as np
 
+from ..common import LazyLoader
 from ..feat import Gate, QueueEventExtractor
 from ..read import HDF5Data
+from ..segm.segmenter import STRUCTURING_ELEMENT
 
 from .chunk_slot import ChunkSlot, ChunkSlotData
 from .job import DCNumPipelineJob
 
 
+ndi = LazyLoader("scipy.ndimage")
 mp_spawn = mp.get_context("spawn")
 
 
@@ -55,8 +58,10 @@ class SlotRegister:
         self._slots = []
 
         self.timers = {
+            "task_load_all": mp_spawn.Value("d", 0.0),
+            "task_label_masks": mp_spawn.Value("d", 0.0),
+            "task_process_labels": mp_spawn.Value("d", 0.0),
             "task_extract_features": mp_spawn.Value("d", 0.0),
-            "task_load_all": mp_spawn.Value("d", 0.0)
         }
 
         # Counters are created with recursive locks, which means that the
@@ -256,65 +261,9 @@ class SlotRegister:
                                next_state=next_state,
                                batch_size=batch_size)
 
-    @count_time()
-    def task_extract_features(self,
-                              logger: logging.Logger | None = None
-                              ) -> bool:
-        """Perform feature extraction for a `ChunkSlot`
-
-        This method is process-safe. Multiple processes may call it
-        concurrently, working on the same `ChunkSlot`.
-
-        Returns
-        -------
-        did_something : bool
-            Whether events were extracted
-        """
-        did_something = False
-        cs = self.find_slot(state="e")
-
-        logger = logger or logging.getLogger(__name__)
-
-        # Extract all features from this ChunkSlot
-        batch_size = 10
-        if cs is not None and cs.state == "e":
-            extractor = QueueEventExtractor(
-                slot_register=self,
-                pixel_size=self.data.pixel_size,
-                gate=Gate(self.data, **self.job["gate_kwargs"]),
-                event_queue=self.event_queue,
-                extract_kwargs=self.job["feature_kwargs"],
-                logger=logger,
-            )
-
-            while True:
-                state_warden = self.reserve_slot_for_task(
-                    current_state="e",
-                    next_state="i",
-                    chunk_slot=cs,
-                    batch_size=batch_size)
-                if state_warden is not None and state_warden.batch_size:
-                    with state_warden as (_, batch_range):
-                        for idx in range(*batch_range):
-                            index = cs.chunk * self.chunk_size + idx
-                            try:
-                                events = extractor.process_label(index=index)
-                            except BaseException:
-                                logger.error(traceback.format_exc())
-                            else:
-                                if events:
-                                    key0 = list(events.keys())[0]
-                                    nevents = len(events[key0])
-                                    self.feat_nevents[index] = nevents
-                                else:
-                                    self.feat_nevents[index] = 0
-                                self.event_queue.put((index, events))
-
-                    did_something = True
-                else:
-                    break
-
-        return did_something
+    ##############################################################
+    # Tasks (ordered according to their sequence of application) #
+    ##############################################################
 
     @count_time()
     def task_load_all(self,
@@ -371,6 +320,151 @@ class SlotRegister:
                     logger.error(traceback.format_exc())
             finally:
                 lock.release()
+        return did_something
+
+    @count_time()
+    def task_label_masks(self,
+                         logger: logging.Logger | None = None
+                         ) -> bool:
+        """Perform labeling of mask images for a `ChunkSlot`
+
+        This method is process-safe. Multiple processes may call it
+        concurrently, working on the same `ChunkSlot`.
+
+        Returns
+        -------
+        did_something : bool
+            Whether masks where converted to labels
+        """
+        did_something = False
+        cs = self.find_slot(state="m")
+
+        logger = logger or logging.getLogger(__name__)
+
+        # Comput labels from this ChunkSlot
+        batch_size = 100
+        if cs is not None and cs.state == "m":
+            while True:
+                state_warden = self.reserve_slot_for_task(
+                    current_state="m",
+                    next_state="l",
+                    chunk_slot=cs,
+                    batch_size=batch_size)
+                if state_warden is not None and state_warden.batch_size:
+                    with state_warden as (_, batch_range):
+                        for idx in range(*batch_range):
+                            cs.labels[idx], _ = ndi.label(
+                                input=cs.mask[idx],
+                                structure=STRUCTURING_ELEMENT)
+                    did_something = True
+                else:
+                    break
+
+        return did_something
+
+    @count_time()
+    def task_process_labels(self,
+                            logger: logging.Logger | None = None
+                            ) -> bool:
+        """Perform label processing (e.g. binary closing) for a `ChunkSlot`
+
+        This method is process-safe. Multiple processes may call it
+        concurrently, working on the same `ChunkSlot`.
+
+        Returns
+        -------
+        did_something : bool
+            Whether labels were processed
+        """
+        did_something = False
+        cs = self.find_slot(state="l")
+
+        logger = logger or logging.getLogger(__name__)
+
+        # Comput labels from this ChunkSlot
+        batch_size = 100
+        if cs is not None and cs.state == "l":
+            while True:
+                state_warden = self.reserve_slot_for_task(
+                    current_state="l",
+                    next_state="e",
+                    chunk_slot=cs,
+                    batch_size=batch_size)
+                if state_warden is not None and state_warden.batch_size:
+                    with state_warden as (_, batch_range):
+                        # TODO: This segmentation juggling looks clunky.
+                        km = self.job.kwargs["segmenter_kwargs"]["kwargs_mask"]
+                        segm = self.job.get_segmenter_class()(kwargs_mask=km)
+                        if segm.mask_postprocessing:
+                            for idx in range(*batch_range):
+                                cs.labels[idx] = \
+                                    segm.process_labels(cs.labels[idx],
+                                                        **segm.kwargs_mask)
+                        segm.close()
+                    did_something = True
+                else:
+                    break
+
+        return did_something
+
+    @count_time()
+    def task_extract_features(self,
+                              logger: logging.Logger | None = None
+                              ) -> bool:
+        """Perform feature extraction for a `ChunkSlot`
+
+        This method is process-safe. Multiple processes may call it
+        concurrently, working on the same `ChunkSlot`.
+
+        Returns
+        -------
+        did_something : bool
+            Whether events were extracted
+        """
+        did_something = False
+        cs = self.find_slot(state="e")
+
+        logger = logger or logging.getLogger(__name__)
+
+        # Extract features from this ChunkSlot
+        batch_size = 10
+        if cs is not None and cs.state == "e":
+            extractor = QueueEventExtractor(
+                slot_register=self,
+                pixel_size=self.data.pixel_size,
+                gate=Gate(self.data, **self.job["gate_kwargs"]),
+                event_queue=self.event_queue,
+                extract_kwargs=self.job["feature_kwargs"],
+                logger=logger,
+            )
+
+            while True:
+                state_warden = self.reserve_slot_for_task(
+                    current_state="e",
+                    next_state="i",
+                    chunk_slot=cs,
+                    batch_size=batch_size)
+                if state_warden is not None and state_warden.batch_size:
+                    with state_warden as (_, batch_range):
+                        for idx in range(*batch_range):
+                            index = cs.chunk * self.chunk_size + idx
+                            try:
+                                events = extractor.process_label(index=index)
+                            except BaseException:
+                                logger.error(traceback.format_exc())
+                            else:
+                                if events:
+                                    key0 = list(events.keys())[0]
+                                    nevents = len(events[key0])
+                                    self.feat_nevents[index] = nevents
+                                else:
+                                    self.feat_nevents[index] = 0
+                                self.event_queue.put((index, events))
+
+                    did_something = True
+                else:
+                    break
+
         return did_something
 
 

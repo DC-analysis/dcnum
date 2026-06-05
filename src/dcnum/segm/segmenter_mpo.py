@@ -8,7 +8,7 @@ import numpy as np
 from ..common import cpu_count, start_workers_threaded
 from ..os_env_st import RequestSingleThreaded, confirm_single_threaded
 
-from .segmenter import Segmenter, assert_labels
+from .segmenter import Segmenter
 
 
 # All subprocesses should use 'spawn' to avoid issues with threads
@@ -186,7 +186,7 @@ class MPOSegmenter(Segmenter, abc.ABC):
         cs.chunk = 0
 
         self.segment_chunk(0, [cs])
-        return cs.labels[:]
+        return cs.mask[:]
 
     def segment_chunk(self,
                       chunk: int,  # noqa: F821
@@ -203,8 +203,8 @@ class MPOSegmenter(Segmenter, abc.ABC):
 
         Returns
         -------
-        labels: np.array
-            The `chunk_slot.labels` numpy view on the shared labels array.
+        mask: np.array
+            The `chunk_slot.mask` numpy view on the shared boolean mask array.
         """
         self.mp_active.clear()
 
@@ -238,10 +238,10 @@ class MPOSegmenter(Segmenter, abc.ABC):
             time.sleep(.01)
 
         self.mp_active.clear()
-        return cs.labels
+        return cs.mask
 
-    def segment_single(self, image, bg_off: float = None):
-        """Return the integer label image for an input image
+    def segment_single(self, image, bg_off: float | None = None):
+        """Return the boolean mask image for an input image
 
         Before segmentation, an optional background offset correction with
         ``bg_off`` is performed. After segmentation, mask postprocessing is
@@ -253,15 +253,10 @@ class MPOSegmenter(Segmenter, abc.ABC):
         if bg_off is not None:
             image = image - bg_off
 
-        # obtain mask or label
-        mol = segm_wrap(image)
+        # obtain mask
+        mask = segm_wrap(image)
 
-        # optional mask/label postprocessing
-        if self.mask_postprocessing:
-            labels = self.process_labels(mol, **self.kwargs_mask)
-        else:
-            labels = assert_labels(mol)
-        return labels
+        return mask
 
     def close(self):
         self.join_workers()
@@ -335,7 +330,7 @@ class MPOSegmenterWorker:
                     # Iterate over the chunks in that slot
                     for idx in range(self.sl_start,
                                      min(self.sl_stop, cs.length)):
-                        cs.labels[idx] = self.segmenter.segment_single(
+                        cs.mask[idx] = self.segmenter.segment_single(
                             image=images[idx],
                             bg_off=None if bg_offs is None else bg_offs[idx],
                         )

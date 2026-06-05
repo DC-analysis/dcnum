@@ -1026,7 +1026,7 @@ def test_simple_pipeline_bg_off_thresh_segmenter():
             assert len(fidx), "make sure we have something to test against"
 
             # sanity check for mask
-            labels_sc = segmenter.segment_single(
+            labels_sc = segmenter.segment_single_with_labeling(
                 image=hd.image_corr[fidx[0]+10],
                 bg_off=hd["bg_off"][fidx[0]+10])
             for ii in range(1, np.max(labels_sc) + 1):
@@ -1036,7 +1036,7 @@ def test_simple_pipeline_bg_off_thresh_segmenter():
                 assert False, f"Sanity mask {fidx[0] + 10} not matching"
 
             # check the masks by reproducing the segmentation
-            labels = segmenter.segment_single(
+            labels = segmenter.segment_single_with_labeling(
                 image=hd.image_corr[fidx[0]],
                 bg_off=hd["bg_off"][fidx[0]])
 

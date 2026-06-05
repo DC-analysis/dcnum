@@ -40,9 +40,9 @@ def test_segm_sto_bg_off_batch():
                                        "fill_holes": True,
                                        "closing_disk": 0,
                                        })
-    labels = sm.segment_batch(images=np.array([img, img]),
-                              bg_off=np.array([1.5, 0.9])
-                              )
+    labels = sm.segment_batch_with_labeling(images=np.array([img, img]),
+                                            bg_off=np.array([1.5, 0.9])
+                                            )
     label1_exp = np.array([
         [0, 0, 0, 0, 0, 0, 0, 0],
         [0, 0, 0, 1, 1, 1, 0, 0],
@@ -84,7 +84,8 @@ def test_segm_sto_bg_off_no_background_correction():
 
     im = MockImageData()
     with pytest.raises(ValueError, match="does not employ background"):
-        sg.segment_batch(im.get_chunk(1), bg_off=np.ones(100, dtype=float))
+        sg.segment_batch_with_labeling(
+            im.get_chunk(1), bg_off=np.ones(100, dtype=float))
 
 
 def test_segm_sto_bg_off_single():
@@ -106,7 +107,7 @@ def test_segm_sto_bg_off_single():
                                        "fill_holes": True,
                                        "closing_disk": 0,
                                        })
-    label1 = sm.segment_single(image=img, bg_off=1.5)
+    label1 = sm.segment_single_with_labeling(image=img, bg_off=1.5)
     label1_exp = np.array([
         [0, 0, 0, 0, 0, 0, 0, 0],
         [0, 0, 0, 1, 1, 1, 0, 0],
@@ -123,7 +124,7 @@ def test_segm_sto_bg_off_single():
 
     assert np.all(label1 == label1_exp)
 
-    label2 = sm.segment_single(image=img, bg_off=0.9)
+    label2 = sm.segment_single_with_labeling(image=img, bg_off=0.9)
     label2_exp = np.array([
         [0, 0, 0, 0, 0, 0, 0, 0],
         [0, 0, 0, 0, 0, 0, 0, 0],
@@ -167,7 +168,7 @@ def test_segmenter_sto_labeled_mask_fill_holes():
                                         "fill_holes": True,
                                         "closing_disk": 0,
                                         })
-    labels1 = sm1.segment_single(-10 * mask)
+    labels1 = sm1.segment_single_with_labeling(-10 * mask)
     assert np.sum(labels1 != 0) == 32
     assert len(np.unique(labels1)) == 3  # (bg, filled, other)
     assert np.sum(labels1 == 1) == 9
@@ -178,7 +179,7 @@ def test_segmenter_sto_labeled_mask_fill_holes():
                                         "fill_holes": False,
                                         "closing_disk": 0,
                                         })
-    labels2 = sm2.segment_single(-10 * mask)
+    labels2 = sm2.segment_single_with_labeling(-10 * mask)
     _, l2a, l2b = np.unique(labels2)
     assert np.sum(labels2 != 0) == 23
     assert len(np.unique(labels2)) == 3  # (bg, filled, other)
@@ -189,7 +190,7 @@ def test_segmenter_sto_labeled_mask_fill_holes():
                                         "fill_holes": False,
                                         "closing_disk": 0,
                                         })
-    labels3 = sm3.segment_single(-10 * mask)
+    labels3 = sm3.segment_single_with_labeling(-10 * mask)
     assert np.sum(labels3 != 0) == 31
     assert len(np.unique(labels3)) == 4  # (bg, filled, border, other)
     assert np.sum(labels3 == 1) == 8
@@ -200,7 +201,7 @@ def test_segmenter_sto_labeled_mask_fill_holes():
                                         "fill_holes": True,
                                         "closing_disk": 0,
                                         })
-    labels4 = sm4.segment_single(-10 * mask)
+    labels4 = sm4.segment_single_with_labeling(-10 * mask)
     assert np.sum(labels4 != 0) == 40
     assert len(np.unique(labels4)) == 4  # (bg, filled, border, other)
     assert np.sum(labels4 == 1) == 9
@@ -227,7 +228,8 @@ def test_segmenter_sto_labeled_mask_fill_holes_int32():
     ], dtype=bool)
 
     sm1 = MockSTOSegmenter()
-    labels = np.array(sm1.segment_single(-10 * mask), dtype=np.int64)
+    labels = np.array(
+        sm1.segment_single_with_labeling(-10 * mask), dtype=np.int64)
     assert len(labels.shape) == 2
     # sanity checks
     assert labels.dtype == np.int64
@@ -244,7 +246,7 @@ def test_segm_sto_mask_postprocessing_removed_border_fill_holes():
     sg = MockSTOSegmenter()
     im = MockImageData()
     assert sg.mask_postprocessing
-    labels = sg.segment_batch(im.get_chunk(1))
+    labels = sg.segment_batch_with_labeling(im.get_chunk(1))
     assert labels.shape == (100, 14, 8)
     label = labels[0]
 
@@ -271,7 +273,7 @@ def test_segm_sto_mask_postprocessing_removed_border_no_fill_holes():
     sg = MockSTOSegmenter(kwargs_mask={"fill_holes": False})
     im = MockImageData()
     assert sg.mask_postprocessing
-    labels = sg.segment_batch(im.get_chunk(1))
+    labels = sg.segment_batch_with_labeling(im.get_chunk(1))
     assert labels.shape == (100, 14, 8)
     label = labels[0]
 

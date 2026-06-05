@@ -2,7 +2,7 @@ import abc
 
 import numpy as np
 
-from .segmenter import Segmenter, assert_labels
+from .segmenter import Segmenter
 
 
 class STOSegmenter(Segmenter, abc.ABC):
@@ -68,27 +68,10 @@ class STOSegmenter(Segmenter, abc.ABC):
                                  f"your analysis pipeline.")
             images = images - bg_off.reshape(-1, 1, 1)
 
-        # obtain masks or labels
-        mols = segm(images)
+        # obtain masks
+        mask = segm(images)
 
-        # Put everything into a uint16 array
-        if mols.dtype == bool:
-            # Create output array
-            labels = np.zeros_like(mols, dtype=np.uint16)
-        else:
-            # Modification in-place
-            labels = np.asarray(mols, dtype=np.uint16)
-
-        # TODO: Parallelize this
-        # Perform mask postprocessing
-        if self.mask_postprocessing:
-            for ii in range(len(labels)):
-                labels[ii] = self.process_labels(mols[ii], **self.kwargs_mask)
-        else:
-            for ii in range(len(labels)):
-                labels[ii] = assert_labels(mols[ii])
-
-        return labels
+        return mask
 
     def segment_single(self, image, bg_off: float | None = None):
         """This is a convenience-wrapper around `segment_batch`"""

@@ -57,18 +57,18 @@ class SegmentTorchMPO(TorchSegmenterBase, MPOSegmenter):
 
         # Convert cuda-tensor into numpy mask array. The `pred_tensor`
         # array is still of the shape (1, 1, H, W). The `masks`
-        # array is of shape (1, H, W). We can optionally label it
-        # here (we have to if the shapes don't match) or do it in
-        # postprocessing.
-        masks = pred_tensor.detach().cpu().numpy()[0] >= 0.5
+        # array is of shape (1, H, W).
+        mask = pred_tensor.detach().cpu().numpy()[0] >= 0.5
 
         # Perform postprocessing in cases where the image shapes don't match
-        assert len(masks[0].shape) == len(image.shape), "sanity check"
-        if masks[0].shape != image.shape:
+        assert len(mask[0].shape) == len(image.shape), "sanity check"
+        if mask[0].shape != image.shape:
+            # This is inefficient, because `postprocess_masks` requires
+            # us to convert mask to labels.
             labels = postprocess_masks(
-                masks=masks,
+                masks=mask,
                 original_image_shape=image.shape,
             )
-            return labels[0]
+            return labels[0] > 0
         else:
-            return masks[0]
+            return mask[0]

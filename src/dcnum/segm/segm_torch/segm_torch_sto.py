@@ -44,7 +44,7 @@ class SegmentTorchSTO(TorchSegmenterBase, STOSegmenter):
     def _segment_in_batches(images, model, model_meta, device):
         """Segment image data in batches
 
-        Return mask or label array with same shape as `images`.
+        Return mask array with same shape as `images`.
         """
         size = len(images)
 
@@ -61,7 +61,7 @@ class SegmentTorchSTO(TorchSegmenterBase, STOSegmenter):
                                        **model_meta["preprocessing"])
 
         # Create empty array to fill up with segmented batches
-        masks = np.empty((size, *batch_next.shape[-2:]), dtype=bool)
+        mask = np.empty((size, *batch_next.shape[-2:]), dtype=bool)
 
         for start_idx in range(0, size, batch_size):
             # Move image tensors to cuda
@@ -85,17 +85,19 @@ class SegmentTorchSTO(TorchSegmenterBase, STOSegmenter):
             batch_seg_bool = batch_seg_bool.squeeze(1)
             # Convert cuda-tensor to numpy array and fill masks array
             # (This will lock until the GPU computation is complete).
-            masks[start_idx:start_idx + batch_size] \
+            mask[start_idx:start_idx + batch_size] \
                 = batch_seg_bool.detach().cpu().numpy()
 
         # Perform postprocessing in cases where the image shapes don't match
-        if masks.shape[1:] != images.shape[1:]:
+        if mask.shape[1:] != images.shape[1:]:
+            # This is inefficient, because `postprocess_masks` requires
+            # us to convert mask to labels.
             labels = postprocess_masks(
-                masks=masks,
+                masks=mask,
                 original_image_shape=images.shape[1:])
-            return labels
+            return labels > 0
         else:
-            return masks
+            return mask
 
     @staticmethod
     def segment_algorithm(images,
@@ -117,7 +119,7 @@ class SegmentTorchSTO(TorchSegmenterBase, STOSegmenter):
         Returns
         -------
         mask: 2d boolean or integer ndarray
-            mask or label images of shape (N, H, W)
+            mask images of shape (N, H, W)
         """
         if model_file is None:
             raise ValueError("Please specify a .dcnm model file!")
@@ -131,11 +133,11 @@ class SegmentTorchSTO(TorchSegmenterBase, STOSegmenter):
         # Model inference
         # The `masks` array has the shape (len(images), H, W), where
         # H and W may be different from the corresponding axes in `images`.
-        mol = SegmentTorchSTO._segment_in_batches(
+        mask = SegmentTorchSTO._segment_in_batches(
             images=images,
             model=model,
             model_meta=model_meta,
             device=device,
         )
 
-        return mol
+        return mask

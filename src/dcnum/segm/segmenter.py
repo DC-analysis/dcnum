@@ -310,7 +310,7 @@ class Segmenter(abc.ABC):
     def segment_algorithm(image) -> np.ndarray:
         """The segmentation algorithm implemented in the subclass
 
-        Perform segmentation and return integer label or binary mask image
+        Perform segmentation and return boolean mask image
         """
 
     @functools.cache
@@ -333,10 +333,23 @@ class Segmenter(abc.ABC):
 
     @abc.abstractmethod
     def segment_batch(self, images, bg_off=None):
-        """Return the integer labels for an entire batch
+        """Return the bollean mask for an entire batch
 
         This is implemented in the MPO and STO segmenters.
         """
+
+    def segment_batch_with_labeling(self, images, bg_off=None):
+        """Return the processed label image for an image batch
+
+        This is intended for testing only. The logic pipeline uses
+        UniversalWorkers to perform labeling and label processing.
+        """
+        mask = self.segment_batch(images, bg_off=bg_off)
+        labels = np.zeros_like(images, dtype=np.uint16)
+        for ii in range(len(mask)):
+            label, _ = ndi.label(mask[ii], structure=STRUCTURING_ELEMENT)
+            labels[ii] = self.process_labels(label, **self.kwargs_mask)
+        return labels
 
     def segment_chunk(self,
                       chunk: int,  # noqa: F821
@@ -346,7 +359,8 @@ class Segmenter(abc.ABC):
 
         This is a wrapper for `segment_batch`. The image information
         are extracted from the `chunk_slot.image`/`chunk_slot.image_corr`
-        properties and the labels are written to ``chunk_slot.labels`.
+        properties and the boolean mask arrays are written to
+        ``chunk_slot.mask`.
 
         Parameters
         ----------
@@ -355,8 +369,8 @@ class Segmenter(abc.ABC):
 
         Returns
         -------
-        labels: np.array
-            The `chunk_slot.labels` numpy view on the shared labels array.
+        mask: np.array
+            The `chunk_slot.mask` numpy view on the shared mask array.
         """
         # Find the slot that we are supposed to be working on.
         for cs in slot_list:
@@ -372,17 +386,25 @@ class Segmenter(abc.ABC):
             images = cs.image
             bg_off = None
 
-        labels = cs.labels
-
-        labels[:] = self.segment_batch(images, bg_off=bg_off)
-        return labels
+        cs.mask[:] = self.segment_batch(images, bg_off=bg_off)
+        return cs.mask
 
     @abc.abstractmethod
-    def segment_single(self, image):
-        """Return the integer label for one image
+    def segment_single(self, image, bg_off: float | None = None):
+        """Return the boolean mask for one image
 
         This is implemented in the MPO and STO segmenters.
         """
+
+    def segment_single_with_labeling(self, image, bg_off=None):
+        """Return the processed label image for one image
+
+        This is intended for testing only. The logic pipeline uses
+        UniversalWorkers to perform labeling and label processing.
+        """
+        mask = self.segment_single(image, bg_off=bg_off)
+        label, _ = ndi.label(mask, structure=STRUCTURING_ELEMENT)
+        return self.process_labels(label, **self.kwargs_mask)
 
     def close(self):
         """Subclasses can implement clean-up code here"""

@@ -5,7 +5,7 @@ import hashlib
 import json
 import numbers
 import pathlib
-from typing import BinaryIO
+from typing import Any, BinaryIO
 import uuid
 import warnings
 
@@ -185,7 +185,7 @@ class HDF5Data:
         self._len = state.get("len", None)
         # Image cache
         if not hasattr(self, "_image_cache"):
-            self._image_cache = {}
+            self._image_cache: dict[str, Any] = {}
         # Basin data
         if not hasattr(self, "_basin_data"):
             self._basin_data = {}
@@ -294,15 +294,15 @@ class HDF5Data:
         return self._h5
 
     @property
-    def image(self):
+    def image(self) -> HDF5ImageCache | None:
         return self.get_image_cache("image")
 
     @property
-    def image_bg(self):
+    def image_bg(self) -> HDF5ImageCache | None:
         return self.get_image_cache("image_bg")
 
     @property
-    def image_corr(self):
+    def image_corr(self) -> ImageCorrCache | None:
         if "image_corr" not in self._image_cache:
             if self.image is not None and self.image_bg is not None:
                 image_corr = ImageCorrCache(self.image, self.image_bg)

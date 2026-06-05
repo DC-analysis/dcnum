@@ -77,7 +77,7 @@ class ChunkSlotData:
         - "0": construction of instance
         - "i": image loading (populates image, image_bg, image_corr, bg_off)
         - "s": segmentation (populates mask or labels)
-        - "m": mask processing (takes data from mask and populates labels)
+        - "m": mask labeling (takes mask and populates labels)
         - "l": label processing (modifies labels in-place)
         - "e": feature extraction (requires labels)
         - "w": writing
@@ -86,7 +86,7 @@ class ChunkSlotData:
 
         The pipeline workflow is:
 
-            "0" -> "i" -> "s" -> "m" or "l" -> "e" -> "w" -> "d" -> "i" ...
+            "0" -> "i" -> "s" -> "m" -> "l" -> "e" -> "w" -> "d" -> "i" ...
         """
         return self._state.value
 
@@ -109,7 +109,7 @@ class ChunkSlotData:
 
     @property
     def image(self):
-        """Return numpy view on image data"""
+        """numpy view on image data"""
         # Convert the RawArray to something we can write to fast
         # (similar to memory view, but without having to cast) using
         # np.ctypeslib.as_array. See discussion in
@@ -118,7 +118,7 @@ class ChunkSlotData:
 
     @property
     def image_bg(self):
-        """Return numpy view on background image data"""
+        """numpy view on background image data"""
         if self.mp_image_bg is not None:
             return np.ctypeslib.as_array(self.mp_image_bg).reshape(self.shape)
         else:
@@ -126,7 +126,7 @@ class ChunkSlotData:
 
     @property
     def image_corr(self):
-        """Return numpy view on background-corrected image data"""
+        """numpy view on background-corrected image data"""
         if self.mp_image_corr is not None:
             return np.ctypeslib.as_array(
                 self.mp_image_corr).reshape(self.shape)
@@ -135,8 +135,15 @@ class ChunkSlotData:
 
     @property
     def labels(self):
+        """numpy view on the labeling data"""
         return np.ctypeslib.as_array(
             self.mp_labels).reshape(self.shape)
+
+    @property
+    def mask(self):
+        """numpy view on the boolean, unlabeled mask data"""
+        return np.ctypeslib.as_array(
+            self.mp_mask).reshape(self.shape)
 
     def acquire_task_lock(self,
                           req_state: str,

@@ -783,6 +783,14 @@ class DCNumJobRunner(threading.Thread):
             f"{slot_register.get_time('task_load_all'):.1f}s")
 
         self.logger.info(
+            f"Labeling time: "
+            f"{slot_register.get_time('task_label_masks'):.1f}s")
+
+        self.logger.info(
+            f"Label processing time: "
+            f"{slot_register.get_time('task_process_labels'):.1f}s")
+
+        self.logger.info(
             f"Feature extraction time: "
             f"{slot_register.get_time('task_extract_features'):.1f}s")
 
@@ -801,8 +809,7 @@ class DCNumJobRunner(threading.Thread):
         # join threads
         join_worker(worker=thr_uw,
                     logger=self.logger,
-                    name="worker starter"
-                    )
+                    name="worker starter")
         join_worker(worker=worker_segm,
                     logger=self.logger,
                     name="segmentation")

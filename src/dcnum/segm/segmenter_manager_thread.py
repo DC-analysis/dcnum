@@ -71,7 +71,7 @@ class SegmenterManagerThread(threading.Thread):
                 # (preloaded from disk by UniversalWorker)
                 state_warden = self.slot_register.reserve_slot_for_task(
                     current_state="s",
-                    next_state="e"
+                    next_state="m"
                 )
                 if state_warden is None or state_warden.batch_size == 0:
                     time.sleep(.01)
@@ -88,7 +88,7 @@ class SegmenterManagerThread(threading.Thread):
                                      f"({state_warden.batch_size=} vs. "
                                      f"{cs.length=})")
 
-                # `segment_chunk` populates the `cs.labels` array.
+                # `segment_chunk` populates the `cs.mask` array.
                 self.segmenter.segment_chunk(cs.chunk,
                                              self.slot_register.slots)
             self.logger.debug(f"Segmented chunk {chunk} in slot {cs}")

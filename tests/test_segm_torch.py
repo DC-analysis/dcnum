@@ -186,7 +186,7 @@ def test_segm_torch_mpo():
     assert sm.get_ppid() == f"torchmpo:m={model_file.name}:cle=1^f=1^clo=0"
 
     with read.HDF5Data(path) as hd:
-        labels_seg = sm.segment_single(hd.image[0])
+        labels_seg = sm.segment_single_with_labeling(hd.image[0])
         assert np.all(np.unique(labels_seg) == [0, 1, 2])
         assert np.sum(labels_seg == 0) == 24194  # background
         assert np.sum(labels_seg == 1) == 831  # first label

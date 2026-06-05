@@ -21,20 +21,20 @@ hdf5plugin = LazyLoader("hdf5plugin")
 class DCNumPipelineJob:
     def __init__(self,
                  path_in: pathlib.Path | str,
-                 path_out: pathlib.Path | str = None,
+                 path_out: pathlib.Path | str | None = None,
                  data_code: str = "hdf",
-                 data_kwargs: dict = None,
+                 data_kwargs: dict | None = None,
                  background_code: str = "sparsemed",
-                 background_kwargs: dict = None,
+                 background_kwargs: dict | None = None,
                  segmenter_code: str = "thresh",
-                 segmenter_kwargs: dict = None,
+                 segmenter_kwargs: dict | None = None,
                  feature_code: str = "legacy",
-                 feature_kwargs: dict = None,
+                 feature_kwargs: dict | None = None,
                  gate_code: str = "norm",
-                 gate_kwargs: dict = None,
+                 gate_kwargs: dict | None = None,
                  basin_strategy: Literal["drain", "tap"] = "drain",
                  compression: str = "zstd-5",
-                 num_procs: int = None,
+                 num_procs: int | None = None,
                  log_level: int = logging.INFO,
                  debug: bool = False,
                  ):
@@ -102,7 +102,7 @@ class DCNumPipelineJob:
             if arg == "self":
                 continue
             value = locs[arg]
-            if value is None and spec.annotations[arg] is dict:
+            if value is None and spec.annotations[arg] == dict | None:
                 value = {}
             self.kwargs[arg] = value
         # Set default pixel size for this job
@@ -209,6 +209,10 @@ class DCNumPipelineJob:
             ret = ret[0]
         return ret
 
+    def get_segmenter_class(self):
+        """Return the class of the segmenter associated with this job"""
+        return get_segmenters()[self.kwargs["segmenter_code"]]
+
     def validate(self):
         """Make sure the pipeline will run given the job kwargs
 
@@ -223,7 +227,7 @@ class DCNumPipelineJob:
             the segmenter is incompatible with the input path
         """
         # Check segmenter applicability applicability
-        seg_cls = get_segmenters()[self.kwargs["segmenter_code"]]
+        seg_cls = self.get_segmenter_class()
         with HDF5Data(self.kwargs["path_in"]) as hd:
             seg_cls.validate_applicability(
                 segmenter_kwargs=self.kwargs["segmenter_kwargs"],

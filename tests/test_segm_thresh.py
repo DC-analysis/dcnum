@@ -42,7 +42,7 @@ def test_segm_thresh_basic():
     assert sm.requires_background_correction
 
     for ii in range(len(frame_u)):
-        labels_seg = sm.segment_single(image_u_c[ii])
+        labels_seg = sm.segment_single_with_labeling(image_u_c[ii])
         mask_seg = np.array(labels_seg, dtype=bool)
         # Remove small objects, because this is not implemented in the
         # segmenter class as it would be part of gating.
@@ -84,7 +84,7 @@ def test_segm_thresh_segment_batch(worker_type):
 
     sm = segm.segm_thresh.SegmentThresh(debug=debug)
 
-    labels_seg = sm.segment_batch(image_u_c, bg_off=bg_off_u)
+    labels_seg = sm.segment_batch_with_labeling(image_u_c, bg_off=bg_off_u)
     # tell workers to stop
     sm.join_workers()
 
@@ -109,7 +109,7 @@ def test_segm_thresh_segment_batch_large(worker_type):
                                         kwargs_mask={"closing_disk": 0},
                                         debug=debug)
 
-    labels_seg_1 = np.copy(sm.segment_batch(images)[:101])
+    labels_seg_1 = np.copy(sm.segment_batch_with_labeling(images)[:101])
 
     assert labels_seg_1.dtype == np.uint16  # uint8 is not enough
     assert sm.mp_slot_index.value == 0
@@ -122,7 +122,7 @@ def test_segm_thresh_segment_batch_large(worker_type):
         # Check whether all processes did their deeds
         assert sm.mp_num_workers_done.value == mp.cpu_count()
 
-    labels_seg_2 = np.copy(sm.segment_batch(images)[101:121])
+    labels_seg_2 = np.copy(sm.segment_batch_with_labeling(images)[101:121])
 
     # tell workers to stop
     sm.join_workers()

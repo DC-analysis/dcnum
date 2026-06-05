@@ -1,7 +1,5 @@
 import pathlib
 import tempfile
-import threading
-import time
 
 import multiprocessing as mp
 
@@ -30,53 +28,49 @@ class Benchmark:
                                           path_out=self.path_out,
                                           basin_strategy="tap",
                                           segmenter_code="thresh",
-                                          num_procs=6,
                                           )
 
         self.runner = logic.DCNumJobRunner(job=self.job)
         self.runner.task_background()
 
-        log_queue = mp_spawn.Queue()
+        log_queue = self.runner.log_queue
         log_queue.cancel_join_thread()
 
         self.slot_register = logic.SlotRegister(job=self.job,
                                                 data=self.runner.dtin,
-                                                num_slots=2)
-        self.u_worker = logic.UniversalWorkerThread(
-            slot_register=self.slot_register,
-            log_queue=log_queue,
-        )
-        self.u_worker.start()
+                                                num_slots=6)
+        self.slot_register.event_queue.cancel_join_thread()
+
+        self.u_workers = []
+        for _ in range(5):
+            uw = logic.UniversalWorkerProcess(
+                slot_register=self.slot_register,
+                log_queue=log_queue,
+            )
+            self.u_workers.append(uw)
+            uw.start()
 
     def benchmark(self):
         seg_cls = segm.get_available_segmenters()[self.job["segmenter_code"]]
-        fake_extractor = SlotStateInvalidator(slot_register=self.slot_register)
-        fake_extractor.start()
         thr_segm = segm.SegmenterManagerThread(
-            segmenter=seg_cls(num_workers=2, **self.job["segmenter_kwargs"]),
+            segmenter=seg_cls(num_workers=6, **self.job["segmenter_kwargs"]),
             slot_register=self.slot_register,
         )
         thr_segm.run()
-        self.slot_register.close()
-        fake_extractor.join()
-        self.u_worker.join()
+        thr_segm.segmenter.close()
 
     def teardown(self):
-        self.runner.close()
-
-
-class SlotStateInvalidator(threading.Thread):
-    """Pretend to be the feature extractor"""
-    def __init__(self, slot_register, *args, **kwargs):
-        super(SlotStateInvalidator, self).__init__(*args, **kwargs)
-        self.slot_register = slot_register
-
-    def run(self):
-        while self.slot_register.state != "q":
-            for cs in self.slot_register:
-                if cs.state == "e":
-                    time.sleep(0.1)
-                    cs.state = "i"
+        self.slot_register.close()
+        assert self.slot_register.state == "q"
+        # empty the queues
+        for q in [self.runner.log_queue, self.slot_register.event_queue]:
+            while True:
+                try:
+                    q.get(timeout=1)
+                except BaseException:
                     break
-            else:
-                time.sleep(0.1)
+
+        for uw in self.u_workers:
+            uw.join()
+
+        self.runner.close()
