@@ -1,4 +1,5 @@
 0.30.1
+ - bmk: add feature extraction benchmark
  - setup: migrate from src-layout to flat-layout (define setuptools.packages)
 0.30.0
  - feat: sub-chunk analysis for labeling masks using `UniversalWorker`
