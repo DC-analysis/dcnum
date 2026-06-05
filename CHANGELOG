@@ -2,6 +2,8 @@
  - feat: sub-chunk analysis for labeling masks using `UniversalWorker`
  - feat: sub-chunk analysis for processing labels using `UniversalWorker`
  - enh: make sure `UniversalWorker` uses single-threaded Python
+ - enh: increase batch size for feature extraction in `UniversalWorker` to 100
+ - enh: correct measurement task time in `UniversalWorker`
  - ref: `Segmenter.segment_batch` always returns raw boolean masks
  - ref: `Segmenter.segment_single` always returns raw boolean masks
  - ref: add `Segmenter.segment_batch_with_labeling` for testing

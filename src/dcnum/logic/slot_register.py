@@ -29,11 +29,12 @@ class count_time:
         def method(inst, *args, **kwargs):
             t0 = time.perf_counter()
             retval = func(inst, *args, **kwargs)
+            t1 = time.perf_counter()
             # update the time counter for this method
             fn = func.__name__
             if fn in inst.timers:
                 with inst.timers[fn].get_lock():
-                    inst.timers[fn].value += time.perf_counter() - t0
+                    inst.timers[fn].value += t1 - t0
             return retval
 
         return method
@@ -427,7 +428,7 @@ class SlotRegister:
         logger = logger or logging.getLogger(__name__)
 
         # Extract features from this ChunkSlot
-        batch_size = 10
+        batch_size = 100
         if cs is not None and cs.state == "e":
             extractor = QueueEventExtractor(
                 slot_register=self,
