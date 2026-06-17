@@ -288,7 +288,7 @@ class HDF5Data:
         return self._len
 
     @property
-    def h5(self):
+    def h5(self) -> h5py.File:
         if self._h5 is None:
             self._h5 = h5py.File(self.path, libver="latest")
         return self._h5

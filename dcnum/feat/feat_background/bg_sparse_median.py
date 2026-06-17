@@ -43,7 +43,7 @@ class BackgroundSparseMed(Background):
         output_path: pathlib.Path
             Path to the output file. If `input_data` is a path, you can
             set `output_path` to the same path to write directly to the
-            input file. The data are written in the "events/image_bg"
+            input file. The data are written in the "basin_events/image_bg"
             dataset in the output file.
         kernel_size: int
             Kernel size for median computation. This is the number of

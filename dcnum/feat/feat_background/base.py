@@ -69,13 +69,13 @@ class Background(abc.ABC):
         self.image_proc = mp_spawn.Value("d", 0)
         """fraction of images that have been processed"""
 
-        self.hdin = None
+        self.hdin: HDF5Data | None = None
         """HDF5Data instance for input data"""
 
-        self.h5in = None
+        self.h5in: h5py.File | None = None
         """input h5py.File"""
 
-        self.h5out = None
+        self.h5out: h5py.File | None = None
         """output h5py.File"""
 
         self.paths_ref = []
@@ -135,7 +135,8 @@ class Background(abc.ABC):
             self.h5out.close()
 
     @abc.abstractmethod
-    def check_user_kwargs(self, **kwargs):
+    @staticmethod
+    def check_user_kwargs():
         """Implement this to check the kwargs during init"""
 
     def get_ppid(self):
