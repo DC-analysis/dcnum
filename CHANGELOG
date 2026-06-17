@@ -1,4 +1,5 @@
 0.30.1
+ - fix: support basin-based background data in `BackgroundCopy` (#51)
  - bmk: add feature extraction benchmark
  - setup: migrate from src-layout to flat-layout (define setuptools.packages)
  - tests: require scikit-image>=0.26.0

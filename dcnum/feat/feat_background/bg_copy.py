@@ -1,5 +1,5 @@
 from ...common import h5py
-
+from ...write import HDF5Writer
 from .base import Background
 
 
@@ -14,7 +14,30 @@ class BackgroundCopy(Background):
 
     def process(self):
         """Copy input data to output dataset"""
+        assert self.h5in is not None
+        assert self.h5out is not None
+        assert self.hdin is not None
+
         if self.h5in != self.h5out:
+            # check input basins for background image
+            for ii, bn_dict in enumerate(self.hdin.basins):
+                if "image_bg" in bn_dict["features"]:
+                    # load the basin data
+                    h5group, features, mapping = self.hdin.get_basin_data(ii)
+                    if isinstance(mapping, (int, slice, list)):
+                        raise NotImplementedError(
+                            f"Image data mapping for {type(mapping)} "
+                            f"not supported yet")
+                    with HDF5Writer(self.h5out) as hw:
+                        hw.store_basin(
+                            name=bn_dict["name"],
+                            description=bn_dict.get("description"),
+                            mapping=mapping,
+                            internal_data={"image_bg": h5group["image_bg"][:]},
+                        )
+                    break
+
+            # check regular events for "image_bg" and "bg_off"
             hin = self.hdin.h5
             for feat in ["image_bg", "bg_off"]:
                 if feat in hin["events"]:
