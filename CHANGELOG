@@ -2,6 +2,7 @@
  - fix: support basin-based background data in `BackgroundCopy` (#51)
  - bmk: add feature extraction benchmark
  - setup: migrate from src-layout to flat-layout (define setuptools.packages)
+ - setup: require Python>=3.11
  - tests: require scikit-image>=0.26.0
 0.30.0
  - feat: sub-chunk analysis for labeling masks using `UniversalWorker`
