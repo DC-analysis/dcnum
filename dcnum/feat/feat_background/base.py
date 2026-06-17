@@ -134,8 +134,8 @@ class Background(abc.ABC):
         if self.h5in is not self.h5out and self.h5out is not None:
             self.h5out.close()
 
-    @abc.abstractmethod
     @staticmethod
+    @abc.abstractmethod
     def check_user_kwargs():
         """Implement this to check the kwargs during init"""
 
