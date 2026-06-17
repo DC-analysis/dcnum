@@ -1,2 +1,2 @@
 pytest
-scikit-image
+scikit-image>=0.26.0

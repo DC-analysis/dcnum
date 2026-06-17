@@ -46,7 +46,7 @@ def test_segm_thresh_basic():
         mask_seg = np.array(labels_seg, dtype=bool)
         # Remove small objects, because this is not implemented in the
         # segmenter class as it would be part of gating.
-        mask_seg = morphology.remove_small_objects(mask_seg, min_size=10)
+        mask_seg = morphology.remove_small_objects(mask_seg, max_size=10)
         assert np.all(mask_seg == mask_u[ii]), f"masks not matching at {ii}"
 
 
@@ -92,7 +92,7 @@ def test_segm_thresh_segment_batch(worker_type):
         mask_seg = np.array(labels_seg[ii], dtype=bool)
         # Remove small objects, because this is not implemented in the
         # segmenter class as it would be part of gating.
-        mask_seg = morphology.remove_small_objects(mask_seg, min_size=10)
+        mask_seg = morphology.remove_small_objects(mask_seg, max_size=10)
         assert np.all(mask_seg == mask_u[ii]), f"masks not matching at {ii}"
 
 

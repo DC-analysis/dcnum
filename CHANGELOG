@@ -1,6 +1,7 @@
 0.30.1
  - bmk: add feature extraction benchmark
  - setup: migrate from src-layout to flat-layout (define setuptools.packages)
+ - tests: require scikit-image>=0.26.0
 0.30.0
  - feat: sub-chunk analysis for labeling masks using `UniversalWorker`
  - feat: sub-chunk analysis for processing labels using `UniversalWorker`
