@@ -1,7 +1,7 @@
-from .segmenter_mpo import MPOSegmenter
+from .segmenter_uni import UNISegmenter
 
 
-class SegmentThresh(MPOSegmenter):
+class SegmentThresh(UNISegmenter):
     mask_postprocessing = True
     mask_default_kwargs = {
         "clear_border": True,

@@ -8,10 +8,13 @@ import traceback
 
 import numpy as np
 
+from dcnum.segm.segmenter_uni import UNISegmenter
+
 from ..common import LazyLoader
 from ..feat import Gate, QueueEventExtractor
 from ..read import HDF5Data
 from ..segm.segmenter import STRUCTURING_ELEMENT
+from ..segm import get_segmenters
 
 from .chunk_slot import ChunkSlot, ChunkSlotData
 from .job import DCNumPipelineJob
@@ -57,9 +60,11 @@ class SlotRegister:
         self.chunk_size = data.image_chunk_size
         self.num_chunks = data.image_num_chunks
         self._slots = []
+        self._segmenter = None
 
         self.timers = {
             "task_load_all": mp_spawn.Value("d", 0.0),
+            "task_segment_images": mp_spawn.Value("d", 0.0),
             "task_label_masks": mp_spawn.Value("d", 0.0),
             "task_process_labels": mp_spawn.Value("d", 0.0),
             "task_extract_features": mp_spawn.Value("d", 0.0),
@@ -131,6 +136,18 @@ class SlotRegister:
     @masks_dropped.setter
     def masks_dropped(self, value):
         self.counters["masks_dropped"].value = value
+
+    @property
+    def segmenter(self):
+        """Current segmenter class"""
+        if self._segmenter is None:
+            seg_cls = get_segmenters()[self.job["segmenter_code"]]
+            if not issubclass(seg_cls, UNISegmenter):
+                raise ValueError(
+                    f"Segmenter {seg_cls} is not an instance of UNISegmenter")
+            self._segmenter = seg_cls(debug=self.job["debug"],
+                                      **self.job["segmenter_kwargs"])
+        return self._segmenter
 
     @property
     def write_queue_size(self):
@@ -324,6 +341,54 @@ class SlotRegister:
         return did_something
 
     @count_time()
+    def task_segment_images(self,
+                            logger: logging.Logger | None = None
+                            ) -> bool:
+        """Perform segmentation of images (mask creation)
+
+        This method will only perform segmentation for when the `UNISegmenter`
+        is used.
+
+        Returns
+        -------
+        did_something : bool
+            Whether images were segmented
+        """
+        did_something = False
+        cs = self.find_slot(state="s")
+
+        logger = logger or logging.getLogger(__name__)
+
+        # Segment images from this ChunkSlot
+        batch_size = 100
+        if cs is not None and cs.state == "s":
+            while True:
+                state_warden = self.reserve_slot_for_task(
+                    current_state="s",
+                    next_state="m",
+                    chunk_slot=cs,
+                    batch_size=batch_size)
+                if state_warden is not None and state_warden.batch_size:
+                    with state_warden as (_, batch_range):
+                        if self.segmenter.requires_background_correction:
+                            images = cs.image_corr
+                            bg_off = cs.bg_off
+                        else:
+                            images = cs.image
+                            bg_off = None
+
+                        for idx in range(*batch_range):
+                            cs.mask[idx] = self.segmenter.segment_single(
+                                image=images[idx],
+                                bg_off=None if bg_off is None else bg_off[idx]
+                                )
+                    did_something = True
+                else:
+                    break
+
+        return did_something
+
+    @count_time()
     def task_label_masks(self,
                          logger: logging.Logger | None = None
                          ) -> bool:
@@ -342,7 +407,7 @@ class SlotRegister:
 
         logger = logger or logging.getLogger(__name__)
 
-        # Comput labels from this ChunkSlot
+        # Compute labels from this ChunkSlot
         batch_size = 100
         if cs is not None and cs.state == "m":
             while True:

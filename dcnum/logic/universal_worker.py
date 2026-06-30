@@ -84,7 +84,8 @@ class UniversalWorker:
                 # Load data into memory for all available slots
                 did_something |= sr.task_load_all(logger=logger)
 
-                # Segmentation is not handled by UniversalWorker
+                # Segmentation is only done for `UNISegmenter` subclasses
+                did_something |= sr.task_segment_images(logger=logger)
 
                 # After segmentation, perform mask to label conversion
                 did_something |= sr.task_label_masks(logger=logger)

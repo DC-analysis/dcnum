@@ -96,6 +96,12 @@ class Segmenter(abc.ABC):
                 "`kwargs_mask` has been specified, but mask post-processing "
                 f"is disabled for segmenter {self.__class__}")
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        pass
+
     @staticmethod
     @functools.cache
     def get_border(shape):
@@ -307,7 +313,7 @@ class Segmenter(abc.ABC):
 
     @staticmethod
     @abc.abstractmethod
-    def segment_algorithm(image) -> np.ndarray:
+    def segment_algorithm(image, mask_out=None) -> np.ndarray:
         """The segmentation algorithm implemented in the subclass
 
         Perform segmentation and return boolean mask image
@@ -332,8 +338,11 @@ class Segmenter(abc.ABC):
         return segm_wrap
 
     @abc.abstractmethod
-    def segment_batch(self, images, bg_off=None):
-        """Return the bollean mask for an entire batch
+    def segment_batch(self,
+                      images,
+                      bg_off=None
+                      ) -> np.ndarray:
+        """Return the boolean mask for an entire batch
 
         This is implemented in the MPO and STO segmenters.
         """
@@ -390,7 +399,10 @@ class Segmenter(abc.ABC):
         return cs.mask
 
     @abc.abstractmethod
-    def segment_single(self, image, bg_off: float | None = None):
+    def segment_single(self,
+                       image,
+                       bg_off: float | None = None
+                       ) -> np.ndarray:
         """Return the boolean mask for one image
 
         This is implemented in the MPO and STO segmenters.

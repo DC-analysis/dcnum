@@ -1,5 +1,3 @@
-import multiprocessing as mp
-
 from dcnum import segm
 import h5py
 import numpy as np
@@ -85,8 +83,6 @@ def test_segm_thresh_segment_batch(worker_type):
     sm = segm.segm_thresh.SegmentThresh(debug=debug)
 
     labels_seg = sm.segment_batch_with_labeling(image_u_c, bg_off=bg_off_u)
-    # tell workers to stop
-    sm.join_workers()
 
     for ii in range(len(frame_u)):
         mask_seg = np.array(labels_seg[ii], dtype=bool)
@@ -112,20 +108,8 @@ def test_segm_thresh_segment_batch_large(worker_type):
     labels_seg_1 = np.copy(sm.segment_batch_with_labeling(images)[:101])
 
     assert labels_seg_1.dtype == np.uint16  # uint8 is not enough
-    assert sm.mp_slot_index.value == 0
-    if worker_type == "thread":
-        assert len(sm._workers) == 1
-        assert sm.mp_num_workers_done.value == 1
-    else:
-        # This will fail if you have too many CPUs in your system
-        assert len(sm._workers) == mp.cpu_count()
-        # Check whether all processes did their deeds
-        assert sm.mp_num_workers_done.value == mp.cpu_count()
 
     labels_seg_2 = np.copy(sm.segment_batch_with_labeling(images)[101:121])
-
-    # tell workers to stop
-    sm.join_workers()
 
     for ii in range(101):
         mask_seg = np.array(labels_seg_1[ii], dtype=bool)

@@ -15,9 +15,11 @@ import uuid
 
 import numpy as np
 
+from dcnum.segm.segmenter_mpo import MPOSegmenter
+
 from ..common import h5py, join_worker, start_workers_threaded
 from ..feat.feat_background.base import get_available_background_methods
-from ..segm import SegmenterManagerThread, get_segmenters
+from ..segm import SegmenterManagerThread, UNISegmenter, get_segmenters
 from ..meta import ppid
 from ..read import HDF5Data, get_measurement_identifier, get_mapping_indices
 from .._version import version, version_tuple
@@ -678,21 +680,21 @@ class DCNumJobRunner(threading.Thread):
 
         if self.job["debug"]:
             num_universal = 1
-            num_segmenters = 1
-        elif seg_cls.hardware_processor == "cpu":  # MPO segmenter
+        elif issubclass(seg_cls, MPOSegmenter):
             # Split segmentation and feature extraction workers evenly.
             num_universal = self.job["num_procs"] // 2
-            num_segmenters = self.job["num_procs"] - num_universal
             # Leave one CPU for the writer and the other threads.
-            num_segmenters -= 1
+            num_universal -= 1
+        elif issubclass(seg_cls, UNISegmenter):
+            # Split segmentation and feature extraction workers evenly.
+            num_universal = self.job["num_procs"]
+            # Leave one CPU for the writer and the other threads.
+            num_universal -= 1
         else:  # GPU segmenter
             num_universal = self.job["num_procs"]
             # Leave one CPU for the writer and the other threads.
             num_universal -= 1
-            num_segmenters = 1
         num_universal = max(1, num_universal)
-        num_segmenters = max(1, num_segmenters)
-        self.job.kwargs["segmenter_kwargs"]["num_workers"] = num_segmenters
 
         # The number of ChunkSlots defines how well workers can operate in
         # parallel. This should be higher than the number states a ChunkSlot
@@ -711,7 +713,6 @@ class DCNumJobRunner(threading.Thread):
                                      num_slots=num_slots)
 
         self.logger.debug(f"Number of slots: {num_slots}")
-        self.logger.debug(f"Number of segmenters: {num_segmenters}")
         self.logger.debug(f"Number of universal workers: {num_universal}")
 
         if self.job["debug"]:
@@ -730,13 +731,14 @@ class DCNumJobRunner(threading.Thread):
                                         name="UniversalWorker",
                                         )
 
-        # Initialize segmenter manager thread
-        worker_segm = SegmenterManagerThread(
-            segmenter=seg_cls(debug=self.job["debug"],
-                              **self.job["segmenter_kwargs"]),
-            slot_register=slot_register,
-        )
-        worker_segm.start()
+        if not issubclass(seg_cls, UNISegmenter):
+            # Initialize segmenter manager thread
+            worker_segm = SegmenterManagerThread(
+                segmenter=seg_cls(debug=self.job["debug"],
+                                  **self.job["segmenter_kwargs"]),
+                slot_register=slot_register,
+            )
+            worker_segm.start()
 
         # Start the data collection and writer thread
         if self.job["debug"]:
@@ -782,6 +784,11 @@ class DCNumJobRunner(threading.Thread):
             f"Data load time: "
             f"{slot_register.get_time('task_load_all'):.1f}s")
 
+        if issubclass(seg_cls, UNISegmenter):
+            self.logger.info(
+                f"Segmentation time: "
+                f"{slot_register.get_time('task_segment_images'):.1f}s")
+
         self.logger.info(
             f"Labeling time: "
             f"{slot_register.get_time('task_label_masks'):.1f}s")
@@ -810,9 +817,10 @@ class DCNumJobRunner(threading.Thread):
         join_worker(worker=thr_uw,
                     logger=self.logger,
                     name="worker starter")
-        join_worker(worker=worker_segm,
-                    logger=self.logger,
-                    name="segmentation")
+        if not issubclass(seg_cls, UNISegmenter):
+            join_worker(worker=worker_segm,
+                        logger=self.logger,
+                        name="segmentation")
         join_worker(worker=worker_write,
                     timeout=600,
                     logger=self.logger,
