@@ -61,6 +61,7 @@ class SlotRegister:
         self.num_chunks = data.image_num_chunks
         self._slots = []
         self._segmenter = None
+        self._segmenter_class = None
 
         self.timers = {
             "task_load_all": mp_spawn.Value("d", 0.0),
@@ -141,13 +142,20 @@ class SlotRegister:
     def segmenter(self):
         """Current segmenter class"""
         if self._segmenter is None:
-            seg_cls = get_segmenters()[self.job["segmenter_code"]]
-            if not issubclass(seg_cls, UNISegmenter):
+            if not issubclass(self.segmenter_class, UNISegmenter):
                 raise ValueError(
-                    f"Segmenter {seg_cls} is not an instance of UNISegmenter")
-            self._segmenter = seg_cls(debug=self.job["debug"],
-                                      **self.job["segmenter_kwargs"])
+                    f"Segmenter {self.segmenter_class} is not an instance "
+                    f"of UNISegmenter")
+            self._segmenter = self.segmenter_class(
+                debug=self.job["debug"], **self.job["segmenter_kwargs"])
         return self._segmenter
+
+    @property
+    def segmenter_class(self):
+        if self._segmenter_class is None:
+            self._segmenter_class = \
+                get_segmenters()[self.job["segmenter_code"]]
+        return self._segmenter_class
 
     @property
     def write_queue_size(self):
@@ -355,6 +363,10 @@ class SlotRegister:
             Whether images were segmented
         """
         did_something = False
+
+        if not issubclass(self.segmenter_class, UNISegmenter):
+            return did_something
+
         cs = self.find_slot(state="s")
 
         logger = logger or logging.getLogger(__name__)
