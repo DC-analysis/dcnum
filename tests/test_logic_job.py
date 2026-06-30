@@ -1,6 +1,6 @@
 import multiprocessing as mp
 
-from dcnum import logic
+from dcnum import common, logic
 from dcnum.segm.segm_torch import segm_torch_base  # noqa: E402
 import h5py
 
@@ -13,7 +13,7 @@ def test_basic_job():
     path = retrieve_data("fmt-hdf5_cytoshot_full-features_2023.zip")
     job = logic.DCNumPipelineJob(path_in=path)
     assert job["path_out"] == path.with_name(path.stem + "_dcn.rtdc")
-    assert job["num_procs"] == mp.cpu_count()
+    assert job["num_procs"] == common.cpu_count()
     assert not job["debug"]
 
 
