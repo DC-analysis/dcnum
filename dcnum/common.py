@@ -6,6 +6,8 @@ import threading
 import time
 from typing import Callable
 
+import psutil
+
 
 class LazyLoader:
     def __init__(self,
@@ -66,24 +68,47 @@ class LazyLoader:
 
 
 def cpu_count() -> int:
-    """Get the number of processes
+    """Get the number of processes available
 
-    Try to get the number of CPUs the current process can use first.
-    Fallback to `mp.cpu_count()`
+    ``multiprocessing.cpu_count()`` returns the number of logical CPUs
+    available. We are interested in the physical CPUs, because there is
+    no performance advantage to using all logical CPUs and because using
+    more CPUs would imply more workers and thus more RAM usage.
+
+    On cluster systems, with jobs possibly having CPU affinity, we want
+    to stick to that limitation as well.
+
+    This method handles both cases by:
+
+    1. Get the number of physical CPUs using `psutil.cpu_count(logical=False)`
+    2. Get the number of CPUs according to process affinity
+    3. Get the number of CPUs using `multiprocessing.cpu_count()`
+    4. Return the minimum of all of the above
     """
+    num_cpus = []
+
+    # physical CPUs
+    cpu_physical = psutil.cpu_count(logical=False)
+    if cpu_physical is not None:
+        num_cpus.append(cpu_physical)
+
+    # CPUs according to process affinity
     try:
         if hasattr(os, "sched_getaffinity"):
-            num_cpus = len(os.sched_getaffinity(0))
+            cpu_affin = len(os.sched_getaffinity(0))
         elif hasattr(os, "process_cpu_count"):
-            num_cpus = os.process_cpu_count()
+            cpu_affin = os.process_cpu_count()
         else:
-            num_cpus = os.cpu_count()
+            cpu_affin = os.cpu_count()
+        if cpu_affin is not None:
+            num_cpus.append(cpu_affin)
     except BaseException:
-        num_cpus = None
+        pass
 
-    if num_cpus is None:
-        num_cpus = mp.cpu_count()
-    return num_cpus
+    # Fallback
+    num_cpus.append(mp.cpu_count())
+
+    return min(num_cpus)
 
 
 def join_worker(worker,
