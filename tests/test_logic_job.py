@@ -1,5 +1,3 @@
-import multiprocessing as mp
-
 from dcnum import common, logic
 from dcnum.segm.segm_torch import segm_torch_base  # noqa: E402
 import h5py
