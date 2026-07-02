@@ -372,7 +372,7 @@ class SlotRegister:
         logger = logger or logging.getLogger(__name__)
 
         # Segment images from this ChunkSlot
-        batch_size = 100
+        batch_size = self.segmenter.required_batch_size or 10
         if cs is not None and cs.state == "s":
             while True:
                 state_warden = self.reserve_slot_for_task(
@@ -382,18 +382,44 @@ class SlotRegister:
                     batch_size=batch_size)
                 if state_warden is not None and state_warden.batch_size:
                     with state_warden as (_, batch_range):
+                        ds = slice(*batch_range)
+
                         if self.segmenter.requires_background_correction:
-                            images = cs.image_corr
-                            bg_off = cs.bg_off
+                            images = cs.image_corr[ds]
+                            if cs.bg_off is not None:
+                                bg_off = cs.bg_off[ds]
+                            else:
+                                bg_off = None
                         else:
-                            images = cs.image
+                            images = cs.image[ds]
                             bg_off = None
 
-                        for idx in range(*batch_range):
-                            cs.mask[idx] = self.segmenter.segment_single(
-                                image=images[idx],
-                                bg_off=None if bg_off is None else bg_off[idx]
-                                )
+                        bshape = (batch_size, cs.shape[1], cs.shape[2])
+
+                        if (not self.segmenter.required_batch_size
+                                or len(images) == batch_size):
+                            # Either the segmenter does not care about batch
+                            # sizes or the batch size matches.
+                            cs.mask[ds] = self.segmenter.segment_batch(
+                                images=images,
+                                bg_off=bg_off,
+                            )
+                        else:
+                            # Create a padded version to match the batch size
+                            # requested by the segmenter.
+                            images_pad = np.zeros(bshape,
+                                                  dtype=images.dtype)
+                            images_pad[:len(images), :, :] = images
+                            if bg_off is not None:
+                                bg_off = np.zeros(batch_size,
+                                                  dtype=bg_off.dtype)
+                                bg_off[:batch_size] = bg_off
+                            mask = self.segmenter.segment_batch(
+                                images=images_pad,
+                                bg_off=bg_off,
+                            )
+                            cs.mask[ds] = mask[:len(images)]
+
                     did_something = True
                 else:
                     break

@@ -7,6 +7,7 @@ from .segmenter import Segmenter
 
 class UNISegmenter(Segmenter, abc.ABC):
     hardware_processor = "cpu"
+    required_batch_size = 0
 
     def __init__(self,
                  *,
@@ -33,7 +34,6 @@ class UNISegmenter(Segmenter, abc.ABC):
     def segment_batch(self,
                       images: np.ndarray,
                       bg_off: np.ndarray | None = None,
-                      mask_out: np.ndarray | None = None,
                       ) -> np.ndarray:
         """Perform batch segmentation of `images`
 
@@ -47,8 +47,6 @@ class UNISegmenter(Segmenter, abc.ABC):
             The time-series image data. First axis is time.
         bg_off: 1D np.ndarray of length N
             Optional 1D numpy array with background offset
-        mask_out: 3d boolean np.ndarray of shape (N, Y, X)
-            Optional output array into which mask data are written
 
         Notes
         -----
@@ -67,11 +65,7 @@ class UNISegmenter(Segmenter, abc.ABC):
                                  f"your analysis pipeline.")
             images = images - bg_off.reshape(-1, 1, 1)
 
-        if mask_out is None:
-            mask_out = np.zeros_like(images, dtype=np.bool)
-
-        for idx in range(len(images)):
-            mask_out[idx] = segm(images[idx])
+        mask_out = segm(images)
 
         return mask_out
 
@@ -79,7 +73,7 @@ class UNISegmenter(Segmenter, abc.ABC):
         """This is a convenience-wrapper around `segment_batch`"""
         segm = self.segment_algorithm_wrapper()
 
-        if bg_off is not None:
+        if bg_off is not None and self.requires_background_correction:
             image = image - bg_off
 
-        return segm(image)
+        return segm(image[np.newaxis, :, :])[0]

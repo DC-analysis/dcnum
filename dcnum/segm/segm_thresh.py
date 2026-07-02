@@ -11,13 +11,13 @@ class SegmentThresh(UNISegmenter):
     requires_background_correction = True
 
     @staticmethod
-    def segment_algorithm(image, *,
+    def segment_algorithm(images, *,
                           thresh: float = -6):
         """Mask retrieval using basic thresholding
 
         Parameters
         ----------
-        image: 2d ndarray
+        image: 3d ndarray
             Background-corrected frame image
         thresh: float
             Threshold value for creation of binary mask; a negative value
@@ -30,4 +30,4 @@ class SegmentThresh(UNISegmenter):
             Mask image for the given index
         """
         assert thresh < 0, "threshold values above zero not supported!"
-        return image < thresh
+        return images < thresh
