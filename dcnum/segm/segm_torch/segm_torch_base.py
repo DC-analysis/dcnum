@@ -15,6 +15,7 @@ from .torch_setup import torch
 class TorchSegmenterBase(Segmenter):
     """Torch segmenters that use a pretrained model for segmentation"""
     requires_background_correction = False
+    requires_model_format_version = "0.0"
     mask_postprocessing = True
     mask_default_kwargs = {
         "clear_border": True,
@@ -76,6 +77,16 @@ class TorchSegmenterBase(Segmenter):
 
         model_file = segmenter_kwargs["model_file"]
         _, model_meta = load_model(model_file, device="cpu")
+
+        model_version = model_meta["format_version"]
+        if model_version != cls.requires_model_format_version:
+            raise SegmenterNotApplicableError(
+                segmenter_class=cls,
+                reasons_list=[
+                    f"Model {model_file} is version {model_version}, "
+                    f"but segmenter {cls} requires  "
+                    f"version {cls.requires_model_format_version}"
+                ])
 
         reasons_list = []
         validators = {

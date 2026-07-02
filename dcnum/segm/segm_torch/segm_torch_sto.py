@@ -1,5 +1,6 @@
-from dcnum.segm import STOSegmenter
 import numpy as np
+
+from ..segmenter_sto import STOSegmenter
 
 from .segm_torch_base import TorchSegmenterBase
 from .torch_model import load_model
@@ -10,6 +11,7 @@ from .torch_setup import torch
 
 class SegmentTorchSTO(TorchSegmenterBase, STOSegmenter):
     """PyTorch segmentation (GPU version)"""
+    requires_model_format_version = "1.0"
 
     def log_info(self, logger, gpu_id=None):
         model_file = self.kwargs["model_file"]

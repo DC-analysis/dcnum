@@ -11,6 +11,7 @@ from .torch_setup import torch
 
 class SegmentTorchMPO(TorchSegmenterBase, MPOSegmenter):
     """PyTorch segmentation (multiprocessing version)"""
+    requires_model_format_version = "1.0"
 
     @staticmethod
     def segment_algorithm(image, *,

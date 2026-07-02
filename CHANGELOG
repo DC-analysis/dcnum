@@ -1,5 +1,7 @@
 0.31.0
  - feat: introduce `UNISegmenter` which is handled by `UniversalWorker`
+ - feat: new `torchuni` segmenter
+ - feat: support dcnm model file format version 2.0
  - enh: use number of physical CPUs in `cpu_count`
  - ref: migrate `thresh` segmenter to `UNISegmenter`
  - setup: add `psutil` dependency

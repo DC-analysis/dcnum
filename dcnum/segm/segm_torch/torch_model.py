@@ -1,10 +1,13 @@
 import errno
 import functools
 import hashlib
+import io
 import json
 import logging
 import os
 import pathlib
+import warnings
+import zipfile
 
 import numpy as np
 
@@ -44,9 +47,24 @@ def load_model(path_or_name, device):
     model_meta: dict
         metadata associated with the loaded model
     """
-    device = torch.device(device)
+    with torch.inference_mode():
+        device = torch.device(device)
 
-    model_path = retrieve_model_file(path_or_name)
+        model_path = retrieve_model_file(path_or_name)
+
+        with open(model_path, "rb") as fd:
+            is_version_2 = fd.read(4) == b"DCNM"
+
+        if is_version_2:
+            model_call, model_meta = load_model_v2_pt2(model_path, device)
+        else:
+            model_call, model_meta = load_model_v1_jit(model_path, device)
+
+        return model_call, model_meta
+
+
+def load_model_v1_jit(model_path, device):
+    """Load dcnm model file format version 1 (torch JIT)"""
     # define an extra files mapping dictionary that loads the model's metadata
     extra_files = {"dcnum_meta.json": ""}
     # load model
@@ -90,7 +108,59 @@ def load_model(path_or_name, device):
         size = max(size, 50)
         model_meta["estimated_batch_size_cuda"] = size
 
+    model_meta["format_version"] = "1.0"
+
     return model_jit, model_meta
+
+
+def load_model_v2_pt2(model_path: pathlib.Path,
+                      device: str,
+                      ):
+    """Load dcnm model file format version 2 (ExportedProgram .pt2)"""
+    content = model_path.read_bytes()
+    hash = hashlib.md5(content[:-32]).hexdigest().encode()
+
+    # Make sure we have a valid .dcnm model file
+    if hash != content[-32:]:
+        raise ValueError(f"Not a valid DCNM model file: {model_path}")
+
+    buffer = io.BytesIO()
+    buffer.write(content)
+    buffer.seek(0)
+    buffer.write(b"PK\x03\x04")
+    buffer.seek(0)
+
+    with zipfile.ZipFile(buffer) as z:
+        with z.open("dcnum_meta.json") as fd:
+            model_meta = json.loads(fd.read())
+            ident = model_meta["identifier"]
+
+        with z.open(f"{ident}.pt2") as fd2:
+            mdat = fd2.read()
+
+    # Fail if the model gets recompiled. This should not be an issue,
+    # because dynamic dimensions are defined by guards in the ExportedProgram.
+    # torch.compiler.set_stance("fail_on_recompile")
+
+    # load model
+    buffer = io.BytesIO()
+    buffer.write(mdat)
+    buffer.seek(0)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", UserWarning)
+        pe = torch.export.load(buffer)
+
+    # https://docs.pytorch.org/docs/main/generated/torch.compile.html#torch.compile
+    model = torch.compile(
+        pe.module(),
+        fullgraph=True,
+        dynamic=False,
+        backend="inductor",
+        # TODO: Pytorch 3.13 supports setting this (avoid recompilations)?
+        # dynamic_shapes=(10, 80, 320),
+    )
+
+    return model, model_meta
 
 
 @functools.cache

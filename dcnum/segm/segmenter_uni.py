@@ -71,6 +71,10 @@ class UNISegmenter(Segmenter, abc.ABC):
 
     def segment_single(self, image, bg_off: float | None = None):
         """This is a convenience-wrapper around `segment_batch`"""
+        if self.required_batch_size > 1:
+            raise ValueError(f"Segmenter {self} only supports segmenting "
+                             f"batches of size {self.required_batch_size}")
+
         segm = self.segment_algorithm_wrapper()
 
         if bg_off is not None and self.requires_background_correction:
