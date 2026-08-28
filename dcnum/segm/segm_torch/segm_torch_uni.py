@@ -32,9 +32,9 @@ class SegmentTorchUNI(TorchSegmenterBase, UNISegmenter):
             _, model_meta = load_model(model_file, "cpu")
             if "batch_size" in model_meta:
                 self.required_batch_size = model_meta["batch_size"]
-        super(SegmentTorchUNI, self).__init__(kwargs_mask=kwargs_mask,
-                                              debug=debug,
-                                              **kwargs)
+        super().__init__(kwargs_mask=kwargs_mask,
+                         debug=debug,
+                         **kwargs)
 
     @staticmethod
     def segment_algorithm(images, *,

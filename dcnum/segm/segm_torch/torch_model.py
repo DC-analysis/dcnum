@@ -93,7 +93,7 @@ def load_model_v1_jit(model_path, device):
                 np.zeros((size, 1, sy, sx), dtype=np.float32),
                 device=device)
             data_seg = model_jit(data)
-            data_seg_bin = data_seg > 0.5  # noqa: F841
+            data_seg_bin = data_seg > 0.5
             torch.cuda.synchronize()
             free, total = torch.cuda.mem_get_info(device)
             if free / total < 0.1:  # leave a bit of space for other things
@@ -192,7 +192,7 @@ def retrieve_model_file(path_or_name):
         else:
             path = paths.find_file("torch_model_files", name)
     else:
-        raise ValueError(
+        raise TypeError(
             f"Please pass a string or a path, got {type(path_or_name)}!")
 
     logger.info(f"Found dcnum model file {path}")
