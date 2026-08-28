@@ -85,6 +85,11 @@ class Segmenter(abc.ABC):
         self.kwargs_mask = {}
         """keyword arguments for mask post-processing"""
 
+        self.kwargs_technical = {}
+        """technical keyword arguments that do not affect the PPID"""
+
+        self._wrapped_segment_algorithm = None
+
         if self.mask_postprocessing:
             spec_mask = inspect.getfullargspec(self.process_labels)
             self.kwargs_mask.update(spec_mask.kwonlydefaults or {})
@@ -317,23 +322,29 @@ class Segmenter(abc.ABC):
         Perform segmentation and return boolean mask image
         """
 
-    @functools.cache
     def segment_algorithm_wrapper(self):
-        """Wraps ``self.segment_algorithm`` to only accept an image
+        """Wraps ``self.segment_algorithm`` to only accept an image array
 
         The static method ``self.segment_algorithm`` may optionally accept
-        keyword arguments ``self.kwargs``. This wrapper returns the
-        wrapped method that only accepts the image as an argument. This
-        makes sense if you want to unify
+        keyword arguments ``self.kwargs`` and ``self.kwargs_technical``.
+        This method returns a wrapped version of `segment_algorithm` which
+        only accepts the input images as an argument.
+        This simplifies the application of segmentation algorithms
+        across different implementations.
         """
-        if self.kwargs:
-            # For segmenters that accept keyword arguments.
-            segm_wrap = functools.partial(self.segment_algorithm,
-                                          **self.kwargs)
-        else:
-            # For segmenters that don't accept keyword arguments.
-            segm_wrap = self.segment_algorithm
-        return segm_wrap
+        if self._wrapped_segment_algorithm is None:
+            kwargs = self.kwargs | self.kwargs_technical
+
+            if kwargs:
+                # For segmenters that accept keyword arguments.
+                segm_wrap = functools.partial(self.segment_algorithm, **kwargs)
+            else:
+                # For segmenters that don't accept keyword arguments.
+                segm_wrap = self.segment_algorithm
+
+            self._wrapped_segment_algorithm = segm_wrap
+
+        return self._wrapped_segment_algorithm
 
     @abc.abstractmethod
     def segment_batch(self,
