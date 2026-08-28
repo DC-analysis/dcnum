@@ -21,11 +21,11 @@ mp_spawn = mp.get_context("spawn")
 class UniversalWorker:
     def __init__(self,
                  slot_register: SlotRegister,
-                 log_queue: "mp.Queue",
+                 log_queue: mp.Queue,
                  log_level: int = logging.INFO,
                  *args, **kwargs):
         # Must call super init, otherwise Thread or Process are not initialized
-        super(UniversalWorker, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
         self.slot_register = slot_register
         """Chunk slot register"""
@@ -120,14 +120,12 @@ class UniversalWorker:
 
 class UniversalWorkerThread(UniversalWorker, threading.Thread):
     def __init__(self, *args, **kwargs):
-        super(UniversalWorkerThread, self).__init__(
-            name="UniversalWorkerThread", *args, **kwargs)
+        super().__init__(*args, name="UniversalWorkerThread", **kwargs)
 
 
 class UniversalWorkerProcess(UniversalWorker, mp_spawn.Process):
     def __init__(self, *args, **kwargs):
-        super(UniversalWorkerProcess, self).__init__(
-            name="UniversalWorkerProcess", *args, **kwargs)
+        super().__init__(*args, name="UniversalWorkerProcess", **kwargs)
 
     def start(self):
         # Set all relevant os environment variables such libraries in the
