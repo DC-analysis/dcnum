@@ -89,18 +89,19 @@ def load_model_v1_jit(model_path, device):
         # We estimate the batch size by determining the memory usage.
         size = 100
         for _ in range(50):
-            data = torch.tensor(
+            memdat = {}
+            memdat["raw"] = torch.tensor(
                 np.zeros((size, 1, sy, sx), dtype=np.float32),
                 device=device)
-            data_seg = model_jit(data)
-            data_seg_bin = data_seg > 0.5
+            memdat["model"] = model_jit(memdat["raw"])
+            memdat["thresh"] = memdat["model"] > 0.5
             torch.cuda.synchronize()
             free, total = torch.cuda.mem_get_info(device)
             if free / total < 0.1:  # leave a bit of space for other things
                 size -= 100
                 break
             size += 100
-            del data, data_seg, data_seg_bin
+            del memdat
             import gc
             gc.collect()
             torch.cuda.empty_cache()
