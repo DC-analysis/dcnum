@@ -21,7 +21,7 @@ STRUCTURING_ELEMENT = ndi.generate_binary_structure(2, 2)
 class SegmenterNotApplicableError(BaseException):
     """Used to indicate when a dataset cannot be segmented with a segmenter"""
     def __init__(self, segmenter_class, reasons_list):
-        super(SegmenterNotApplicableError, self).__init__(
+        super().__init__(
             f"The dataset cannot be segmented with the "
             f"'{segmenter_class.get_ppid_code()}' segmenter: "
             f"{', '.join(reasons_list)}"
@@ -145,8 +145,7 @@ class Segmenter(abc.ABC):
     def get_ppid_code(cls):
         """The unique code/name of this segmenter class"""
         code = cls.__name__.lower()
-        if code.startswith("segment"):
-            code = code[7:]
+        code = code.removeprefix("segment")
         return code
 
     @classmethod
@@ -216,7 +215,6 @@ class Segmenter(abc.ABC):
 
     def log_info(self, logger):
         """Allow segmenter to write informative log messages"""
-        pass
 
     @staticmethod
     def process_labels(labels,
@@ -248,7 +246,7 @@ class Segmenter(abc.ABC):
         # Every case must modify the `labels` variable such that it is
         # either a uint16 labeling image or a boolean mask.
 
-        if clear_border:
+        if clear_border:  # noqa: SIM102
             #
             # from skimage import segmentation
             # segmentation.clear_border(mask, out=mask)
@@ -361,7 +359,7 @@ class Segmenter(abc.ABC):
         return labels
 
     def segment_chunk(self,
-                      chunk: int,  # noqa: F821
+                      chunk: int,
                       slot_list: list,
                       ):
         """Segment the image data of one `ChunkSlot`
@@ -420,7 +418,6 @@ class Segmenter(abc.ABC):
 
     def close(self):
         """Subclasses can implement clean-up code here"""
-        pass
 
     @classmethod
     def validate_applicability(cls,

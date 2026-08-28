@@ -3,6 +3,7 @@
  - feat: new `torchuni` segmenter
  - feat: support dcnm model file format version 2.0
  - enh: use number of physical CPUs in `cpu_count`
+ - ref: code cleanup with ruff in multiple places
  - ref: migrate `thresh` segmenter to `UNISegmenter`
  - setup: add `psutil` dependency
  - setup: add ruff settings
