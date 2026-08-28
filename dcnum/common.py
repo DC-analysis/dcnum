@@ -66,6 +66,15 @@ class LazyLoader:
         # call this outside exception handler in case it raises new exception
         return getattr(self._mod, attr)
 
+    def module_available(self):
+        """Check whether the module is available by reading its version"""
+        try:
+            self.__getattr__("__version__")
+        except BaseException:
+            return False
+        else:
+            return True
+
 
 def cpu_count() -> int:
     """Get the number of processes available
