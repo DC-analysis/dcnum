@@ -19,7 +19,7 @@ def test_metadata_loading_from_unet_1316_naiad_g1_abd2a():
     device = torch.device("cpu")
     _, meta = torch_model.load_model(model_file, device)
     assert isinstance(meta, dict)
-    assert "preprocessing" not in meta.keys()
+    assert "preprocessing" not in meta
     assert meta["image_shape"] == [80, 320]
     assert meta["batch_size"] == 10
 
@@ -132,12 +132,11 @@ def test_segm_torch_uni_bad_model():
 
     sm = segm.segm_torch.SegmentTorchUNI(model_file=model_file)
 
-    with read.HDF5Data(path) as hd:
-        with pytest.raises(
-                segm_torch_base.SegmenterNotApplicableError,
-                match="requires  version 2.0"):
-            sm.validate_applicability(
-                segmenter_kwargs={"model_file": model_file},
-                meta=hd.meta,
-                logs=hd.logs
-            )
+    with (read.HDF5Data(path) as hd,
+          pytest.raises(segm_torch_base.SegmenterNotApplicableError,
+                        match="requires  version 2.0")):
+        sm.validate_applicability(
+            segmenter_kwargs={"model_file": model_file},
+            meta=hd.meta,
+            logs=hd.logs
+        )
