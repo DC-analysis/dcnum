@@ -114,7 +114,9 @@ def test_segm_torch_uni():
     model_file = retrieve_model(
         "segm-torch-model_unet-dcnum-test_g1_cb45f.zip")
 
-    sm = segm.segm_torch.SegmentTorchUNI(model_file=model_file)
+    sm = segm.segm_torch.SegmentTorchUNI(model_file=model_file,
+                                         backend="inductor",
+                                         device="cpu")
     assert not sm.requires_background_correction
     assert sm.mask_postprocessing
     assert not sm.mask_default_kwargs["closing_disk"]
