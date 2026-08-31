@@ -16,8 +16,7 @@ class QueueWriterProcess(QueueWriterBase, mp_spawn.Process):
         self.log_queue = log_queue
         """queue for logging"""
 
-        super(QueueWriterProcess, self).__init__(
-              name="QueueWriterProcess", *args, **kwargs)
+        super().__init__(*args, name="QueueWriterProcess", **kwargs)
 
     def run(self, **kwargs):
         # Clear any handlers that might be set for this logger. This is
@@ -39,7 +38,7 @@ class QueueWriterProcess(QueueWriterBase, mp_spawn.Process):
                                f"`QueueWriterProcess.run` has no effect.")
 
         try:
-            super(QueueWriterProcess, self).run(logger=logger)
+            super().run(logger=logger)
         except BaseException:
             self.logger.error(traceback.format_exc())
 

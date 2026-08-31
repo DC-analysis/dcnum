@@ -42,7 +42,7 @@ class ChunkWriter(threading.Thread):
         mode:
             HDF5 file opening mode, passed to :class:`.HDF5Writer`
         """
-        super(ChunkWriter, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         if parent_logger is None:
             self.logger = logging.getLogger("dcnum.write.ChunkWriter")
         else:

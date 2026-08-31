@@ -214,7 +214,7 @@ class Segmenter(abc.ABC):
         return kwargs
 
     @staticmethod
-    def is_available():
+    def is_available() -> bool:
         """Subclasses may override this method e.g. if dependencies exist"""
         return True
 

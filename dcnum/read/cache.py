@@ -136,7 +136,7 @@ class HDF5ImageCache(BaseImageChunkCache):
         `HDF5ImageCache` class caches the chunks from the HDF5 files
         into memory, making single-image-access very fast.
         """
-        super(HDF5ImageCache, self).__init__(
+        super().__init__(
             shape=h5ds.shape,
             chunk_size=chunk_size,
             cache_size=cache_size)
@@ -160,7 +160,7 @@ class ImageCorrCache(BaseImageChunkCache):
     def __init__(self,
                  image: HDF5ImageCache,
                  image_bg: HDF5ImageCache):
-        super(ImageCorrCache, self).__init__(
+        super().__init__(
             shape=image.shape,
             chunk_size=image.chunk_size,
             cache_size=image.cache_size)

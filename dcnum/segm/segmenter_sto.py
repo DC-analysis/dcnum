@@ -30,9 +30,9 @@ class STOSegmenter(Segmenter, abc.ABC):
         if num_workers not in [None, 1]:
             raise ValueError(f"Number of workers must not be larger than 1 "
                              f"for GPU segmenter, got '{num_workers}'!")
-        super(STOSegmenter, self).__init__(kwargs_mask=kwargs_mask,
-                                           debug=debug,
-                                           **kwargs)
+        super().__init__(kwargs_mask=kwargs_mask,
+                         debug=debug,
+                         **kwargs)
 
     def segment_batch(self,
                       images: np.ndarray,

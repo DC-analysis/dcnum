@@ -54,7 +54,7 @@ class BackgroundRollMed(Background):
             Number of CPUs to use for median computation. Defaults to
             `dcnum.common.cpu_count()`.
         """
-        super(BackgroundRollMed, self).__init__(
+        super().__init__(
             input_data=input_data,
             output_path=output_path,
             compress=compress,
@@ -124,7 +124,7 @@ class BackgroundRollMed(Background):
     def __exit__(self, type, value, tb):
         self.worker_counter.value = -1000
         [w.join() for w in self.workers]
-        super(BackgroundRollMed, self).__exit__(type, value, tb)
+        super().__exit__(type, value, tb)
 
     @staticmethod
     def check_user_kwargs(*,
@@ -243,7 +243,7 @@ class WorkerRollMed(mp_spawn.Process):
     def __init__(self, job_queue, counter, shared_input, shared_output,
                  batch_size, kernel_size, *args, **kwargs):
         """Worker process for median computation"""
-        super(WorkerRollMed, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.queue = job_queue
         self.queue.cancel_join_thread()
         self.counter = counter

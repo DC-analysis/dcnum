@@ -35,7 +35,7 @@ class ChunkSlot(ChunkSlotData):
         else:
             length = self.data.image.chunk_size
 
-        super(ChunkSlot, self).__init__(
+        super().__init__(
             shape=(length,) + self.data.image.shape[1:],
             available_features=self.data.keys(),
         )

@@ -80,14 +80,14 @@ def load_model(path_or_name: str | pathlib.Path,
 
 def load_model_v1_jit(model_path, device: str):
     """Load dcnm model file format version 1 (torch JIT)"""
-    device = torch.device(device or "cpu")
+    torch_device = torch.device(device or "cpu")
 
     # define an extra files mapping dictionary that loads the model's metadata
     extra_files = {"dcnum_meta.json": ""}
     # load model
     model_jit = torch.jit.load(model_path,
                                _extra_files=extra_files,
-                               map_location=device)
+                               map_location=torch_device)
     # load model metadata
     model_meta = json.loads(extra_files["dcnum_meta.json"])
     # set model to evaluation mode
@@ -95,7 +95,7 @@ def load_model_v1_jit(model_path, device: str):
     # optimize for inference on device
     model_jit = torch.jit.optimize_for_inference(model_jit)
 
-    if device.type == "cuda":
+    if torch_device.type == "cuda":
         # Estimate the batch size for the current device.
         # In principle, we would be fine with a batch size of 50, but
         # there is a slight improvement in performance when going to
@@ -109,11 +109,11 @@ def load_model_v1_jit(model_path, device: str):
             memdat = {}
             memdat["raw"] = torch.tensor(
                 np.zeros((size, 1, sy, sx), dtype=np.float32),
-                device=device)
+                device=torch_device)
             memdat["model"] = model_jit(memdat["raw"])
             memdat["thresh"] = memdat["model"] > 0.5
             torch.cuda.synchronize()
-            free, total = torch.cuda.mem_get_info(device)
+            free, total = torch.cuda.mem_get_info(torch_device)
             if free / total < 0.1:  # leave a bit of space for other things
                 size -= 100
                 break

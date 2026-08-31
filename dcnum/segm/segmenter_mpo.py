@@ -39,9 +39,9 @@ class MPOSegmenter(Segmenter, abc.ABC):
             Additional, optional keyword arguments for ``segment_algorithm``
             defined in the subclass.
         """
-        super(MPOSegmenter, self).__init__(kwargs_mask=kwargs_mask,
-                                           debug=debug,
-                                           **kwargs)
+        super().__init__(kwargs_mask=kwargs_mask,
+                         debug=debug,
+                         **kwargs)
         self.num_workers = num_workers or cpu_count()
 
         self.slot_list = None
@@ -280,7 +280,7 @@ class MPOSegmenterWorker:
             Stop of slice of input array to process
         """
         # Must call super init, otherwise Thread or Process are not initialized
-        super(MPOSegmenterWorker, self).__init__()
+        super().__init__()
         self.segmenter = segmenter
 
         self.slot_list = segmenter.slot_list
@@ -343,7 +343,7 @@ class MPOSegmenterWorker:
 
 class MPOSegmenterWorkerProcess(MPOSegmenterWorker, mp_spawn.Process):
     def __init__(self, *args, **kwargs):
-        super(MPOSegmenterWorkerProcess, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
     def start(self):
         # Set all relevant os environment variables such libraries in the
@@ -354,4 +354,4 @@ class MPOSegmenterWorkerProcess(MPOSegmenterWorker, mp_spawn.Process):
 
 class MPOSegmenterWorkerThread(MPOSegmenterWorker, threading.Thread):
     def __init__(self, *args, **kwargs):
-        super(MPOSegmenterWorkerThread, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)

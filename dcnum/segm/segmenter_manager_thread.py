@@ -39,8 +39,7 @@ class SegmenterManagerThread(threading.Thread):
         segmenter is a GPU-based segmenter, then it makes sense to have
         more than one slot, so CPU and GPU can work in parallel.
         """
-        super(SegmenterManagerThread, self).__init__(
-              name="SegmenterManager", *args, **kwargs)
+        super().__init__(*args, name="SegmenterManager", **kwargs)
         self.logger = logging.getLogger("dcnum.segm.SegmenterManagerThread")
 
         self.segmenter = segmenter

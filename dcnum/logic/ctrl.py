@@ -69,7 +69,7 @@ class DCNumJobRunner(threading.Thread):
             optional unique string for creating temporary files
             (defaults to hostname)
         """
-        super(DCNumJobRunner, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.error_tb = None
         self.job = job
         if tmp_suffix is None:
@@ -206,7 +206,7 @@ class DCNumJobRunner(threading.Thread):
             # is `rename`d to `self.job["path_out"]`.
 
     def join(self, delete_temporary_files=True, *args, **kwargs):
-        super(DCNumJobRunner, self).join(*args, **kwargs)
+        super().join(*args, **kwargs)
         # Close only after join
         self.close(delete_temporary_files=delete_temporary_files)
 

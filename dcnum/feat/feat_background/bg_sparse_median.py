@@ -86,7 +86,7 @@ class BackgroundSparseMed(Background):
             The background image data are stored as an internal
             mapped basin to reduce the output file size.
         """
-        super(BackgroundSparseMed, self).__init__(
+        super().__init__(
             input_data=input_data,
             output_path=output_path,
             compress=compress,
@@ -209,7 +209,7 @@ class BackgroundSparseMed(Background):
     def __exit__(self, type, value, tb):
         self.worker_counter.value = -1000
         [w.join() for w in self.workers]
-        super(BackgroundSparseMed, self).__exit__(type, value, tb)
+        super().__exit__(type, value, tb)
 
     @staticmethod
     def check_user_kwargs(*,
@@ -441,7 +441,7 @@ class WorkerSparseMed(mp_spawn.Process):
     def __init__(self, job_queue, counter, shared_input, shared_output,
                  kernel_size, *args, **kwargs):
         """Worker process for median computation"""
-        super(WorkerSparseMed, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.queue = job_queue
         self.queue.cancel_join_thread()
         self.counter = counter

@@ -1,6 +1,7 @@
 import functools
 import pathlib
 import re
+from typing import ClassVar
 
 import numpy as np
 
@@ -17,7 +18,7 @@ class TorchSegmenterBase(Segmenter):
     requires_background_correction = False
     requires_model_format_version = "0.0"
     mask_postprocessing = True
-    mask_default_kwargs = {
+    mask_default_kwargs: ClassVar = {
         "clear_border": True,
         "fill_holes": True,
         "closing_disk": 0,
@@ -37,8 +38,7 @@ class TorchSegmenterBase(Segmenter):
                 # registry so other threads/processes will find it.
                 paths.register_search_path("torch_model_files", mpath.parent)
                 kwargs_new["model_file"] = mpath.name
-        return super(TorchSegmenterBase, cls).get_ppid_from_ppkw(kwargs_new,
-                                                                 kwargs_mask)
+        return super().get_ppid_from_ppkw(kwargs_new, kwargs_mask)
 
     @classmethod
     def validate_applicability(cls,
@@ -82,11 +82,11 @@ class TorchSegmenterBase(Segmenter):
         if model_version != cls.requires_model_format_version:
             raise SegmenterNotApplicableError(
                 segmenter_class=cls,
-                reasons_list=[
+                reasons_list=[(
                     f"Model {model_file} is version {model_version}, "
                     f"but segmenter {cls} requires  "
                     f"version {cls.requires_model_format_version}"
-                ])
+                )])
 
         reasons_list = []
         validators = {
@@ -147,7 +147,7 @@ class TorchSegmenterBase(Segmenter):
     @staticmethod
     def is_available():
         try:
-            torch.__version__
+            _ = torch.__version__
         except BaseException:
             available = False
         else:
