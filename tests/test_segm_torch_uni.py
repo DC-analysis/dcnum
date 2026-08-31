@@ -141,7 +141,7 @@ def test_segm_torch_uni_bad_model():
 
     with (read.HDF5Data(path) as hd,
           pytest.raises(segm_torch_base.SegmenterNotApplicableError,
-                        match="requires  version 2.0")):
+                        match="requires version 2.0")):
         sm.validate_applicability(
             segmenter_kwargs={"model_file": model_file},
             meta=hd.meta,

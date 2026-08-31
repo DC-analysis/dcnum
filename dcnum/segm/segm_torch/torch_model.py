@@ -127,6 +127,8 @@ def load_model_v1_jit(model_path, device: str):
         model_meta["estimated_batch_size_cuda"] = size
 
     model_meta["format_version"] = "1.0"
+    model_meta["backend"] = "torch.jit"
+    model_meta["device"] = torch_device.type
 
     return model_jit, model_meta
 

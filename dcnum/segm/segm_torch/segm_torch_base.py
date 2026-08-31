@@ -84,7 +84,7 @@ class TorchSegmenterBase(Segmenter):
                 segmenter_class=cls,
                 reasons_list=[(
                     f"Model {model_file} is version {model_version}, "
-                    f"but segmenter {cls} requires  "
+                    f"but segmenter {cls} requires "
                     f"version {cls.requires_model_format_version}"
                 )])
 
