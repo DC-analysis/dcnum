@@ -1,10 +1,10 @@
+from collections.abc import Callable
 import importlib
 import logging
 import multiprocessing as mp
 import os
 import threading
 import time
-from typing import Callable
 
 import psutil
 
@@ -12,8 +12,9 @@ import psutil
 class LazyLoader:
     def __init__(self,
                  modname: str,
-                 sibling: str = None,
-                 action: Callable = None,
+                 sibling: str | None = None,
+                 action_before_import: Callable | None = None,
+                 action_after_import: Callable | None = None,
                  ):
         """Lazily load a module
 
@@ -33,7 +34,9 @@ class LazyLoader:
             If ``submod_1`` would like to lazily import ``submod_2``::
 
                 submod_2 = LazyLoader("submod_2", sibling==__name__)
-        action: Callable
+        action_before_import: Callable
+            Called before the import.
+        action_after_import: Callable
             Method that should be called after the actual import.
             Must accept the module as an argument. This is useful
             if any setup steps need to be made after import (e.g.
@@ -44,7 +47,8 @@ class LazyLoader:
             modname = f"{sibling}.{modname}"
         self._modname = modname
         self._mod = None
-        self._action = action
+        self._action_before = action_before_import
+        self._action_after = action_after_import
 
     def __getattr__(self, attr):
         """If the module is accessed, load it and return what was asked for"""
@@ -52,11 +56,14 @@ class LazyLoader:
             return getattr(self._mod, attr)
         except BaseException:
             if self._mod is None:
+                # before import
+                if self._action_before is not None:
+                    self._action_before()
                 # module is unset, load it
                 self._mod = importlib.import_module(self._modname)
-                # call the action method
-                if self._action is not None:
-                    self._action(self._mod)
+                # after import
+                if self._action_after is not None:
+                    self._action_after(self._mod)
             else:
                 # Module is loaded or does not exist,
                 # exception unrelated to LazyLoader.
@@ -161,5 +168,5 @@ def setup_h5py(h5py):
     import hdf5plugin  # noqa: F401
 
 
-h5py = LazyLoader("h5py", action=setup_h5py)
+h5py = LazyLoader("h5py", action_after_import=setup_h5py)
 """Lazily loaded h5py module"""

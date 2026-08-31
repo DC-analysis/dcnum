@@ -1,4 +1,7 @@
 import os
+import pathlib
+import platform
+import traceback
 import warnings
 
 from ...common import LazyLoader
@@ -15,7 +18,43 @@ from ...common import LazyLoader
 os.environ["CUBLAS_WORKSPACE_CONFIG"] = ":4096:8"
 
 
+def setup_openvino(openvino):
+    # Executed before import.
+    # Disable telemetry
+    try:
+        try:
+            import openvino_telemetry.main as tm
+            opt_in_checker = tm.OptInChecker()
+            opt_in_checker.update_result(tm.ConsentCheckResult.DECLINED)
+        except ImportError:
+            # Package openvino_telemetry is not available
+            pf = platform.system()
+            if pf == "Windows":
+                dir = pathlib.Path(os.path.expandvars("$LOCALAPPDATA"))
+                subdir = "Intel Corporation"
+            elif pf in ["Linux", "Darwin"]:
+                dir = pathlib.Path.home()
+                subdir = "intel"
+            else:
+                dir = subdir = None
+
+            if dir is not None and subdir is not None and dir.exists():
+                consent_file = dir / subdir / "openvino_telemetry"
+                consent_file.write_text("0")
+            else:
+                print("Failed to opt out of openvino telemetry")
+    except BaseException:
+        print("Failed to setup openvino properly.")
+        print(traceback.format_exc())
+
+    yield
+    # Executed after import.
+
+
 def setup_torch(torch):
+    # Executed before import.
+    yield
+    # Executed after import.
     # REPRODUCIBILITY: All of these settings, including CUBLAS_WORKSPACE_CONFIG
     # above resulted in a segmentation performance hit of about 10% for an
     # NVIDIA RTX 2050 Laptop.
@@ -42,5 +81,5 @@ def setup_torch(torch):
                       f"segmenters")
 
 
-torch = LazyLoader("torch", action=setup_torch)
-openvino = LazyLoader("openvino")
+torch = LazyLoader("torch", action_after_import=setup_torch)
+openvino = LazyLoader("openvino", action_before_import=setup_openvino)
