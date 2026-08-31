@@ -17,8 +17,6 @@ mp_spawn = mp.get_context('spawn')
 
 
 class MPOSegmenter(Segmenter, abc.ABC):
-    hardware_processor = "cpu"
-
     def __init__(self,
                  *,
                  num_workers: int | None = None,

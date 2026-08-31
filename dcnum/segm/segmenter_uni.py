@@ -6,7 +6,6 @@ from .segmenter import Segmenter
 
 
 class UNISegmenter(Segmenter, abc.ABC):
-    hardware_processor = "cpu"
     required_batch_size = 0
 
     def __init__(self,

@@ -31,9 +31,6 @@ class SegmenterNotApplicableError(BaseException):
 
 
 class Segmenter(abc.ABC):
-    hardware_processor = "none"
-    """Required hardware ("cpu" or "gpu") defined in first-level subclass."""
-
     mask_postprocessing = True
     """Whether to enable mask post-processing.
     If disabled, you should make sure that your mask is properly defined

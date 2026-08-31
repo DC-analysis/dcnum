@@ -5,6 +5,7 @@
  - fix: possible memory leak in `segment_algorithm_wrapper`
  - enh: allow to specify technical kwargs for `segment_algorithm`
  - enh: use number of physical CPUs in `cpu_count`
+ - ref: remove unused and restrictive `Segmenter.hardware_processor` property
  - ref: code cleanup with ruff in multiple places
  - ref: migrate `thresh` segmenter to `UNISegmenter`
  - setup: add `psutil` dependency

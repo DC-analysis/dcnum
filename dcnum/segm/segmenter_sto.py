@@ -6,8 +6,6 @@ from .segmenter import Segmenter
 
 
 class STOSegmenter(Segmenter, abc.ABC):
-    hardware_processor = "gpu"
-
     def __init__(self,
                  *,
                  num_workers: int | None = None,
