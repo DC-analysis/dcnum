@@ -15,11 +15,10 @@ import uuid
 
 import numpy as np
 
-from dcnum.segm.segmenter_mpo import MPOSegmenter
-
 from ..common import h5py, join_worker, start_workers_threaded
 from ..feat.feat_background.base import get_available_background_methods
 from ..segm import SegmenterManagerThread, UNISegmenter, get_segmenters
+from ..segm.segmenter_mpo import MPOSegmenter
 from ..meta import ppid
 from ..read import HDF5Data, get_measurement_identifier, get_mapping_indices
 from .._version import version, version_tuple
