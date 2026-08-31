@@ -38,7 +38,10 @@ dependencies = [
 dynamic = ["version"]
 
 [project.optional-dependencies]
-torch = ["torch>=2.2, <3"]
+torch = [
+    "torch>=2.2, <3",
+    "openvino",
+]
 
 [project.urls]
 source = "https://github.com/DC-Analysis/dcnum"

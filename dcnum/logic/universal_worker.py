@@ -39,8 +39,10 @@ class UniversalWorker:
         self.log_level = log_level or logging.getLogger("dcnum").level
 
     def run(self):
+        # If multiprocessing is used, we now live in our own process.
         confirm_single_threaded()
 
+        # Connect the logger
         logger = logging.getLogger(
             f"dcnum.logic.UniversalWorker.{os.getpid()}")
         """logger that sends all logs to `self.log_queue`"""
@@ -56,9 +58,16 @@ class UniversalWorker:
         logger.addHandler(queue_handler)
         logger.debug("Ready")
 
-        # only close queues when we have created them ourselves.
+        # Only close queues when we have created them ourselves.
         close_queues = isinstance(self, mp_spawn.Process)
         wait_time_writer = 0
+
+        # If we are responsible for segmentation, set everything up.
+        try:
+            self.slot_register.segmenter.log_info(logger)
+        except ValueError:
+            # Not a UNISegmenter
+            pass
 
         sr = self.slot_register
         while sr.state != "q":

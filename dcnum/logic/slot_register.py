@@ -8,12 +8,11 @@ import traceback
 
 import numpy as np
 
-from dcnum.segm.segmenter_uni import UNISegmenter
-
 from ..common import LazyLoader
 from ..feat import Gate, QueueEventExtractor
 from ..read import HDF5Data
 from ..segm.segmenter import STRUCTURING_ELEMENT
+from ..segm.segmenter_uni import UNISegmenter
 from ..segm import get_segmenters
 
 from .chunk_slot import ChunkSlot, ChunkSlotData
@@ -147,7 +146,8 @@ class SlotRegister:
                     f"Segmenter {self.segmenter_class} is not an instance "
                     f"of UNISegmenter")
             self._segmenter = self.segmenter_class(
-                debug=self.job["debug"], **self.job["segmenter_kwargs"])
+                debug=self.job["debug"],
+                **self.job["segmenter_kwargs"])
         return self._segmenter
 
     @property

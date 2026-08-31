@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import errno
 import functools
 import hashlib
@@ -6,17 +8,21 @@ import json
 import logging
 import os
 import pathlib
+import tempfile
 import warnings
 import zipfile
 
 import numpy as np
 
 from ...meta import paths
+from ...common import cpu_count
 
-from .torch_setup import torch
+from .torch_setup import torch, openvino
 
 
 logger = logging.getLogger(__name__)
+if tempfile.tempdir is not None:
+    tempdir = pathlib.Path(tempfile.tempdir) / "dcnum_compiled_models"
 
 
 def check_md5sum(path):
@@ -28,16 +34,19 @@ def check_md5sum(path):
 
 
 @functools.cache
-def load_model(path_or_name, device):
+def load_model(path_or_name: str | pathlib.Path,
+               backend: str | None = None,
+               device: str | None = None,
+               ):
     """Load a PyTorch model + metadata from a TorchScript jit checkpoint
 
     Parameters
     ----------
-    path_or_name: str or pathlib.Path
+    path_or_name:
         jit checkpoint file; For dcnum, these files have the suffix .dcnm
         and contain a special `_extra_files["dcnum_meta.json"]` extra
         file that can be loaded via `torch.jit.load` (see below).
-    device: str or torch.device
+    device:
         device on which to run the model
 
     Returns
@@ -47,24 +56,32 @@ def load_model(path_or_name, device):
     model_meta: dict
         metadata associated with the loaded model
     """
+    device = device or "cpu"
     with torch.inference_mode():
-        device = torch.device(device)
-
         model_path = retrieve_model_file(path_or_name)
 
         with open(model_path, "rb") as fd:
             is_version_2 = fd.read(4) == b"DCNM"
 
         if is_version_2:
-            model_call, model_meta = load_model_v2_pt2(model_path, device)
+            model_call, model_meta = load_model_v2_pt2(
+                model_path=model_path,
+                backend=backend,
+                device=device)
         else:
+            if not isinstance(device, (str, torch.device)):
+                raise TypeError(
+                    f"Model files version 1 only accept string or "
+                    f"`torch.device` as `device`, got '{type(device)}'")
             model_call, model_meta = load_model_v1_jit(model_path, device)
 
         return model_call, model_meta
 
 
-def load_model_v1_jit(model_path, device):
+def load_model_v1_jit(model_path, device: str):
     """Load dcnm model file format version 1 (torch JIT)"""
+    device = torch.device(device or "cpu")
+
     # define an extra files mapping dictionary that loads the model's metadata
     extra_files = {"dcnum_meta.json": ""}
     # load model
@@ -115,7 +132,8 @@ def load_model_v1_jit(model_path, device):
 
 
 def load_model_v2_pt2(model_path: pathlib.Path,
-                      device: str,
+                      backend: str | None = None,
+                      device: str = "cpu",
                       ):
     """Load dcnm model file format version 2 (ExportedProgram .pt2)"""
     content = model_path.read_bytes()
@@ -151,15 +169,56 @@ def load_model_v2_pt2(model_path: pathlib.Path,
         warnings.simplefilter("ignore", UserWarning)
         pe = torch.export.load(buffer)
 
-    # https://docs.pytorch.org/docs/main/generated/torch.compile.html#torch.compile
-    model = torch.compile(
-        pe.module(),
-        fullgraph=True,
-        dynamic=False,
-        backend="inductor",
-        # TODO: Pytorch 3.13 supports setting this (avoid recompilations)?
-        # dynamic_shapes=(10, 80, 320),
-    )
+    if backend in [None, "openvino"] and openvino.module_available():
+        example = torch.randint(
+            low=100,
+            high=200,
+            size=tuple([model_meta["batch_size"]] + model_meta["image_shape"]),
+            dtype=torch.uint8)
+        ov_model = openvino.convert_model(pe, example_input=(example,))
+
+        # compile the model for the specified device
+        core = openvino.Core()
+        ov_device_map = {
+            "cpu": "CPU",
+        }
+        if device not in ov_device_map:
+            warnings.warn(f"Openvino device `{device}` not known to dcnum")
+            if device in core.available_devices:
+                ov_device_map[device] = device
+            else:
+                raise ValueError(f"Unavailable openvino device '{device}'")
+        model = core.compile_model(
+            ov_model,
+            ov_device_map[device],
+            config={
+                # Disable hyperthreading, it's not efficient.
+                openvino.properties.hint.enable_hyper_threading(): False,
+                # Only use the physical cores. Using virtual cores is not
+                # efficient. Note that we have to set this here globally,
+                # because openvino somehow treats all computations centrally.
+                # If we set this to "1", then **all** worker instances will
+                # share just one CPU. It's how openvino works.
+                openvino.properties.inference_num_threads(): cpu_count(),
+            }
+        )
+        model_meta["mask_func"] = lambda x: next(iter(x.values()))
+        model_meta["backend"] = "openvino"
+        model_meta["device"] = device
+    else:
+        # Fallback to default "inductor" compiler
+        # https://docs.pytorch.org/docs/main/generated/torch.compile.html#torch.compile
+        model = torch.compile(
+            pe.module(),
+            fullgraph=True,
+            dynamic=False,
+            backend="inductor",
+            # TODO: Pytorch 3.13 supports setting this (avoid recompilations)?
+            # dynamic_shapes=(10, 80, 320),
+        )
+        model_meta["mask_func"] = lambda x: x.detach().cpu().numpy()
+        model_meta["backend"] = "inductor"
+        model_meta["device"] = device or "cpu"
 
     return model, model_meta
 

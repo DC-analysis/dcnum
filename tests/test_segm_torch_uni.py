@@ -11,6 +11,13 @@ torch = pytest.importorskip("torch")
 
 from dcnum.segm.segm_torch import segm_torch_base  # noqa: E402
 from dcnum.segm.segm_torch import torch_model  # noqa: E402
+from dcnum.segm.segm_torch import torch_setup  # noqa: E402
+
+
+OPENVINO_OK = (
+    torch_setup.openvino.module_available()
+    and "CPU" in torch_setup.openvino.Core().available_devices
+)
 
 
 def test_metadata_loading_from_unet_1316_naiad_g1_abd2a():
@@ -140,3 +147,29 @@ def test_segm_torch_uni_bad_model():
             meta=hd.meta,
             logs=hd.logs
         )
+
+
+@pytest.mark.skipif(not OPENVINO_OK,
+                    reason="openvino not installed or no openvino device")
+def test_segm_torch_uni_openvino():
+    """Test with openvino"""
+    path = retrieve_data(
+        "fmt-hdf5_cytoshot_full-features_2024.zip")
+    model_file = retrieve_model(
+        "segm-torch-model_unet-dcnum-test_g1_cb45f.zip")
+
+    sm = segm.segm_torch.SegmentTorchUNI(model_file=model_file,
+                                         backend="openvino",
+                                         device="cpu")
+    assert not sm.requires_background_correction
+    assert sm.mask_postprocessing
+    assert not sm.mask_default_kwargs["closing_disk"]
+    assert sm.get_ppid() == f"torchuni:m={model_file.name}:cle=1^f=1^clo=0"
+
+    with read.HDF5Data(path) as hd:
+        labels_seg = sm.segment_batch_with_labeling(
+            hd.image[:10][:, 8:-8, 32:-32])
+        assert np.all(np.unique(labels_seg[0]) == [0, 1, 2])
+        assert np.sum(labels_seg[0] == 0) == 14978  # background
+        assert np.sum(labels_seg[0] == 1) == 831  # first label
+        assert np.sum(labels_seg[0] == 2) == 575  # first label

@@ -1,6 +1,6 @@
 0.31.0
  - feat: introduce `UNISegmenter` which is handled by `UniversalWorker`
- - feat: new `torchuni` segmenter
+ - feat: new `torchuni` segmenter with "openvino" and "inductor" backends
  - feat: support dcnm model file format version 2.0
  - fix: possible memory leak in `segment_algorithm_wrapper`
  - enh: allow to specify technical kwargs for `segment_algorithm`

@@ -27,9 +27,9 @@ class UNISegmenter(Segmenter, abc.ABC):
             Additional, optional keyword arguments for ``segment_algorithm``
             defined in the subclass.
         """
-        super(UNISegmenter, self).__init__(kwargs_mask=kwargs_mask,
-                                           debug=debug,
-                                           **kwargs)
+        super().__init__(kwargs_mask=kwargs_mask,
+                         debug=debug,
+                         **kwargs)
 
     def segment_batch(self,
                       images: np.ndarray,

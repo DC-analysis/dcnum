@@ -43,3 +43,4 @@ def setup_torch(torch):
 
 
 torch = LazyLoader("torch", action=setup_torch)
+openvino = LazyLoader("openvino")

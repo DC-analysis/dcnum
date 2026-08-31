@@ -12,6 +12,8 @@ class SegmentTorchUNI(TorchSegmenterBase, UNISegmenter):
     def __init__(self,
                  *,
                  kwargs_mask: dict | None = None,
+                 backend: str | None = None,
+                 device: str | None = None,
                  debug: bool = False,
                  **kwargs
                  ):
@@ -21,23 +23,38 @@ class SegmentTorchUNI(TorchSegmenterBase, UNISegmenter):
         ----------
         kwargs_mask: dict
             Keyword arguments for mask post-processing (see `process_labels`)
+        compile_for: str
+            For which hardware device to compile the model for
         debug: bool
             Debugging parameters
         kwargs:
             Additional, optional keyword arguments for ``segment_algorithm``
             defined in the subclass.
         """
-        if "model_file" in kwargs:
-            model_file = kwargs["model_file"]
-            _, model_meta = load_model(model_file, "cpu")
-            if "batch_size" in model_meta:
-                self.required_batch_size = model_meta["batch_size"]
         super().__init__(kwargs_mask=kwargs_mask,
                          debug=debug,
                          **kwargs)
 
+        if "model_file" in kwargs:
+            model_file = kwargs["model_file"]
+            _, model_meta = load_model(model_file,
+                                       backend=backend,
+                                       device=device)
+            if "batch_size" in model_meta:
+                self.required_batch_size = model_meta["batch_size"]
+            self.kwargs_technical["backend"] = model_meta["backend"]
+            self.kwargs_technical["device"] = model_meta["device"]
+
+    def log_info(self, logger):
+        backend = self.kwargs_technical.get("backend")
+        device = self.kwargs_technical.get("device")
+        logger.info(f"Segmenter backend: {backend}, device: {device}")
+
     @staticmethod
-    def segment_algorithm(images, *,
+    def segment_algorithm(images,
+                          backend: str | None,
+                          device: str | None,
+                          *,
                           model_file: str | None = None):
         """
         Parameters
@@ -52,7 +69,7 @@ class SegmentTorchUNI(TorchSegmenterBase, UNISegmenter):
         Returns
         -------
         mask: 3d boolean or integer ndarray
-            mask or labeling image for the give index
+            mask or labeling image for the given index
         """
         if model_file is None:
             raise ValueError("Please specify a .dcnm model file!")
@@ -66,10 +83,14 @@ class SegmentTorchUNI(TorchSegmenterBase, UNISegmenter):
                 torch.set_num_threads(1)
             if torch.get_num_interop_threads() != 1:
                 torch.set_num_interop_threads(1)
-            device = torch.device("cpu")
+
+            device = device or "cpu"
 
             # Load model and metadata
-            model, model_meta = load_model(model_file, device)
+            model, model_meta = load_model(model_file,
+                                           backend=backend,
+                                           device=device,
+                                           )
 
             image_ten = torch.from_numpy(images)
 
@@ -78,6 +99,7 @@ class SegmentTorchUNI(TorchSegmenterBase, UNISegmenter):
             # Model inference
             pred_tensor = model(image_ten_on_device)
 
-            mask = pred_tensor.detach().cpu().numpy()
+            mask_func = model_meta["mask_func"]
+            mask = mask_func(pred_tensor)
 
         return mask
