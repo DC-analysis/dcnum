@@ -44,7 +44,7 @@ class SegmentTorchMPO(TorchSegmenterBase, MPOSegmenter):
         device = torch.device("cpu")
 
         # Load model and metadata
-        model, model_meta = load_model(model_file, device)
+        model, model_meta = load_model(model_file, device=device)
 
         image_preproc = preprocess_images(image[np.newaxis, :, :],
                                           **model_meta["preprocessing"])

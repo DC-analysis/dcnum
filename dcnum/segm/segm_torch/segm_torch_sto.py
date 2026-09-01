@@ -28,7 +28,7 @@ class SegmentTorchSTO(TorchSegmenterBase, STOSegmenter):
         _, total = torch.cuda.mem_get_info(device)
         logger.info(f"Available GPU memory: {total/1024**3:.1f}GB")
 
-        model, model_meta = load_model(model_file, device)
+        model, model_meta = load_model(model_file, device=device)
         batch_size = model_meta["estimated_batch_size_cuda"]
         logger.info(f"GPU segmentation batch size: {batch_size}")
 
@@ -130,7 +130,7 @@ class SegmentTorchSTO(TorchSegmenterBase, STOSegmenter):
         device = torch.device(gpu_id if gpu_id is not None else "cuda")
 
         # Load model and metadata
-        model, model_meta = load_model(model_file, device)
+        model, model_meta = load_model(model_file, device=device)
 
         # Model inference
         # The `masks` array has the shape (len(images), H, W), where
