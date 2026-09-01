@@ -95,7 +95,7 @@ def load_model_v1_jit(model_path, device: str):
     # optimize for inference on device
     model_jit = torch.jit.optimize_for_inference(model_jit)
 
-    if torch_device.type == "cuda":
+    if torch_device.type.startswith("cuda"):
         # Estimate the batch size for the current device.
         # In principle, we would be fine with a batch size of 50, but
         # there is a slight improvement in performance when going to

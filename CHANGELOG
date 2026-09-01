@@ -3,6 +3,7 @@
  - feat: new `torchuni` segmenter with "openvino" and "inductor" backends
  - feat: support dcnm model file format version 2.0
  - fix: possible memory leak in `segment_algorithm_wrapper`
+ - fix: loading model for CUDA when device type contains index, e.g. "cuda:0"
  - enh: allow to specify technical kwargs for `segment_algorithm`
  - enh: use number of physical CPUs in `cpu_count`
  - enh: update entry for libraries in dcnum logs
