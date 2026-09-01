@@ -18,7 +18,7 @@ from ...common import LazyLoader
 os.environ["CUBLAS_WORKSPACE_CONFIG"] = ":4096:8"
 
 
-def setup_openvino(openvino):
+def setup_openvino():
     # Executed before import.
     # Disable telemetry
     try:
