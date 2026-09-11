@@ -241,6 +241,8 @@ def retrieve_model_file(path_or_name):
         else:
             try:
                 return retrieve_model_file(path_or_name.name)
+            except KeyboardInterrupt:
+                raise
             except BaseException:
                 raise FileNotFoundError(errno.ENOENT,
                                         os.strerror(errno.ENOENT),

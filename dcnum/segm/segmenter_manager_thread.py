@@ -57,6 +57,8 @@ class SegmenterManagerThread(threading.Thread):
     def run(self):
         try:
             self.segmenter.log_info(self.logger)
+        except KeyboardInterrupt:
+            raise
         except BaseException:
             self.logger.error("Failed to log device information")
             self.logger.info(traceback.format_exc())

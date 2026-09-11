@@ -15,7 +15,9 @@ import uuid
 
 import numpy as np
 
-from ..common import h5py, join_worker, start_workers_threaded
+from ..common import (
+    DCNUMHaltInterrupt, h5py, join_worker, start_workers_threaded
+)
 from ..feat.feat_background.base import get_available_background_methods
 from ..segm import SegmenterManagerThread, UNISegmenter, get_segmenters
 from ..segm.segmenter_mpo import MPOSegmenter
@@ -68,7 +70,12 @@ class DCNumJobRunner(threading.Thread):
             optional unique string for creating temporary files
             (defaults to hostname)
         """
-        super().__init__(*args, **kwargs)
+        super().__init__(*args,
+                         # Set this thread as a daemon thread, so that Ctrl+C
+                         # does not hang. There are no downsides to this,
+                         # because the main thread always joins this thread.
+                         daemon=True,
+                         **kwargs)
         self.error_tb = None
         self.job = job
         if tmp_suffix is None:
@@ -257,6 +264,10 @@ class DCNumJobRunner(threading.Thread):
     def run(self):
         try:
             self.run_pipeline()
+        except (KeyboardInterrupt, DCNUMHaltInterrupt):
+            self.log_queue.cancel_join_thread()
+            self.close()
+            return
         except BaseException:
             self.state = "error"
             self.error_tb = traceback.format_exc()
@@ -765,8 +776,23 @@ class DCNumJobRunner(threading.Thread):
         data_size = len(self.dtin)
         t0 = time.perf_counter()
 
-        # So in principle we are done here. We do not have to do anything
+        for _ in range(100 * len(uni_workers)):
+            if all(w.is_alive() for w in uni_workers):
+                break
+            elif (worker_write.written_frames.value
+                    == worker_write.written_events.value):
+                # unexpectedly, we are already done (probably as small dataset)
+                break
+            else:
+                self.logger.info("Waiting for universal workers to start")
+                time.sleep(0.1)
+        else:
+            self.logger.error("Universal workers failed to spawn")
+            raise DCNUMHaltInterrupt("Universal workers failed to spawn")
+
+        # We can lean back now. We do not have to do anything
         # besides monitoring the progress.
+        error = None
         while True:
             counted_frames = worker_write.written_frames.value
             self.event_count = worker_write.written_events.value
@@ -777,6 +803,10 @@ class DCNumJobRunner(threading.Thread):
             time.sleep(.1)
             if counted_frames == data_size:
                 break
+            else:
+                if all(not w.is_alive() for w in uni_workers):
+                    error = "Universal workers exited early"
+                    break
 
         slot_register.state = "q"
 
@@ -821,6 +851,7 @@ class DCNumJobRunner(threading.Thread):
             join_worker(worker=worker_segm,
                         logger=self.logger,
                         name="segmentation")
+
         join_worker(worker=worker_write,
                     timeout=600,
                     logger=self.logger,
@@ -834,13 +865,17 @@ class DCNumJobRunner(threading.Thread):
                         logger=self.logger,
                         name="universal worker")
 
-        self.event_count = worker_write.written_events.value
-        if self.event_count == 0:
-            self.logger.error(
-                f"No events found in {self.draw.path}! Please check the "
-                f"input file or revise your pipeline")
+        if error:
+            self.logger.error(error)
         else:
-            self.logger.info("Finished segmentation and feature extraction")
+            self.event_count = worker_write.written_events.value
+            if self.event_count == 0:
+                self.logger.error(
+                    f"No events found in {self.draw.path}! Please check the "
+                    f"input file or revise your pipeline")
+            else:
+                self.logger.info(
+                    "Finished segmentation and feature extraction")
 
 
 def get_library_versions_dict(library_name_list):
@@ -848,7 +883,7 @@ def get_library_versions_dict(library_name_list):
     for library_name in library_name_list:
         try:
             lib = importlib.import_module(library_name)
-        except BaseException:
+        except ImportError:
             version = None
         else:
             version = lib.__version__

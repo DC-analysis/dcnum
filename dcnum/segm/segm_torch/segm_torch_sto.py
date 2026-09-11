@@ -36,10 +36,7 @@ class SegmentTorchSTO(TorchSegmenterBase, STOSegmenter):
     def is_available():
         available = False
         if TorchSegmenterBase.is_available():
-            try:
-                available = torch.cuda.is_available()
-            except BaseException:
-                available = False
+            available = torch.cuda.is_available()
         return available
 
     @staticmethod

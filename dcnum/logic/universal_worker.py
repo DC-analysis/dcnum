@@ -9,6 +9,7 @@ import time
 import traceback
 import typing
 
+from ..common import DCNUMHaltInterrupt
 from ..os_env_st import RequestSingleThreaded, confirm_single_threaded
 
 
@@ -70,14 +71,14 @@ class UniversalWorker:
             pass
 
         sr = self.slot_register
-        while sr.state != "q":
-            did_something = False
+        try:
+            while sr.state != "q":
+                did_something = False
 
-            if sr.state == "p":
-                time.sleep(0.5)
-                continue
+                if sr.state == "p":
+                    time.sleep(0.5)
+                    continue
 
-            try:
                 # Check whether the writer is overloaded
                 if (ldq := self.slot_register.write_queue_size) > 1000:
                     stalled_sec = 0.
@@ -104,11 +105,15 @@ class UniversalWorker:
 
                 # Finally, perform feature extraction
                 did_something |= sr.task_extract_features(logger=logger)
-            except BaseException:
-                logger.error(traceback.format_exc())
 
-            if not did_something:
-                time.sleep(.01)
+                if not did_something:
+                    time.sleep(.01)
+
+        except (KeyboardInterrupt, DCNUMHaltInterrupt):
+            self.log_queue.cancel_join_thread()
+            return
+        except BaseException:
+            logger.error(traceback.format_exc())
 
         if wait_time_writer > 10:
             logger.warning(f"Waited a total of {wait_time_writer:.1f}s "

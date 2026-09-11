@@ -1,7 +1,6 @@
 import os
 import pathlib
 import platform
-import traceback
 import warnings
 
 from ...common import LazyLoader
@@ -22,30 +21,26 @@ def setup_openvino():
     # Executed before import.
     # Disable telemetry
     try:
-        try:
-            import openvino_telemetry.main as tm
-            opt_in_checker = tm.OptInChecker()
-            opt_in_checker.update_result(tm.ConsentCheckResult.DECLINED)
-        except ImportError:
-            # Package openvino_telemetry is not available
-            pf = platform.system()
-            if pf == "Windows":
-                dir = pathlib.Path(os.path.expandvars("$LOCALAPPDATA"))
-                subdir = "Intel Corporation"
-            elif pf in ["Linux", "Darwin"]:
-                dir = pathlib.Path.home()
-                subdir = "intel"
-            else:
-                dir = subdir = None
+        import openvino_telemetry.main as tm
+        opt_in_checker = tm.OptInChecker()
+        opt_in_checker.update_result(tm.ConsentCheckResult.DECLINED)
+    except ImportError:
+        # Package openvino_telemetry is not available
+        pf = platform.system()
+        if pf == "Windows":
+            dir = pathlib.Path(os.path.expandvars("$LOCALAPPDATA"))
+            subdir = "Intel Corporation"
+        elif pf in ["Linux", "Darwin"]:
+            dir = pathlib.Path.home()
+            subdir = "intel"
+        else:
+            dir = subdir = None
 
-            if dir is not None and subdir is not None and dir.exists():
-                consent_file = dir / subdir / "openvino_telemetry"
-                consent_file.write_text("0")
-            else:
-                print("Failed to opt out of openvino telemetry")
-    except BaseException:
-        print("Failed to setup openvino properly.")
-        print(traceback.format_exc())
+        if dir is not None and subdir is not None and dir.exists():
+            consent_file = dir / subdir / "openvino_telemetry"
+            consent_file.write_text("0")
+        else:
+            print("Failed to opt out of openvino telemetry")
 
     yield
     # Executed after import.

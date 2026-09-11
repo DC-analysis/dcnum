@@ -83,6 +83,8 @@ class ChunkWriter(threading.Thread):
                 else:
                     # wait for the next item to arrive
                     time.sleep(.1)
+        except KeyboardInterrupt:
+            raise
         except BaseException:
             self.logger.error(traceback.format_exc())
         self.logger.info(f"Disk time: {time_tot:.1f}s")

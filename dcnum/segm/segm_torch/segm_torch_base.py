@@ -146,10 +146,4 @@ class TorchSegmenterBase(Segmenter):
 
     @staticmethod
     def is_available():
-        try:
-            _ = torch.__version__
-        except BaseException:
-            available = False
-        else:
-            available = True
-        return available
+        return torch.module_available()

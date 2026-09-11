@@ -189,6 +189,7 @@ class BackgroundSparseMed(Background):
 
         self.queue = mp_spawn.Queue()
         """queue for median computation jobs"""
+        self.queue.cancel_join_thread()
 
         self.workers = [WorkerSparseMed(self.queue,
                                         self.worker_counter,
@@ -418,6 +419,7 @@ class BackgroundSparseMed(Background):
         start = 0
         ival = 500
         smax = height * width
+
         while start < smax:
             args = (slice(start, start+ival),)
             start += ival
@@ -443,7 +445,6 @@ class WorkerSparseMed(mp_spawn.Process):
         """Worker process for median computation"""
         super().__init__(*args, **kwargs)
         self.queue = job_queue
-        self.queue.cancel_join_thread()
         self.counter = counter
         self.shared_input_raw = shared_input
         self.shared_output_raw = shared_output
@@ -451,40 +452,48 @@ class WorkerSparseMed(mp_spawn.Process):
 
     def run(self):
         """Main loop of worker process (breaks when `self.counter` <0)"""
-        # confirm single-threadedness (prints to log)
-        confirm_single_threaded()
-        # Create the ctypes arrays here instead of during __init__, because
-        # for some reason they are copied in __init__ and not mapped.
-        shared_input = np.ctypeslib.as_array(
-            self.shared_input_raw).reshape(self.kernel_size, -1)
-        shared_output = np.ctypeslib.as_array(self.shared_output_raw)
-        while True:
-            if self.counter.value < 0:
-                break
-            try:
-                args = self.queue.get(timeout=.1)
-            except queue.Empty:
-                pass
-            else:
-                job_slice = args[0]
-                # Compute the median of a subslice of the array.
-                # Use np.partition which has less overhead than np.median
-                # (code copy-pasted from np.median):
-                kth = shared_input.shape[0] // 2
-                part = np.partition(a=shared_input[:, job_slice],
-                                    kth=kth,
-                                    axis=0)
-                # Note that we only partition at `kth`, regardless of the
-                # input size. This is ok, because we are only interested
-                # in integers anyway and +/- one grayscale value does not
-                # really matter.
-                shared_output[job_slice] = part[kth]
-                # shared_output[job_slice] = np.median(
-                #     shared_input[:, job_slice],
-                #     axis=0,
-                #     overwrite_input=False)
-                with self.counter.get_lock():
-                    self.counter.value += 1
+        try:
+            self.queue.cancel_join_thread()
+            # confirm single-threadedness (prints to log)
+            confirm_single_threaded()
+            # Create the ctypes arrays here instead of during __init__, because
+            # for some reason they are copied in __init__ and not mapped.
+            shared_input = np.ctypeslib.as_array(
+                self.shared_input_raw).reshape(self.kernel_size, -1)
+            shared_output = np.ctypeslib.as_array(self.shared_output_raw)
+            while True:
+                if self.counter.value < 0:
+                    break
+                try:
+                    # Get the next task from the queue.
+                    args = self.queue.get(timeout=.1)
+
+                    # Process the task
+                    job_slice = args[0]
+                    # Compute the median of a subslice of the array.
+                    # Use np.partition which has less overhead than np.median
+                    # (code copy-pasted from np.median):
+                    kth = shared_input.shape[0] // 2
+                    part = np.partition(a=shared_input[:, job_slice],
+                                        kth=kth,
+                                        axis=0)
+                    # Note that we only partition at `kth`, regardless of the
+                    # input size. This is ok, because we are only interested
+                    # in integers anyway and +/- one grayscale value does not
+                    # really matter.
+                    shared_output[job_slice] = part[kth]
+                    # shared_output[job_slice] = np.median(
+                    #     shared_input[:, job_slice],
+                    #     axis=0,
+                    #     overwrite_input=False)
+                    with self.counter.get_lock():
+                        self.counter.value += 1
+                except queue.Empty:
+                    # Queue is empty, wait for new data.
+                    pass
+        except KeyboardInterrupt:
+            # Silently exit (User pressed Ctrl+C)
+            return
 
     def start(self):
         # Set all relevant os environment variables such libraries in the

@@ -9,6 +9,10 @@ import time
 import psutil
 
 
+class DCNUMHaltInterrupt(BaseException):
+    """Used for generally halting all tasks"""
+
+
 class LazyLoader:
     def __init__(self,
                  modname: str,
@@ -54,7 +58,7 @@ class LazyLoader:
         """If the module is accessed, load it and return what was asked for"""
         try:
             return getattr(self._mod, attr)
-        except BaseException:
+        except AttributeError:
             if self._mod is None:
                 # before import
                 if self._action_before is not None:
@@ -77,7 +81,7 @@ class LazyLoader:
         """Check whether the module is available by reading its version"""
         try:
             self.__getattr__("__version__")
-        except BaseException:
+        except (ImportError, AttributeError):
             return False
         else:
             return True
@@ -109,17 +113,14 @@ def cpu_count() -> int:
         num_cpus.append(cpu_physical)
 
     # CPUs according to process affinity
-    try:
-        if hasattr(os, "sched_getaffinity"):
-            cpu_affin = len(os.sched_getaffinity(0))
-        elif hasattr(os, "process_cpu_count"):
-            cpu_affin = os.process_cpu_count()
-        else:
-            cpu_affin = os.cpu_count()
-        if cpu_affin is not None:
-            num_cpus.append(cpu_affin)
-    except BaseException:
-        pass
+    if hasattr(os, "sched_getaffinity"):
+        cpu_affin = len(os.sched_getaffinity(0))
+    elif hasattr(os, "process_cpu_count"):
+        cpu_affin = os.process_cpu_count()
+    else:
+        cpu_affin = os.cpu_count()
+    if cpu_affin is not None:
+        num_cpus.append(cpu_affin)
 
     # Fallback
     num_cpus.append(mp.cpu_count())
@@ -152,12 +153,21 @@ def join_worker(worker,
 def start_workers_threaded(worker_list, logger, name):
     def target(worker_list, logger, name):
         tw0 = time.perf_counter()
-        for w in worker_list:
-            w.start()
-        logger.info(f"{len(worker_list)} {name} spawn time: "
-                    f"{time.perf_counter() - tw0:.1f}s")
+        w = None
+        ii = 0
+        try:
+            for ii, w in enumerate(worker_list):
+                w.start()
+        except BrokenPipeError:
+            logger.error(f"Worker {ii+1}: {w} failed to spawn")
+            raise DCNUMHaltInterrupt(f"Worker {ii+1}: {w} failed to spawn")
+        else:
+            logger.info(f"{len(worker_list)} {name} spawn time: "
+                        f"{time.perf_counter() - tw0:.1f}s")
 
-    thr = threading.Thread(target=target, args=(worker_list, logger, name))
+    thr = threading.Thread(target=target,
+                           args=(worker_list, logger, name),
+                           )
     thr.start()
     return thr
 

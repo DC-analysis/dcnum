@@ -124,6 +124,10 @@ class QueueWriterBase:
             writer_dq = collections.deque()
         thr_write = ChunkWriter(
             path_out=self.path_out,
+            # We need the daemon mode, because otherwise dcnum hangs
+            # when sending a KeyboardInterupt. But this is safe, because
+            # wer are always joining the writer thread.
+            daemon=True,
             dq=writer_dq,
             mode="w",
             ds_kwds=self.hdf5_dataset_kwargs,

@@ -341,6 +341,9 @@ class SlotRegister:
                                     cs.load(self.chunks_loaded)
                                     self.chunks_loaded += 1
                                     did_something = True
+            except KeyboardInterrupt:
+                self.event_queue.cancel_join_thread()
+                raise
             except BaseException:
                 if logger is not None:
                     logger.error(traceback.format_exc())
@@ -554,6 +557,9 @@ class SlotRegister:
                             index = cs.chunk * self.chunk_size + idx
                             try:
                                 events = extractor.process_label(index=index)
+                            except KeyboardInterrupt:
+                                self.event_queue.cancel_join_thread()
+                                raise
                             except BaseException:
                                 logger.error(traceback.format_exc())
                             else:

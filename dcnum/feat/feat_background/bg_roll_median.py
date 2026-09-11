@@ -254,27 +254,31 @@ class WorkerRollMed(mp_spawn.Process):
 
     def run(self):
         """Main loop of worker process (breaks when `self.counter` <0)"""
-        # confirm single-threadedness (prints to log)
-        confirm_single_threaded()
-        # Create the ctypes arrays here instead of during __init__, because
-        # for some reason they are copied in __init__ and not mapped.
-        shared_input = np.ctypeslib.as_array(
-            self.shared_input_raw).reshape(
-            self.batch_size + self.kernel_size, -1)
-        shared_output = np.ctypeslib.as_array(
-            self.shared_output_raw).reshape(self.batch_size, -1)
-        while True:
-            if self.counter.value < 0:
-                break
-            try:
-                args = self.queue.get(timeout=.1)
-            except queue.Empty:
-                pass
-            else:
-                compute_median_for_slice(shared_input, shared_output,
-                                         self.kernel_size, *args)
-                with self.counter.get_lock():
-                    self.counter.value += 1
+        try:
+            # confirm single-threadedness (prints to log)
+            confirm_single_threaded()
+            # Create the ctypes arrays here instead of during __init__, because
+            # for some reason they are copied in __init__ and not mapped.
+            shared_input = np.ctypeslib.as_array(
+                self.shared_input_raw).reshape(
+                self.batch_size + self.kernel_size, -1)
+            shared_output = np.ctypeslib.as_array(
+                self.shared_output_raw).reshape(self.batch_size, -1)
+            while True:
+                if self.counter.value < 0:
+                    break
+                try:
+                    args = self.queue.get(timeout=.1)
+                except queue.Empty:
+                    pass
+                else:
+                    compute_median_for_slice(shared_input, shared_output,
+                                             self.kernel_size, *args)
+                    with self.counter.get_lock():
+                        self.counter.value += 1
+        except KeyboardInterrupt:
+            # Silently exit
+            return
 
     def start(self):
         # Set all relevant os environment variables such libraries in the

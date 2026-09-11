@@ -229,6 +229,8 @@ def simple_type_eval(type_string: str | type) -> str | type | list:
         if type_string.count("|"):
             try:
                 return [simple_type_eval(ts) for ts in type_string.split("|")]
+            except KeyboardInterrupt:
+                raise
             except BaseException:
                 pass
         if type_string in ["bool", "dict", "float", "int", "str"]:

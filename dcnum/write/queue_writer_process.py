@@ -39,8 +39,12 @@ class QueueWriterProcess(QueueWriterBase, mp_spawn.Process):
 
         try:
             super().run(logger=logger)
+        except KeyboardInterrupt:
+            # User pressed Ctrl+C
+            self.log_queue.cancel_join_thread()
+            self.event_queue.cancel_join_thread()
         except BaseException:
-            self.logger.error(traceback.format_exc())
+            logger.error(traceback.format_exc())
 
         # Make sure everything gets written to the queue.
         queue_handler.flush()
