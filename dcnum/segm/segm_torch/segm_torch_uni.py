@@ -92,10 +92,8 @@ class SegmentTorchUNI(TorchSegmenterBase, UNISegmenter):
                                            device=device,
                                            )
 
-            image_ten = torch.from_numpy(images)
-
             # Move image tensors to device
-            image_ten_on_device = image_ten.to(device)
+            image_ten_on_device = torch.tensor(images, device=device)
             # Model inference
             pred_tensor = model(image_ten_on_device)
 
