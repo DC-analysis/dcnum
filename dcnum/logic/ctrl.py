@@ -780,7 +780,9 @@ class DCNumJobRunner(threading.Thread):
             if all(w.is_alive() for w in uni_workers):
                 break
             elif (worker_write.written_frames.value
-                    == worker_write.written_events.value):
+                  == worker_write.written_events.value
+                  == data_size
+                  ):
                 # unexpectedly, we are already done (probably as small dataset)
                 break
             else:
