@@ -82,9 +82,6 @@ class Segmenter(abc.ABC):
         self.kwargs_mask = {}
         """keyword arguments for mask post-processing"""
 
-        self.kwargs_technical = {}
-        """technical keyword arguments that do not affect the PPID"""
-
         self._wrapped_segment_algorithm = None
 
         if self.mask_postprocessing:
@@ -323,14 +320,14 @@ class Segmenter(abc.ABC):
         """Wraps ``self.segment_algorithm`` to only accept an image array
 
         The static method ``self.segment_algorithm`` may optionally accept
-        keyword arguments ``self.kwargs`` and ``self.kwargs_technical``.
+        the keyword arguments ``self.kwargs``.
         This method returns a wrapped version of `segment_algorithm` which
         only accepts the input images as an argument.
         This simplifies the application of segmentation algorithms
         across different implementations.
         """
         if self._wrapped_segment_algorithm is None:
-            kwargs = self.kwargs | self.kwargs_technical
+            kwargs = copy.copy(self.kwargs)
 
             if kwargs:
                 # For segmenters that accept keyword arguments.

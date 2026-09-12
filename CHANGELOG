@@ -5,7 +5,6 @@
  - fix: possible memory leak in `segment_algorithm_wrapper`
  - fix: loading model for CUDA when device type contains index, e.g. "cuda:0"
  - fix: make SIGINT / KeyboardInterrupt work
- - enh: allow to specify technical kwargs for `segment_algorithm`
  - enh: use number of physical CPUs in `cpu_count`
  - enh: update entry for libraries in dcnum logs
  - ref: remove unused and restrictive `Segmenter.hardware_processor` property

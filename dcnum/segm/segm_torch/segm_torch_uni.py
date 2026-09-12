@@ -42,12 +42,10 @@ class SegmentTorchUNI(TorchSegmenterBase, UNISegmenter):
                                        device=device)
             if "batch_size" in model_meta:
                 self.required_batch_size = model_meta["batch_size"]
-            self.kwargs_technical["backend"] = model_meta["backend"]
-            self.kwargs_technical["device"] = model_meta["device"]
 
     def log_info(self, logger):
-        backend = self.kwargs_technical.get("backend")
-        device = self.kwargs_technical.get("device")
+        backend = self.kwargs.get("backend")
+        device = self.kwargs.get("device")
         logger.info(f"Segmenter backend: {backend}, device: {device}")
 
     @staticmethod
