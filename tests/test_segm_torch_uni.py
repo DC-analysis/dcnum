@@ -9,6 +9,8 @@ from helper_methods import retrieve_data, retrieve_model
 
 torch = pytest.importorskip("torch")
 
+from torch._inductor import cpp_builder  # noqa: E402
+
 from dcnum.segm.segm_torch import segm_torch_base  # noqa: E402
 from dcnum.segm.segm_torch import torch_setup  # noqa: E402
 
@@ -17,6 +19,14 @@ OPENVINO_OK = (
     torch_setup.openvino.module_available()
     and "CPU" in torch_setup.openvino.Core().available_devices
 )
+
+
+try:
+    cpp_builder.get_cpp_compiler()
+except BaseException:
+    CPP_COMPILER_OK = False
+else:
+    CPP_COMPILER_OK = False
 
 
 def test_segm_torch_validate_model_file_logs_negate():
@@ -95,6 +105,8 @@ def test_segm_torch_validate_model_file_meta_value():
         )
 
 
+@pytest.mark.skipif(not CPP_COMPILER_OK,
+                    reason="Not CPP compiler found")
 def test_segm_torch_uni():
     """Basic PyTorch segmenter"""
     path = retrieve_data(
