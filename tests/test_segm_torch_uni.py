@@ -139,7 +139,7 @@ def test_segm_torch_uni_no_compile():
         "segm-torch-model_unet-dcnum-test_g1_cb45f.zip")
 
     sm = segm.segm_torch.SegmentTorchUNI(model_file=model_file,
-                                         backend="torch.eager_mode",
+                                         backend="torch.eager",
                                          device="cpu")
     assert not sm.requires_background_correction
     assert sm.mask_postprocessing

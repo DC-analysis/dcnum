@@ -217,7 +217,18 @@ def load_model_v1_jit(model_meta):
 
 
 def load_model_v2_pt2(model_meta: dict[str, Any]):
-    """Load dcnm model file format version 2 (ExportedProgram .pt2)"""
+    """Load dcnm model file format version 2 (ExportedProgram .pt2)
+
+    Notes
+    -----
+    The `model_meta` dict should contain the "backend" key. If "openvino"
+    is installed, then the backend "openvino" is available.
+    Torch's eager mode is available via the "torch.eager" backend (strictly
+    speaking, this is not a backend at all, it's just the torch default
+    execution path op-by-op on the available hardware).
+    In all other cases, the backend is passed to `torch.compile`.
+
+    """
     content = model_meta["path"].read_bytes()
     buffer = io.BytesIO()
     buffer.write(content)
@@ -245,7 +256,7 @@ def load_model_v2_pt2(model_meta: dict[str, Any]):
     backend = model_meta["backend"]
     device = model_meta["device"]
 
-    if backend == "torch.eager_mode":
+    if backend == "torch.eager":
         # In eager mode, nothing is compiled at all.
         model = pe.module()
         model_meta["mask_func"] = lambda x: x.detach().cpu().numpy()
