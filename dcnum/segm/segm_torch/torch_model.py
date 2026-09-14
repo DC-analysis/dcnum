@@ -245,7 +245,12 @@ def load_model_v2_pt2(model_meta: dict[str, Any]):
     backend = model_meta["backend"]
     device = model_meta["device"]
 
-    if backend == "openvino":
+    if backend == "torch.eager_mode":
+        # In eager mode, nothing is compiled at all.
+        model = pe.module()
+        model_meta["mask_func"] = lambda x: x.detach().cpu().numpy()
+
+    elif backend == "openvino":
         assert openvino.module_available()
         model_meta["batch_size"] = batch_size = 10
         example = torch.randint(

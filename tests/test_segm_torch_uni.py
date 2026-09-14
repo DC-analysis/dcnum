@@ -131,6 +131,30 @@ def test_segm_torch_uni():
         assert np.sum(labels_seg[0] == 2) == 575  # first label
 
 
+def test_segm_torch_uni_no_compile():
+    """Basic PyTorch segmenter"""
+    path = retrieve_data(
+        "fmt-hdf5_cytoshot_full-features_2024.zip")
+    model_file = retrieve_model(
+        "segm-torch-model_unet-dcnum-test_g1_cb45f.zip")
+
+    sm = segm.segm_torch.SegmentTorchUNI(model_file=model_file,
+                                         backend="torch.eager_mode",
+                                         device="cpu")
+    assert not sm.requires_background_correction
+    assert sm.mask_postprocessing
+    assert not sm.mask_default_kwargs["closing_disk"]
+    assert sm.get_ppid() == f"torchuni:m={model_file.name}:cle=1^f=1^clo=0"
+
+    with read.HDF5Data(path) as hd:
+        labels_seg = sm.segment_batch_with_labeling(
+            hd.image[:10][:, 8:-8, 32:-32])
+        assert np.all(np.unique(labels_seg[0]) == [0, 1, 2])
+        assert np.sum(labels_seg[0] == 0) == 14978  # background
+        assert np.sum(labels_seg[0] == 1) == 831  # first label
+        assert np.sum(labels_seg[0] == 2) == 575  # first label
+
+
 def test_segm_torch_uni_wrapped_old_model():
     """The UniSegmenter in general also supports torch.jit models
 
