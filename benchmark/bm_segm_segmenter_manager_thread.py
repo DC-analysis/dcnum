@@ -41,10 +41,21 @@ class Benchmark:
                                                 num_slots=6)
         self.slot_register.event_queue.cancel_join_thread()
 
+        # Note that we are marrying the SegmenterManagerThread with
+        # UniversalWorkers which is not the intended workflow.
+        # This benchmark will become obsolete when UniversalWorkers
+        # are on par with MPO and STO segmentation.
+
         self.u_workers = []
         for _ in range(5):
             uw = logic.UniversalWorkerProcess(
                 slot_register=self.slot_register,
+                dedications=[  # all except "segment_images"
+                    "load_all",
+                    "label_masks",
+                    "process_labels",
+                    "extract_features",
+                ],
                 log_queue=log_queue,
             )
             self.u_workers.append(uw)
@@ -53,10 +64,11 @@ class Benchmark:
     def benchmark(self):
         seg_cls = segm.get_available_segmenters()[self.job["segmenter_code"]]
         thr_segm = segm.SegmenterManagerThread(
-            segmenter=seg_cls(num_workers=6, **self.job["segmenter_kwargs"]),
+            segmenter=seg_cls(**self.job["segmenter_kwargs"]),
             slot_register=self.slot_register,
         )
         thr_segm.run()
+        print("finish")
         thr_segm.segmenter.close()
 
     def teardown(self):

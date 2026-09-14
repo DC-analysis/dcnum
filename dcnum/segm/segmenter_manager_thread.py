@@ -84,11 +84,6 @@ class SegmenterManagerThread(threading.Thread):
             self.t_wait += t1 - t0
 
             with state_warden as (cs, _):
-                if state_warden.batch_size != cs.length:
-                    raise ValueError(f"Batch size must match chunk size "
-                                     f"({state_warden.batch_size=} vs. "
-                                     f"{cs.length=})")
-
                 # `segment_chunk` populates the `cs.mask` array.
                 self.segmenter.segment_chunk(cs.chunk,
                                              self.slot_register.slots)
