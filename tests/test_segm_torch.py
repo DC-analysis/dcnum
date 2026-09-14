@@ -14,11 +14,10 @@ from dcnum.segm.segm_torch import segm_torch_base  # noqa: E402
 from dcnum.segm.segm_torch import torch_model  # noqa: E402
 
 
-def test_metadata_loading_from_unet_1316_naiad_g1_abd2a():
+def test_metadata_loading_from_unet_g1_910c2():
     model_file = retrieve_model(
         "segm-torch-model_unet-dcnum-test_g1_910c2.zip")
-    device = torch.device("cpu")
-    _, metadata = torch_model.load_model(model_file, device)
+    _, metadata = torch_model.load_model(model_file, device="cpu")
     assert isinstance(metadata, dict)
     assert "preprocessing" in metadata.keys()
     assert metadata["preprocessing"]["image_shape"] == [64, 256]

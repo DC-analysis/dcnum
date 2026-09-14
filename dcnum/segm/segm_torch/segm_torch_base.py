@@ -9,7 +9,7 @@ from ...meta import paths
 
 from ..segmenter import Segmenter, SegmenterNotApplicableError
 
-from .torch_model import load_model
+from .torch_model import get_model_meta
 from .torch_setup import torch
 
 
@@ -56,7 +56,7 @@ class TorchSegmenterBase(Segmenter):
             Keyword arguments for the segmenter
         meta: dict
             Dictionary of metadata from an :class:`.hdf5_data.HDF5Data`
-             instance
+            instance
         logs: dict
             Dictionary of logs from an :class:`.hdf5_data.HDF5Data` instance
 
@@ -76,17 +76,11 @@ class TorchSegmenterBase(Segmenter):
         logs = logs or {}
 
         model_file = segmenter_kwargs["model_file"]
-        _, model_meta = load_model(model_file, device="cpu")
-
-        model_version = model_meta["format_version"]
-        if model_version != cls.requires_model_format_version:
-            raise SegmenterNotApplicableError(
-                segmenter_class=cls,
-                reasons_list=[(
-                    f"Model {model_file} is version {model_version}, "
-                    f"but segmenter {cls} requires "
-                    f"version {cls.requires_model_format_version}"
-                )])
+        model_meta = get_model_meta(
+            model_file,
+            backend=segmenter_kwargs.get("backend"),
+            device=segmenter_kwargs.get("device"),
+            )
 
         reasons_list = []
         validators = {

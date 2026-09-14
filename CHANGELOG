@@ -1,12 +1,14 @@
 0.31.0
  - feat: introduce `UNISegmenter` which is handled by `UniversalWorker`
  - feat: new `torchuni` segmenter with "openvino" and "inductor" backends
- - feat: support dcnm model file format version 2.0
+ - feat: support (backend-agnostic) dcnm model file format version 2.0
+ - feat: `UniversalWorker` has new init kwarg `dedications` for task management
  - fix: possible memory leak in `segment_algorithm_wrapper`
  - fix: loading model for CUDA when device type contains index, e.g. "cuda:0"
  - fix: make SIGINT / KeyboardInterrupt work
  - enh: use number of physical CPUs in `cpu_count`
  - enh: update entry for libraries in dcnum logs
+ - enh: add `get_model_meta` method to only load torch model metadata
  - ref: remove unused and restrictive `Segmenter.hardware_processor` property
  - ref: code cleanup with ruff in multiple places
  - ref: migrate `thresh` segmenter to `UNISegmenter`

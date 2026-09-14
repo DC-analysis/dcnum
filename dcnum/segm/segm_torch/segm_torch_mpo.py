@@ -41,18 +41,15 @@ class SegmentTorchMPO(TorchSegmenterBase, MPOSegmenter):
             torch.set_num_threads(1)
         if torch.get_num_interop_threads() != 1:
             torch.set_num_interop_threads(1)
-        device = torch.device("cpu")
 
         # Load model and metadata
-        model, model_meta = load_model(model_file, device=device)
+        model, model_meta = load_model(model_file, device="cpu")
 
         image_preproc = preprocess_images(image[np.newaxis, :, :],
                                           **model_meta["preprocessing"])
 
-        image_ten = torch.from_numpy(image_preproc)
-
         # Move image tensors to device
-        image_ten_on_device = image_ten.to(device)
+        image_ten_on_device = torch.tensor(image_preproc, device="cpu")
         # Model inference
         pred_tensor = model(image_ten_on_device)
 

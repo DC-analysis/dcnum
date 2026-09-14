@@ -9,6 +9,7 @@ import logging
 import os
 import pathlib
 import tempfile
+from typing import Any
 import warnings
 import zipfile
 
@@ -34,6 +35,101 @@ def check_md5sum(path):
 
 
 @functools.cache
+def get_model_meta(path_or_name: str | pathlib.Path,
+                   backend: str | None = None,
+                   device: str | None = None,
+                   ) -> dict[str, Any]:
+    """Return model metadata given the model file and backend/device conditions
+
+    If the backend/device are not or only partially given, return the best
+    options for running the model in the metadata. E.g. if the backend is
+    set to "cudagraphs", then it follows that the device should be "cuda",
+    given an installed NVIDIA GPU.
+    """
+    model_path = retrieve_model_file(path_or_name)
+    if isinstance(device, torch.device):
+        device = device.type
+
+    model_meta = {
+        "path": model_path,
+        "wiring_options": [],  # this is defined in the model metadata
+    }
+
+    # Determine the dcnm file format version
+    with open(model_path, "rb") as fd:
+        if fd.read(4) == b"DCNM":
+            dcnm_format_version = "2.0"
+        else:
+            dcnm_format_version = "1.0"
+        model_meta["dcnm_format_version"] = dcnm_format_version
+
+    if dcnm_format_version == "1.0":
+        # define an extra files mapping dictionary that loads the metadata
+        extra_files = {"dcnum_meta.json": ""}
+        # load model
+        _ = torch.jit.load(model_path,
+                           _extra_files=extra_files,
+                           map_location=torch.device("cpu"))
+        # load model metadata
+        model_meta.update(json.loads(extra_files["dcnum_meta.json"]))
+        model_meta["backend"] = "torch.jit"
+        if not model_meta["wiring_options"]:
+            model_meta["wiring_options"] += [
+                {"backend": "torch.jit", "device": "gpu"},
+                {"backend": "torch.jit", "device": "cpu"},
+            ]
+
+    elif dcnm_format_version == "2.0":
+        # Extract the model metadata
+        content = model_path.read_bytes()
+        hash = hashlib.md5(content[:-32]).hexdigest().encode()
+        # Make sure we have a valid .dcnm model file
+        if hash != content[-32:]:
+            raise ValueError(f"Not a valid DCNM model file: {model_path}")
+        # prepare buffer
+        buffer = io.BytesIO()
+        buffer.write(content)
+        buffer.seek(0)
+        buffer.write(b"PK\x03\x04")
+        buffer.seek(0)
+        with zipfile.ZipFile(buffer) as z, z.open("dcnum_meta.json") as fd:
+            model_meta.update(json.loads(fd.read()))
+    else:
+        assert False
+
+    # The available backend/device wiring are baked into the model file.
+    # Each entries consist of a dictionary with keys "device" and "backend",
+    # ordered according to efficiency/suggestion decreasing.
+    wiring_options: list[dict[str, str]] = model_meta["wiring_options"]
+    # Determine the correct wiring based on the input.
+    if backend is None and device is None:
+        pass  # we take the first item from the wiring options
+    elif backend is None and device is not None:
+        wiring_options = [o for o in wiring_options if o["device"] == device]
+    elif backend is not None and device is None:
+        wiring_options = [o for o in wiring_options if o["backend"] == backend]
+    elif backend is not None and device is not None:
+        # This will also allow users to override if this configuration is
+        # not baked into the model.
+        wiring_options = [{"backend": backend, "device": device}]
+
+    if not wiring_options:
+        if backend is None and device is None:
+            raise ValueError(
+                f"The model {model_path.name} does not have wiring options "
+                f"specified. Please provice 'device' and 'backend' manually.")
+        else:
+            raise ValueError(
+                f"The current wiring options {backend=}, {device=} are either "
+                f"not supported or invalid for the model {model_path.name}.")
+
+    model_meta["backend"] = wiring_options[0]["backend"]
+    model_meta["device"] = wiring_options[0]["device"]
+
+    return model_meta
+
+
+@functools.cache
 def load_model(path_or_name: str | pathlib.Path,
                backend: str | None = None,
                device: str | None = None,
@@ -56,40 +152,31 @@ def load_model(path_or_name: str | pathlib.Path,
     model_meta: dict
         metadata associated with the loaded model
     """
-    device = device or "cpu"
     with torch.inference_mode():
-        model_path = retrieve_model_file(path_or_name)
+        model_meta = get_model_meta(
+            path_or_name,
+            backend=backend,
+            device=device,
+        )
 
-        with open(model_path, "rb") as fd:
-            is_version_2 = fd.read(4) == b"DCNM"
-
-        if is_version_2:
-            model_call, model_meta = load_model_v2_pt2(
-                model_path=model_path,
-                backend=backend,
-                device=device)
+        if model_meta["dcnm_format_version"] == "2.0":
+            model_call, model_meta = load_model_v2_pt2(model_meta)
         else:
             if not isinstance(device, (str, torch.device)):
                 raise TypeError(
                     f"Model files version 1 only accept string or "
                     f"`torch.device` as `device`, got '{type(device)}'")
-            model_call, model_meta = load_model_v1_jit(model_path, device)
+            model_call, model_meta = load_model_v1_jit(model_meta)
 
         return model_call, model_meta
 
 
-def load_model_v1_jit(model_path, device: str):
+def load_model_v1_jit(model_meta):
     """Load dcnm model file format version 1 (torch JIT)"""
-    torch_device = torch.device(device or "cpu")
+    torch_device = torch.device(model_meta["device"])
 
-    # define an extra files mapping dictionary that loads the model's metadata
-    extra_files = {"dcnum_meta.json": ""}
-    # load model
-    model_jit = torch.jit.load(model_path,
-                               _extra_files=extra_files,
+    model_jit = torch.jit.load(model_meta["path"],
                                map_location=torch_device)
-    # load model metadata
-    model_meta = json.loads(extra_files["dcnum_meta.json"])
     # set model to evaluation mode
     model_jit.eval()
     # optimize for inference on device
@@ -126,25 +213,12 @@ def load_model_v1_jit(model_path, device: str):
         size = max(size, 50)
         model_meta["estimated_batch_size_cuda"] = size
 
-    model_meta["format_version"] = "1.0"
-    model_meta["backend"] = "torch.jit"
-    model_meta["device"] = torch_device.type
-
     return model_jit, model_meta
 
 
-def load_model_v2_pt2(model_path: pathlib.Path,
-                      backend: str | None = None,
-                      device: str = "cpu",
-                      ):
+def load_model_v2_pt2(model_meta: dict[str, Any]):
     """Load dcnm model file format version 2 (ExportedProgram .pt2)"""
-    content = model_path.read_bytes()
-    hash = hashlib.md5(content[:-32]).hexdigest().encode()
-
-    # Make sure we have a valid .dcnm model file
-    if hash != content[-32:]:
-        raise ValueError(f"Not a valid DCNM model file: {model_path}")
-
+    content = model_meta["path"].read_bytes()
     buffer = io.BytesIO()
     buffer.write(content)
     buffer.seek(0)
@@ -152,10 +226,7 @@ def load_model_v2_pt2(model_path: pathlib.Path,
     buffer.seek(0)
 
     with zipfile.ZipFile(buffer) as z:
-        with z.open("dcnum_meta.json") as fd:
-            model_meta = json.loads(fd.read())
-            ident = model_meta["identifier"]
-
+        ident = model_meta["identifier"]
         with z.open(f"{ident}.pt2") as fd2:
             mdat = fd2.read()
 
@@ -171,11 +242,16 @@ def load_model_v2_pt2(model_path: pathlib.Path,
         warnings.simplefilter("ignore", UserWarning)
         pe = torch.export.load(buffer)
 
-    if backend in [None, "openvino"] and openvino.module_available():
+    backend = model_meta["backend"]
+    device = model_meta["device"]
+
+    if backend == "openvino":
+        assert openvino.module_available()
+        model_meta["batch_size"] = batch_size = 10
         example = torch.randint(
             low=100,
             high=200,
-            size=tuple([model_meta["batch_size"]] + model_meta["image_shape"]),
+            size=tuple([batch_size] + model_meta["image_shape"]),
             dtype=torch.uint8)
         ov_model = openvino.convert_model(pe, example_input=(example,))
 
@@ -205,8 +281,6 @@ def load_model_v2_pt2(model_path: pathlib.Path,
             }
         )
         model_meta["mask_func"] = lambda x: next(iter(x.values()))
-        model_meta["backend"] = "openvino"
-        model_meta["device"] = device
     else:
         # Fallback to default "inductor" compiler
         # https://docs.pytorch.org/docs/main/generated/torch.compile.html#torch.compile
@@ -214,13 +288,11 @@ def load_model_v2_pt2(model_path: pathlib.Path,
             pe.module(),
             fullgraph=True,
             dynamic=False,
-            backend="inductor",
+            backend=backend,
             # TODO: Pytorch 3.13 supports setting this (avoid recompilations)?
             # dynamic_shapes=(10, 80, 320),
         )
         model_meta["mask_func"] = lambda x: x.detach().cpu().numpy()
-        model_meta["backend"] = "inductor"
-        model_meta["device"] = device or "cpu"
 
     return model, model_meta
 

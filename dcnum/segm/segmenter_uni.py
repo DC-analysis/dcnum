@@ -1,8 +1,15 @@
+from __future__ import annotations
+
 import abc
 
 import numpy as np
+from typing import TYPE_CHECKING
 
 from .segmenter import Segmenter
+
+
+if TYPE_CHECKING:
+    from ..logic import DCNumPipelineJob
 
 
 class UNISegmenter(Segmenter, abc.ABC):
@@ -29,6 +36,13 @@ class UNISegmenter(Segmenter, abc.ABC):
         super().__init__(kwargs_mask=kwargs_mask,
                          debug=debug,
                          **kwargs)
+
+    @staticmethod
+    def update_worker_dedications(job: DCNumPipelineJob,
+                                  worker_dedications: list[list[str]],
+                                  ) -> list[list[str]]:
+        """Subclasses may update the worker dedications to their liking"""
+        return worker_dedications
 
     def segment_batch(self,
                       images: np.ndarray,

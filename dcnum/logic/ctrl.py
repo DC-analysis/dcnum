@@ -21,6 +21,7 @@ from ..common import (
 from ..feat.feat_background.base import get_available_background_methods
 from ..segm import SegmenterManagerThread, UNISegmenter, get_segmenters
 from ..segm.segmenter_mpo import MPOSegmenter
+from ..segm.segmenter_sto import STOSegmenter
 from ..meta import ppid
 from ..read import HDF5Data, get_measurement_identifier, get_mapping_indices
 from .._version import version, version_tuple
@@ -32,7 +33,9 @@ from ..write import (
 from .job import DCNumPipelineJob
 from .json_encoder import ExtendedJSONEncoder
 from .slot_register import SlotRegister
-from .universal_worker import UniversalWorkerProcess, UniversalWorkerThread
+from .universal_worker import (
+    UniversalWorker, UniversalWorkerProcess, UniversalWorkerThread
+)
 
 
 # Force using "spawn" method for multiprocessing, because we are using
@@ -686,9 +689,9 @@ class DCNumJobRunner(threading.Thread):
     def task_segment_extract(self):
         self.logger.info("Starting segmentation and feature extraction")
 
-        # Start segmentation thread
         seg_cls = get_segmenters()[self.job["segmenter_code"]]
 
+        # Determine number of universal workers
         if self.job["debug"]:
             num_universal = 1
         elif issubclass(seg_cls, MPOSegmenter):
@@ -697,15 +700,22 @@ class DCNumJobRunner(threading.Thread):
             # Leave one CPU for the writer and the other threads.
             num_universal -= 1
         elif issubclass(seg_cls, UNISegmenter):
-            # Split segmentation and feature extraction workers evenly.
+            # Universal workers do all the work.
             num_universal = self.job["num_procs"]
             # Leave one CPU for the writer and the other threads.
             num_universal -= 1
-        else:  # GPU segmenter
+        elif issubclass(seg_cls, STOSegmenter):
+            # Single-threaded segmenter that makes use of GPU etc.
             num_universal = self.job["num_procs"]
             # Leave one CPU for the writer and the other threads.
             num_universal -= 1
+        else:
+            raise ValueError(f"Unknown segmenter class '{seg_cls}'")
+
         num_universal = max(1, num_universal)
+
+        # Worker dedications (what each worker is supposed to do)
+        w_dcs = UniversalWorker.get_worker_dedications(self.job, num_universal)
 
         # The number of ChunkSlots defines how well workers can operate in
         # parallel. This should be higher than the number states a ChunkSlot
@@ -732,8 +742,9 @@ class DCNumJobRunner(threading.Thread):
             worker_uni_cls = UniversalWorkerProcess
 
         uni_workers = []
-        for _ in range(num_universal):
+        for dedications in w_dcs:
             uni_workers.append(worker_uni_cls(slot_register=slot_register,
+                                              dedications=dedications,
                                               log_queue=self.log_queue,
                                               log_level=self.logger.level,
                                               ))

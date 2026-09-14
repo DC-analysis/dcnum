@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import logging
 from logging.handlers import QueueHandler
 import multiprocessing as mp
@@ -11,22 +12,37 @@ import typing
 
 from ..common import DCNUMHaltInterrupt
 from ..os_env_st import RequestSingleThreaded, confirm_single_threaded
+from ..segm import UNISegmenter, get_segmenters
 
 
 if typing.TYPE_CHECKING:
+    from ..logic import DCNumPipelineJob
     from .slot_register import SlotRegister
 
 mp_spawn = mp.get_context("spawn")
+
+default_dedications = [
+    "load_all",
+    "segment_images",
+    "label_masks",
+    "process_labels",
+    "extract_features",
+]
 
 
 class UniversalWorker:
     def __init__(self,
                  slot_register: SlotRegister,
                  log_queue: mp.Queue,
+                 dedications: list[str] | None = None,
                  log_level: int = logging.INFO,
                  *args, **kwargs):
-        # Must call super init, otherwise Thread or Process are not initialized
+        # Must call super init, otherwise Thread or Process is not initialized
         super().__init__(*args, **kwargs)
+
+        if dedications is None:
+            dedications = copy.copy(default_dedications)
+        self.dedications = dedications
 
         self.slot_register = slot_register
         """Chunk slot register"""
@@ -38,6 +54,31 @@ class UniversalWorker:
         # it looks like we have the same PID as the parent process. We
         # are setting up logging in `run`.
         self.log_level = log_level or logging.getLogger("dcnum").level
+
+    @staticmethod
+    def get_worker_dedications(job: DCNumPipelineJob,
+                               num_universal: int,
+                               ) -> list[list[str]]:
+        """Return a worker dedications for each UniversalWorker"""
+        # Start with: all workers do everything.
+        dcs = [copy.copy(default_dedications) for _ in range(num_universal)]
+
+        # If the segmenter is not the UNISegmenter, then workers
+        # should not segment at all.
+        seg_cls = get_segmenters()[job["segmenter_code"]]
+        if not issubclass(seg_cls, UNISegmenter):
+            for ii in range(num_universal):
+                dcs[ii].remove("segment_images")
+
+        # Loading image data only needs to be done by one worker.
+        if num_universal > 1:
+            # Only the first worker should load image data.
+            for ii in range(1, num_universal):
+                dcs[ii].remove("load_all")
+
+        # The UNISegmenter may modify the dedications.
+        dcs = seg_cls.update_worker_dedications(job, dcs)
+        return dcs
 
     def run(self):
         # If multiprocessing is used, we now live in our own process.
@@ -91,20 +132,25 @@ class UniversalWorker:
                         f"Stalled {stalled_sec:.1f}s due to slow writer "
                         f"({ldq} chunks queued)")
 
-                # Load data into memory for all available slots
-                did_something |= sr.task_load_all(logger=logger)
+                if "load_all" in self.dedications:
+                    # Load data into memory for all available slots
+                    did_something |= sr.task_load_all(logger=logger)
 
-                # Segmentation is only done for `UNISegmenter` subclasses
-                did_something |= sr.task_segment_images(logger=logger)
+                if "segment_images" in self.dedications:
+                    # Segmentation is only done for `UNISegmenter` subclasses
+                    did_something |= sr.task_segment_images(logger=logger)
 
-                # After segmentation, perform mask to label conversion
-                did_something |= sr.task_label_masks(logger=logger)
+                if "label_masks" in self.dedications:
+                    # After segmentation, perform mask to label conversion
+                    did_something |= sr.task_label_masks(logger=logger)
 
-                # After labeling, perform label processing
-                did_something |= sr.task_process_labels(logger=logger)
+                if "process_labels" in self.dedications:
+                    # After labeling, perform label processing
+                    did_something |= sr.task_process_labels(logger=logger)
 
-                # Finally, perform feature extraction
-                did_something |= sr.task_extract_features(logger=logger)
+                if "extract_features" in self.dedications:
+                    # Finally, perform feature extraction
+                    did_something |= sr.task_extract_features(logger=logger)
 
                 if not did_something:
                     time.sleep(.01)

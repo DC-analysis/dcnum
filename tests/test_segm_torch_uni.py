@@ -10,7 +10,6 @@ from helper_methods import retrieve_data, retrieve_model
 torch = pytest.importorskip("torch")
 
 from dcnum.segm.segm_torch import segm_torch_base  # noqa: E402
-from dcnum.segm.segm_torch import torch_model  # noqa: E402
 from dcnum.segm.segm_torch import torch_setup  # noqa: E402
 
 
@@ -20,21 +19,10 @@ OPENVINO_OK = (
 )
 
 
-def test_metadata_loading_from_unet_1316_naiad_g1_abd2a():
-    model_file = retrieve_model(
-        "segm-torch-model_unet-dcnum-test_g2_02dcd.zip")
-    device = torch.device("cpu")
-    _, meta = torch_model.load_model(model_file, device)
-    assert isinstance(meta, dict)
-    assert "preprocessing" not in meta
-    assert meta["image_shape"] == [80, 320]
-    assert meta["batch_size"] == 10
-
-
 def test_segm_torch_validate_model_file_logs_negate():
     """Test whether model validation fails for invalid logs"""
     model_file = retrieve_model(
-        "segm-torch-model_unet-dcnum-test_g2_02dcd.zip")
+        "segm-torch-model_unet-dcnum-test_g2_a8773.zip")
     sm = segm.segm_torch.SegmentTorchUNI
 
     # Creating a specific log file will mak the model invalid
@@ -71,7 +59,7 @@ def test_segm_torch_validate_model_file_logs_negate():
 def test_segm_torch_validate_model_file_meta_value():
     """Test whether model validation fails for invalid metadata"""
     model_file = retrieve_model(
-        "segm-torch-model_unet-dcnum-test_g2_02dcd.zip")
+        "segm-torch-model_unet-dcnum-test_g2_a8773.zip")
     sm = segm.segm_torch.SegmentTorchUNI
 
     # Create a test dataset with metadata that will make the model invalid
@@ -131,8 +119,11 @@ def test_segm_torch_uni():
         assert np.sum(labels_seg[0] == 2) == 575  # first label
 
 
-def test_segm_torch_uni_bad_model():
-    """Basic PyTorch segmenter"""
+def test_segm_torch_uni_wrapped_old_model():
+    """The UniSegmenter in general also supports torch.jit models
+
+    The only issue might be pre- and post-processing.
+    """
     path = retrieve_data(
         "fmt-hdf5_cytoshot_full-features_2024.zip")
     # this is the wrong model
@@ -143,7 +134,7 @@ def test_segm_torch_uni_bad_model():
 
     with (read.HDF5Data(path) as hd,
           pytest.raises(segm_torch_base.SegmenterNotApplicableError,
-                        match="requires version 2.0")):
+                        match="must not be compressed 2024-05-07")):
         sm.validate_applicability(
             segmenter_kwargs={"model_file": model_file},
             meta=hd.meta,

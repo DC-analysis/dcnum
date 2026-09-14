@@ -3,7 +3,7 @@ import numpy as np
 from ..segmenter_sto import STOSegmenter
 
 from .segm_torch_base import TorchSegmenterBase
-from .torch_model import load_model
+from .torch_model import get_model_meta, load_model
 from .torch_preproc import preprocess_images
 from .torch_postproc import postprocess_masks
 from .torch_setup import torch
@@ -28,7 +28,7 @@ class SegmentTorchSTO(TorchSegmenterBase, STOSegmenter):
         _, total = torch.cuda.mem_get_info(device)
         logger.info(f"Available GPU memory: {total/1024**3:.1f}GB")
 
-        model, model_meta = load_model(model_file, device=device)
+        model_meta = get_model_meta(model_file, device=device)
         batch_size = model_meta["estimated_batch_size_cuda"]
         logger.info(f"GPU segmentation batch size: {batch_size}")
 
