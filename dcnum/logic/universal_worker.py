@@ -76,7 +76,7 @@ class UniversalWorker:
             for ii in range(1, num_universal):
                 dcs[ii].remove("load_all")
 
-        if isinstance(seg_cls, UNISegmenter):
+        if issubclass(seg_cls, UNISegmenter):
             # The UNISegmenter may modify the dedications.
             dcs = seg_cls.update_worker_dedications(job, dcs)
 
