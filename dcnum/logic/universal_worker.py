@@ -76,8 +76,10 @@ class UniversalWorker:
             for ii in range(1, num_universal):
                 dcs[ii].remove("load_all")
 
-        # The UNISegmenter may modify the dedications.
-        dcs = seg_cls.update_worker_dedications(job, dcs)
+        if isinstance(seg_cls, UNISegmenter):
+            # The UNISegmenter may modify the dedications.
+            dcs = seg_cls.update_worker_dedications(job, dcs)
+
         return dcs
 
     def run(self):
