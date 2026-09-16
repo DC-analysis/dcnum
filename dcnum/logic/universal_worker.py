@@ -104,14 +104,13 @@ class UniversalWorker:
 
         # Only close queues when we have created them ourselves.
         close_queues = isinstance(self, mp_spawn.Process)
+
+        # Used for checking for a slow writer
         wait_time_writer = 0
 
         # If we are responsible for segmentation, set everything up.
-        try:
+        if "segment_images" in self.dedications:
             self.slot_register.segmenter.log_info(logger)
-        except ValueError:
-            # Not a UNISegmenter
-            pass
 
         sr = self.slot_register
         try:
