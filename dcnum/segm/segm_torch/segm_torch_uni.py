@@ -61,7 +61,16 @@ class SegmentTorchUNI(TorchSegmenterBase, UNISegmenter):
     def log_info(self, logger):
         backend = self.kwargs.get("backend")
         device = self.kwargs.get("device")
-        logger.info(f"Segmenter backend: {backend}, device: {device}")
+        logger.info(f"Segmenter backend '{backend}' with device '{device}'")
+
+        if device and device.startswith("cuda"):
+            logger.info(f"CUDA version: {torch.version.cuda}")
+            logger.info(f"GPU name: {torch.cuda.get_device_name()}")
+            compute_capability = ".".join(
+                str(c) for c in torch.cuda.get_device_capability(device))
+            logger.info(f"GPU compute capability: {compute_capability}")
+            _, total = torch.cuda.mem_get_info(device)
+            logger.info(f"Available GPU memory: {total/1024**3:.1f}GB")
 
     @staticmethod
     def get_model_meta(segm_kwargs) -> dict[str, Any]:
