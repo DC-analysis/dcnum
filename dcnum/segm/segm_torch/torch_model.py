@@ -25,6 +25,11 @@ logger = logging.getLogger(__name__)
 if tempfile.tempdir is not None:
     tempdir = pathlib.Path(tempfile.tempdir) / "dcnum_compiled_models"
 
+#: Model cache with keys "{filename}::{backend}::{device}"
+cache_model = {}
+#: Model metadata cache with keys "{filename}::{backend}::{device}"
+cache_model_meta = {}
+
 
 def check_md5sum(path):
     """Verify the last five characters of the file stem with its MD5 hash"""
@@ -34,7 +39,6 @@ def check_md5sum(path):
                          f"input file to end with '{md5[:5]}{path.suffix}'.")
 
 
-@functools.cache
 def get_model_meta(path_or_name: str | pathlib.Path,
                    backend: str | None = None,
                    device: str | None = None,
@@ -45,94 +49,121 @@ def get_model_meta(path_or_name: str | pathlib.Path,
     options for running the model in the metadata. E.g. if the backend is
     set to "cudagraphs", then it follows that the device should be "cuda",
     given an installed NVIDIA GPU.
+
+    Notes
+    -----
+    The metadata are cached in the :const:`cache_model_meta` dictionary.
     """
-    model_path = retrieve_model_file(path_or_name)
+    # Make sure 'device' is a string
     if isinstance(device, torch.device):
         device = device.type
+    # Use first CUDA device if not specified
+    if device and device.startswith("cuda") and not device.count(":"):
+        device = "cuda:0"
+    # Fetch the model path
+    model_path = retrieve_model_file(path_or_name)
+    # setup the cache key
+    cache_key = f"{model_path.name}::{backend}::{device}"
 
-    model_meta = {
-        "path": model_path,
-        "wiring_options": [],  # this is defined in the model metadata
-    }
-
-    # Determine the dcnm file format version
-    with open(model_path, "rb") as fd:
-        if fd.read(4) == b"DCNM":
-            dcnm_format_version = "2.0"
-        else:
-            dcnm_format_version = "1.0"
-        model_meta["dcnm_format_version"] = dcnm_format_version
-
-    if dcnm_format_version == "1.0":
-        # define an extra files mapping dictionary that loads the metadata
-        extra_files = {"dcnum_meta.json": ""}
-        # load model
-        _ = torch.jit.load(model_path,
-                           _extra_files=extra_files,
-                           map_location=torch.device("cpu"))
-        # load model metadata
-        model_meta.update(json.loads(extra_files["dcnum_meta.json"]))
-        model_meta["backend"] = "torch.jit"
-        if not model_meta["wiring_options"]:
-            model_meta["wiring_options"] += [
-                {"backend": "torch.jit", "device": "cpu"},
-            ]
-            # check whether CUDA is available.
-            if torch.cuda.is_available():
-                model_meta["wiring_options"].insert(
-                    0, {"backend": "torch.jit", "device": "cuda"})
-
-    elif dcnm_format_version == "2.0":
-        # Extract the model metadata
-        content = model_path.read_bytes()
-        hash = hashlib.md5(content[:-32]).hexdigest().encode()
-        # Make sure we have a valid .dcnm model file
-        if hash != content[-32:]:
-            raise ValueError(f"Not a valid DCNM model file: {model_path}")
-        # prepare buffer
-        buffer = io.BytesIO()
-        buffer.write(content)
-        buffer.seek(0)
-        buffer.write(b"PK\x03\x04")
-        buffer.seek(0)
-        with zipfile.ZipFile(buffer) as z, z.open("dcnum_meta.json") as fd:
-            model_meta.update(json.loads(fd.read()))
+    # Either get the model metadata from the cache or retrieve them.
+    if cache_key in cache_model_meta:
+        model_meta = cache_model_meta[cache_key]
     else:
-        assert False
+        model_meta = {
+            "path": model_path,
+            "wiring_options": [],  # this is defined in the model metadata
+        }
 
-    # The available backend/device wiring are baked into the model file.
-    # Each entries consist of a dictionary with keys "device" and "backend",
-    # ordered according to efficiency/suggestion decreasing.
-    wiring_options: list[dict[str, str]] = model_meta["wiring_options"]
-    # Determine the correct wiring based on the input.
-    if backend is None and device is None:
-        pass  # we take the first item from the wiring options
-    elif backend is None and device is not None:
-        wiring_options = [o for o in wiring_options if o["device"] == device]
-    elif backend is not None and device is None:
-        wiring_options = [o for o in wiring_options if o["backend"] == backend]
-    elif backend is not None and device is not None:
-        # This will also allow users to override if this configuration is
-        # not baked into the model.
-        wiring_options = [{"backend": backend, "device": device}]
+        # Determine the dcnm file format version
+        with open(model_path, "rb") as fd:
+            if fd.read(4) == b"DCNM":
+                dcnm_format_version = "2.0"
+            else:
+                dcnm_format_version = "1.0"
+            model_meta["dcnm_format_version"] = dcnm_format_version
 
-    if not wiring_options:
-        if backend is None and device is None:
-            raise ValueError(
-                f"The model {model_path.name} does not have wiring options "
-                f"specified. Please provice 'device' and 'backend' manually.")
+        if dcnm_format_version == "1.0":
+            # define an extra files mapping dictionary that loads the metadata
+            extra_files = {"dcnum_meta.json": ""}
+            # load model
+            _ = torch.jit.load(model_path,
+                               _extra_files=extra_files,
+                               map_location=torch.device("cpu"))
+            # load model metadata
+            model_meta.update(json.loads(extra_files["dcnum_meta.json"]))
+            model_meta["backend"] = "torch.jit"
+            if not model_meta["wiring_options"]:
+                model_meta["wiring_options"] += [
+                    {"backend": "torch.jit", "device": "cpu"},
+                ]
+                # check whether CUDA is available.
+                if torch.cuda.is_available():
+                    model_meta["wiring_options"].insert(
+                        0, {"backend": "torch.jit", "device": "cuda"})
+
+        elif dcnm_format_version == "2.0":
+            # Extract the model metadata
+            content = model_path.read_bytes()
+            hash = hashlib.md5(content[:-32]).hexdigest().encode()
+            # Make sure we have a valid .dcnm model file
+            if hash != content[-32:]:
+                raise ValueError(f"Not a valid DCNM model file: {model_path}")
+            # prepare buffer
+            buffer = io.BytesIO()
+            buffer.write(content)
+            buffer.seek(0)
+            buffer.write(b"PK\x03\x04")
+            buffer.seek(0)
+            with zipfile.ZipFile(buffer) as z, z.open("dcnum_meta.json") as fd:
+                model_meta.update(json.loads(fd.read()))
         else:
-            raise ValueError(
-                f"The current wiring options {backend=}, {device=} are either "
-                f"not supported or invalid for the model {model_path.name}.")
+            assert False
 
-    model_meta["backend"] = wiring_options[0]["backend"]
-    model_meta["device"] = wiring_options[0]["device"]
+        # The available backend/device wiring are baked into the model file.
+        # Each entries consist of a dictionary with keys "device" and
+        # "backend", ordered according to efficiency/suggestion decreasing.
+        wiring_options: list[dict[str, str]] = model_meta["wiring_options"]
+        # Determine the correct wiring based on the input.
+        if backend is None and device is None:
+            pass  # we take the first item from the wiring options
+        elif backend is None and device is not None:
+            wiring_options = [o for o in wiring_options
+                              if o["device"] == device]
+        elif backend is not None and device is None:
+            wiring_options = [o for o in wiring_options
+                              if o["backend"] == backend]
+        elif backend is not None and device is not None:
+            # This will also allow users to override if this configuration is
+            # not baked into the model.
+            wiring_options = [{"backend": backend, "device": device}]
+
+        if not wiring_options:
+            if backend is None and device is None:
+                raise ValueError(
+                    f"The model {model_path.name} does not have wiring "
+                    f"options specified. Please provice 'device' and "
+                    f"'backend' manually.")
+            else:
+                raise ValueError(
+                    f"The current wiring options {backend=}, {device=} "
+                    f"are either not supported or invalid for the "
+                    f"model {model_path.name}.")
+
+        model_meta["backend"] = wiring_options[0]["backend"]
+        model_meta["device"] = wiring_options[0]["device"]
+
+        # Update the cache
+        cache_model_meta[cache_key] = model_meta
+
+    # We might have an updated cache key (e.g. if device was `None`)
+    cache_key_2 = (f"{model_path.name}::"
+                   f"{model_meta['backend']}::{model_meta['device']}")
+    if cache_key_2 not in cache_model_meta:
+        cache_model_meta[cache_key_2] = model_meta
 
     return model_meta
 
 
-@functools.cache
 def load_model(path_or_name: str | pathlib.Path,
                backend: str | None = None,
                device: str | None = None,
@@ -154,6 +185,10 @@ def load_model(path_or_name: str | pathlib.Path,
         loaded PyTorch model stored as a TorchScript module
     model_meta: dict
         metadata associated with the loaded model
+
+    Notes
+    -----
+    The models are cached in the :const:`cache_model` dictionary.
     """
     with torch.inference_mode():
         model_meta = get_model_meta(
@@ -162,14 +197,21 @@ def load_model(path_or_name: str | pathlib.Path,
             device=device,
         )
 
-        if model_meta["dcnm_format_version"] == "2.0":
-            model_call, model_meta = load_model_v2_pt2(model_meta)
+        cache_key = (f"{model_meta['path'].name}::"
+                     f"{model_meta['backend']}::{model_meta['device']}")
+
+        if cache_key in cache_model:
+            return cache_model[cache_key]
         else:
-            if not isinstance(device, (str, torch.device)):
-                raise TypeError(
-                    f"Model files version 1 only accept string or "
-                    f"`torch.device` as `device`, got '{type(device)}'")
-            model_call, model_meta = load_model_v1_jit(model_meta)
+            if model_meta["dcnm_format_version"] == "2.0":
+                model_call, model_meta = load_model_v2_pt2(model_meta)
+            else:
+                if not isinstance(device, (str, torch.device)):
+                    raise TypeError(
+                        f"Model files version 1 only accept string or "
+                        f"`torch.device` as `device`, got '{type(device)}'")
+                model_call, model_meta = load_model_v1_jit(model_meta)
+            cache_model[cache_key] = model_call, model_meta
 
         return model_call, model_meta
 
