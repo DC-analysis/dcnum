@@ -13,9 +13,9 @@ class SegmentTorchSTO(TorchSegmenterBase, STOSegmenter):
     """PyTorch segmentation (GPU version)"""
     requires_model_format_version = "1.0"
 
-    def log_info(self, logger, gpu_id=None):
+    def log_info(self, logger):
         model_file = self.kwargs["model_file"]
-        device = torch.device(gpu_id if gpu_id is not None else "cuda")
+        device = torch.device(self.kwargs["device"])
 
         logger.info(f"CUDA version: {torch.version.cuda}")
 
@@ -28,7 +28,9 @@ class SegmentTorchSTO(TorchSegmenterBase, STOSegmenter):
         _, total = torch.cuda.mem_get_info(device)
         logger.info(f"Available GPU memory: {total/1024**3:.1f}GB")
 
-        model_meta = get_model_meta(model_file, device=device)
+        model_meta = get_model_meta(model_file,
+                                    backend=self.kwargs["backend"],
+                                    device=self.kwargs["device"])
         batch_size = model_meta["estimated_batch_size_cuda"]
         logger.info(f"GPU segmentation batch size: {batch_size}")
 
@@ -100,7 +102,6 @@ class SegmentTorchSTO(TorchSegmenterBase, STOSegmenter):
 
     @staticmethod
     def segment_algorithm(images,
-                          gpu_id: str | None = None,
                           *,
                           model_file: str | None = None):
         """
@@ -108,8 +109,6 @@ class SegmentTorchSTO(TorchSegmenterBase, STOSegmenter):
         ----------
         images: 3d ndarray
             array of N event images of shape (N, H, W)
-        gpu_id: str
-            optional argument specifying the GPU to use
         model_file: str
             path to or name of a dcnum model file (.dcnm); if only a
             name is provided, then the "torch_model_files" directory
@@ -124,7 +123,7 @@ class SegmentTorchSTO(TorchSegmenterBase, STOSegmenter):
             raise ValueError("Please specify a .dcnm model file!")
 
         # Determine device to use
-        device = torch.device(gpu_id if gpu_id is not None else "cuda")
+        device = torch.device("cuda")
 
         # Load model and metadata
         model, model_meta = load_model(model_file, device=device)

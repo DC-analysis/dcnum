@@ -10,6 +10,7 @@
  - enh: update entry for libraries in dcnum logs
  - enh: add `get_model_meta` method to only load torch model metadata
  - enh: add no-op "torch.eager" backend for torch segmenters
+ - enh: CUDA GPU index can now be directly specified via device name
  - ref: remove unused and restrictive `Segmenter.hardware_processor` property
  - ref: code cleanup with ruff in multiple places
  - ref: migrate `thresh` segmenter to `UNISegmenter`
