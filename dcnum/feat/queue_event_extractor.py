@@ -147,8 +147,8 @@ class QueueEventExtractor:
         # especially with U-Net-based segmentation, invalid events happen
         # rarely.
         if np.any(invalid):
-            with self.slot_register.get_counter_lock("masks_dropped"):
-                self.slot_register.masks_dropped += np.sum(invalid)
+            self.slot_register.increment_counter_value(
+                name="masks_dropped", increment=np.sum(invalid))
             for key in gated_events:
                 valid_events[key] = gated_events[key][valid]
         else:

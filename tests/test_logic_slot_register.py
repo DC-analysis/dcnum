@@ -6,10 +6,40 @@ from dcnum.logic.job import DCNumPipelineJob
 
 import h5py
 
+import pytest
+
 from helper_methods import retrieve_data
 
 
 mp_spawn = mp.get_context("spawn")
+
+
+def test_slot_register_increment_counter_value():
+    path = retrieve_data("fmt-hdf5_cytoshot_full-features_2023.zip")
+    hd = HDF5Data(path)
+    assert "image" in hd
+
+    job = DCNumPipelineJob(path_in=path)
+    sr = SlotRegister(job=job, data=hd, num_slots=1)
+
+    assert sr.get_counter_value("chunks_loaded") == 0
+    sr.increment_counter_value("chunks_loaded", 1)
+    sr.increment_counter_value("chunks_loaded", 2)
+    assert sr.get_counter_value("chunks_loaded") == 3
+
+    lock = sr.get_counter_lock("chunks_loaded")
+    with pytest.raises(ValueError, match="A locked `lock` must be passed"):
+        sr.increment_counter_value("chunks_loaded", 1, lock=lock)
+
+    with lock:
+        sr.increment_counter_value("chunks_loaded", 1, lock=lock)
+    assert sr.get_counter_value("chunks_loaded") == 4
+
+    with lock, pytest.raises(TimeoutError, match="Failed to increment"):
+            sr.increment_counter_value("chunks_loaded", 1, timeout=0.01)
+
+    with pytest.raises(KeyError, match="No counter defined"):
+        sr.increment_counter_value("peterpan", 1)
 
 
 def test_slot_register_reserve_slot_for_task():

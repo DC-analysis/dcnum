@@ -5,6 +5,7 @@ import logging
 import multiprocessing as mp
 import time
 import traceback
+from typing import TYPE_CHECKING
 
 import numpy as np
 
@@ -18,6 +19,14 @@ from ..segm import get_segmenters
 from .chunk_slot import ChunkSlot, ChunkSlotData
 from .job import DCNumPipelineJob
 
+
+if TYPE_CHECKING:
+    import contextlib
+    import typing
+    class _LockType(contextlib.AbstractContextManager, typing.Protocol):
+        def acquire(self, block: bool = ..., timeout: float = ...) -> bool: ...
+        def locked(self) -> bool: ...
+        def release(self) -> None: ...
 
 ndi = LazyLoader("scipy.ndimage")
 mp_spawn = mp.get_context("spawn")
@@ -70,14 +79,14 @@ class SlotRegister:
             "task_extract_features": mp_spawn.Value("d", 0.0),
         }
 
-        # Counters are created with recursive locks, which means that the
-        # same process may acquire multiple locks on the object, and only
-        # after releasing all of them, may the lock be acquired by another
-        # process.
+        # Counters are created with non-recursive locks, which means that the
+        # same process may acquire only one lock on the object. This also
+        # applies to reading, so use the `get_counter_value` method if you
+        # only need to read values.
         self.counters = {
-            "chunks_loaded": mp_spawn.Value("Q", 0),
-            "masks_dropped": mp_spawn.Value("Q", 0),
-            "write_queue_size": mp_spawn.Value("Q", 0),
+            "chunks_loaded": mp_spawn.Value("Q", 0, lock=mp_spawn.Lock()),
+            "masks_dropped": mp_spawn.Value("Q", 0, lock=mp_spawn.Lock()),
+            "write_queue_size": mp_spawn.Value("Q", 0, lock=mp_spawn.Lock()),
         }
 
         self._state = mp_spawn.Value("u", "w")
@@ -119,7 +128,7 @@ class SlotRegister:
 
         This number increments as `SlotRegister.task_load_all` is called.
         """
-        return self.counters["chunks_loaded"].value
+        return self.get_counter_value("chunks_loaded")
 
     @chunks_loaded.setter
     def chunks_loaded(self, value):
@@ -131,7 +140,7 @@ class SlotRegister:
 
         Segmentation may drop invalid masks/events.
         """
-        return self.counters["masks_dropped"].value
+        return self.get_counter_value("masks_dropped")
 
     @masks_dropped.setter
     def masks_dropped(self, value):
@@ -166,7 +175,7 @@ class SlotRegister:
         is used compression). Used for preventing
         OOM events by stalling data processing when the writer is slow
         """
-        return self.counters["write_queue_size"].value
+        return self.get_counter_value("write_queue_size")
 
     @property
     def slots(self):
@@ -212,11 +221,61 @@ class SlotRegister:
         # fallback to nothing found
         return None
 
-    def get_counter_lock(self, name):
+    def get_counter_lock(self, name: str) -> _LockType:
         if name in self.counters:
             return self.counters[name].get_lock()
         else:
-            raise KeyError(f"No counter lock defined for {name}")
+            raise KeyError(f"No counter defined for '{name}'")
+
+    def get_counter_value(self, name):
+        if name in self.counters:
+            return self.counters[name].get_obj().value
+        else:
+            raise KeyError(f"No counter defined for '{name}'")
+
+    def increment_counter_value(self,
+                                name: str,
+                                increment: int,
+                                timeout: float = 5.,
+                                lock: _LockType | None = None):
+        """Increment a counter value
+
+        Parameters
+        ----------
+        name:
+            Name of the counter
+        increment:
+            By how much the counter should be incremented
+        timeout:
+            Timeout for acquiring a lock (if `lock` is not set)
+        lock:
+            A locked lock for the given counter. The lock will not be
+            released after incrementing the value.
+            DANGER: When specified, you must have acquired the lock
+            in the correct process/thread beforehand. Otherwise,
+            process-safety is not given anymore.
+        """
+        if name in self.counters:
+            if lock is None:
+                lock = self.get_counter_lock(name)
+                finally_release_lock = True
+                if not lock.acquire(timeout=timeout):
+                    raise TimeoutError(f"Failed to increment '{name}' counter "
+                                       f"with {timeout=}")
+            elif not lock.locked():
+                raise ValueError("A locked `lock` must be passed")
+            else:
+                # We have an acquired lock
+                finally_release_lock = False
+
+            try:
+                self.counters[name].get_obj().value += increment
+            finally:
+                if finally_release_lock:
+                    assert lock is not None
+                    lock.release()
+        else:
+            raise KeyError(f"No counter defined for '{name}'")
 
     def get_time(self, method_name):
         """Return accumulative time for the given method"""
@@ -338,7 +397,11 @@ class SlotRegister:
 
                                 with state_warden:
                                     cs.load(self.chunks_loaded)
-                                    self.chunks_loaded += 1
+                                    self.increment_counter_value(
+                                        name="chunks_loaded",
+                                        increment=1,
+                                        lock=lock,
+                                    )
                                     did_something = True
                     # ruff: enable[SIM102]
             except KeyboardInterrupt:

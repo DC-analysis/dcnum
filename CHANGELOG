@@ -11,6 +11,8 @@
  - enh: add `get_model_meta` method to only load torch model metadata
  - enh: add no-op "torch.eager" backend for torch segmenters
  - enh: CUDA GPU index can now be directly specified via device name
+ - enh: implement `SlotRegister.increment_counter_value`
+ - enh: improve process safety for `SlotRegister.counters` values
  - ref: remove unused and restrictive `Segmenter.hardware_processor` property
  - ref: code cleanup with ruff in multiple places
  - ref: migrate `thresh` segmenter to `UNISegmenter`
