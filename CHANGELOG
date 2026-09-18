@@ -14,6 +14,7 @@
  - enh: implement `SlotRegister.increment_counter_value`
  - enh: improve process safety for `SlotRegister.counters` values
  - enh: allow to track start and complete for `UniversalWorker`
+ - enh: progress shows current segmentation rate (instead of accumulated)
  - ref: remove unused and restrictive `Segmenter.hardware_processor` property
  - ref: code cleanup with ruff in multiple places
  - ref: migrate `thresh` segmenter to `UNISegmenter`

@@ -785,7 +785,6 @@ class DCNumJobRunner(threading.Thread):
         worker_write.start()
 
         data_size = len(self.dtin)
-        t0 = time.perf_counter()
 
         if not all(w.started.value for w in uni_workers):
             self.logger.info("Waiting for universal workers to start")
@@ -805,15 +804,24 @@ class DCNumJobRunner(threading.Thread):
         # We can lean back now. We do not have to do anything
         # besides monitoring the progress.
         error = None
+        frame_count_prev = 0
+        time_prev = time.perf_counter()
+        segm_rate_array = np.zeros(20, dtype=float)
         while True:
-            counted_frames = worker_write.written_frames.value
+            frame_count = worker_write.written_frames.value
+            time_now = time.perf_counter()
             self.event_count = worker_write.written_events.value
-            td = time.perf_counter() - t0
             # set the current status
-            self._progress_ex = counted_frames / data_size
-            self._segm_rate = counted_frames / (td or 0.03)
+            self._progress_ex = frame_count / data_size
+            td = time_now - time_prev
+            if td != 0:
+                segm_rate_array[0] = (frame_count - frame_count_prev) / td
+                segm_rate_array = np.roll(segm_rate_array, 1)
+            self._segm_rate = np.mean(segm_rate_array)
+            frame_count_prev = frame_count
+            time_prev = time_now
             time.sleep(.1)
-            if counted_frames == data_size:
+            if frame_count == data_size:
                 break
             else:
                 if all(not w.is_alive() for w in uni_workers):
