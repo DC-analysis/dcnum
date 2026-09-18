@@ -23,6 +23,7 @@ from .job import DCNumPipelineJob
 if TYPE_CHECKING:
     import contextlib
     import typing
+
     class _LockType(contextlib.AbstractContextManager, typing.Protocol):
         def acquire(self, block: bool = ..., timeout: float = ...) -> bool: ...
         def locked(self) -> bool: ...

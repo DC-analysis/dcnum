@@ -787,17 +787,16 @@ class DCNumJobRunner(threading.Thread):
         data_size = len(self.dtin)
         t0 = time.perf_counter()
 
+        if not all(w.started.value for w in uni_workers):
+            self.logger.info("Waiting for universal workers to start")
         for _ in range(100 * len(uni_workers)):
-            if all(w.is_alive() for w in uni_workers):
+            if all(w.started.value for w in uni_workers):
                 break
-            elif (worker_write.written_frames.value
-                  == worker_write.written_events.value
-                  == data_size
-                  ):
-                # unexpectedly, we are already done (probably as small dataset)
+            elif all(w.completed.value for w in uni_workers):
+                # unexpectedly, we are already done (probably a small dataset)
+                self.logger.info("Universal workers completed early")
                 break
             else:
-                self.logger.info("Waiting for universal workers to start")
                 time.sleep(0.1)
         else:
             self.logger.error("Universal workers failed to spawn")

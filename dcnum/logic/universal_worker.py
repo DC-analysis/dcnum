@@ -50,6 +50,9 @@ class UniversalWorker:
         self.log_queue = log_queue
         """queue for logging"""
 
+        self.started = mp_spawn.Value("i", 0)
+        self.completed = mp_spawn.Value("i", 0)
+
         # Logging needs to be set up after `start` is called, otherwise
         # it looks like we have the same PID as the parent process. We
         # are setting up logging in `run`.
@@ -83,6 +86,7 @@ class UniversalWorker:
         return dcs
 
     def run(self):
+        self.started.value = 1
         # If multiprocessing is used, we now live in our own process.
         confirm_single_threaded()
 
@@ -177,6 +181,8 @@ class UniversalWorker:
             # earlier.
             self.log_queue.close()
             self.log_queue.join_thread()
+
+        self.completed.value = 1
 
 
 class UniversalWorkerThread(UniversalWorker, threading.Thread):

@@ -36,7 +36,7 @@ def test_slot_register_increment_counter_value():
     assert sr.get_counter_value("chunks_loaded") == 4
 
     with lock, pytest.raises(TimeoutError, match="Failed to increment"):
-            sr.increment_counter_value("chunks_loaded", 1, timeout=0.01)
+        sr.increment_counter_value("chunks_loaded", 1, timeout=0.01)
 
     with pytest.raises(KeyError, match="No counter defined"):
         sr.increment_counter_value("peterpan", 1)
@@ -61,7 +61,7 @@ def test_slot_register_reserve_slot_for_task():
         # We only have one slot, this means requesting the same thing will
         # not work.
         warden2 = slot_register.reserve_slot_for_task(current_state="i",
-                                                    next_state="s")
+                                                      next_state="s")
         assert warden2 is None
 
     assert cs.state == "s"
