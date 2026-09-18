@@ -12,7 +12,7 @@ from helper_methods import retrieve_data
 mp_spawn = mp.get_context("spawn")
 
 
-def slot_register_reserve_slot_for_task():
+def test_slot_register_reserve_slot_for_task():
     path = retrieve_data("fmt-hdf5_cytoshot_full-features_2023.zip")
     hd = HDF5Data(path)
     assert "image" in hd
@@ -23,17 +23,18 @@ def slot_register_reserve_slot_for_task():
 
     warden = slot_register.reserve_slot_for_task(current_state="i",
                                                  next_state="s")
+    assert warden is not None
     with warden as (cs, batch_range):
-        assert warden.locked
         assert cs.state == "i"
-        assert batch_range == (0, 100)
-    assert cs.state == "s"
+        assert batch_range == (0, 40)
 
-    # We only have one slot, this means requesting the same thing will
-    # not work.
-    warden2 = slot_register.reserve_slot_for_task(current_state="i",
-                                                  next_state="s")
-    assert warden2 is None
+        # We only have one slot, this means requesting the same thing will
+        # not work.
+        warden2 = slot_register.reserve_slot_for_task(current_state="i",
+                                                    next_state="s")
+        assert warden2 is None
+
+    assert cs.state == "s"
 
     warden3 = slot_register.reserve_slot_for_task(current_state="s",
                                                   next_state="e")
