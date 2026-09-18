@@ -94,7 +94,7 @@ class SlotRegister:
         self.feat_nevents[:] = np.full(self.num_frames, -1)
 
         # Generate all requested slots.
-        for ii in range(max(1, num_slots)):
+        for _ in range(max(1, num_slots)):
             self._slots.append(ChunkSlot(job=job, data=data))
         # Add a slot for the remainder. The size of the remainder chunks
         # slot is smaller or equal to the others.
@@ -205,11 +205,9 @@ class SlotRegister:
         Return None if no matching slot exists
         """
         for sc in self:
-            if sc.state == state:
-                if chunk is None:
-                    return sc
-                elif sc.chunk == chunk:
-                    return sc
+            if (sc.state == state
+                    and (chunk is None or sc.chunk == chunk)):
+                return sc
 
         # fallback to nothing found
         return None
@@ -229,7 +227,7 @@ class SlotRegister:
                               next_state: str,
                               chunk_slot: ChunkSlot | None = None,
                               batch_size: int | None = None,
-                              ) -> "StateWarden | None":
+                              ) -> StateWarden | None:
         """Return slot with the specified state and lowest chunk index
 
         Parameters
@@ -315,6 +313,7 @@ class SlotRegister:
                     # `self.chunks_loaded`.
                     # We are interested in chunks with the state "i" and
                     # will transform them into chunks in state "s".
+                    # ruff: disable[SIM102]
                     if cs.state == "i":
                         # We have at least two chunk slots: One
                         # or more that handle the majority of the frames,
@@ -341,6 +340,7 @@ class SlotRegister:
                                     cs.load(self.chunks_loaded)
                                     self.chunks_loaded += 1
                                     did_something = True
+                    # ruff: enable[SIM102]
             except KeyboardInterrupt:
                 self.event_queue.cancel_join_thread()
                 raise
@@ -388,6 +388,11 @@ class SlotRegister:
                         ds = slice(*batch_range)
 
                         if self.segmenter.requires_background_correction:
+                            if cs.image_corr is None:
+                                raise ValueError(
+                                    f"No background information available in "
+                                    f"{self.job['path_in']}"
+                                    )
                             images = cs.image_corr[ds]
                             if cs.bg_off is not None:
                                 bg_off = cs.bg_off[ds]
@@ -564,7 +569,7 @@ class SlotRegister:
                                 logger.error(traceback.format_exc())
                             else:
                                 if events:
-                                    key0 = list(events.keys())[0]
+                                    key0 = next(iter(events.keys()))
                                     nevents = len(events[key0])
                                     self.feat_nevents[index] = nevents
                                 else:
