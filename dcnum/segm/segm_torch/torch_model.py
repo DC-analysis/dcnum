@@ -256,7 +256,7 @@ def load_model_v1_jit(model_meta):
             torch.cuda.empty_cache()
         # 50 images should fit in any GPU
         size = max(size, 50)
-        model_meta["estimated_batch_size_cuda"] = size
+        model_meta["batch_size_recommended"] = size
 
     return model_jit, model_meta
 

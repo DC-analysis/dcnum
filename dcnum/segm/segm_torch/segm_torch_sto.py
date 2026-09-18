@@ -31,8 +31,8 @@ class SegmentTorchSTO(TorchSegmenterBase, STOSegmenter):
         model_meta = get_model_meta(model_file,
                                     backend=self.kwargs["backend"],
                                     device=self.kwargs["device"])
-        batch_size = model_meta["estimated_batch_size_cuda"]
-        logger.info(f"GPU segmentation batch size: {batch_size}")
+        batch_size = model_meta.get("batch_size_recommended", None)
+        logger.info(f"Recommended batch size: {batch_size}")
 
     @staticmethod
     def is_available():
@@ -55,7 +55,7 @@ class SegmentTorchSTO(TorchSegmenterBase, STOSegmenter):
         # Note that a batch size for segmentation larger than the chunk size
         # will result in an effective batch size that is identical to the
         # chunk size. The for-loop below will only have one iteration.
-        batch_size = model_meta["estimated_batch_size_cuda"]
+        batch_size = model_meta.get("batch_size_recommended", 100)
 
         # Preprocess the first image chunk
         batch_next = preprocess_images(images[0:batch_size],

@@ -59,9 +59,17 @@ class SegmentTorchUNI(TorchSegmenterBase, UNISegmenter):
                 self.required_batch_size = model_meta["batch_size"]
 
     def log_info(self, logger):
+        model_meta = SegmentTorchUNI.get_model_meta(self.kwargs)
         backend = self.kwargs.get("backend")
         device = self.kwargs.get("device")
         logger.info(f"Segmenter backend '{backend}' with device '{device}'")
+        if self.required_batch_size:
+            logger.info(f"Batch size: {self.required_batch_size}")
+        else:
+            logger.info("No batch size restrictions")
+
+        batch_size = model_meta.get("batch_size_recommended", None)
+        logger.info(f"Recommended batch size: {batch_size}")
 
         if device and device.startswith("cuda"):
             logger.info(f"CUDA version: {torch.version.cuda}")
