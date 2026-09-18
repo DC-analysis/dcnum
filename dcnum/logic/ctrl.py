@@ -824,7 +824,9 @@ class DCNumJobRunner(threading.Thread):
             if frame_count == data_size:
                 break
             else:
-                if all(not w.is_alive() for w in uni_workers):
+                # All workers have started, but did something go wrong?
+                if (all(not w.is_alive() for w in uni_workers)
+                        and any(not w.completed.value for w in uni_workers)):
                     error = "Universal workers exited early"
                     break
 
