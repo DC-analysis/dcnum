@@ -3,6 +3,7 @@ from __future__ import annotations
 import functools
 import logging
 import multiprocessing as mp
+import sys
 import time
 import traceback
 from typing import TYPE_CHECKING
@@ -29,8 +30,20 @@ if TYPE_CHECKING:
         def locked(self) -> bool: ...
         def release(self) -> None: ...
 
+
 ndi = LazyLoader("scipy.ndimage")
 mp_spawn = mp.get_context("spawn")
+
+
+def is_locked(lock):
+    """Check whether a lock is locked
+
+    Compatibility wrapper for Python 3.12 and Python 3.13
+    """
+    if sys.version_info[:2] >= (3, 14):
+        return is_locked(lock)
+    else:
+        return lock._semlock._is_zero()
 
 
 class count_time:
@@ -263,7 +276,7 @@ class SlotRegister:
                 if not lock.acquire(timeout=timeout):
                     raise TimeoutError(f"Failed to increment '{name}' counter "
                                        f"with {timeout=}")
-            elif not lock.locked():
+            elif not is_locked(lock):
                 raise ValueError("A locked `lock` must be passed")
             else:
                 # We have an acquired lock
