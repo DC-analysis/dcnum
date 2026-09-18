@@ -36,7 +36,7 @@ mp_spawn = mp.get_context("spawn")
 
 
 def is_locked(lock):
-    """Check whether a lock is locked
+    """Check whether a multiprocessing.Lock is locked
 
     Compatibility wrapper for Python 3.12 and Python 3.13
     """
