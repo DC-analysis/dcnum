@@ -41,7 +41,7 @@ def is_locked(lock):
     Compatibility wrapper for Python 3.12 and Python 3.13
     """
     if sys.version_info[:2] >= (3, 14):
-        return is_locked(lock)
+        return lock.locked()
     else:
         return lock._semlock._is_zero()
 
