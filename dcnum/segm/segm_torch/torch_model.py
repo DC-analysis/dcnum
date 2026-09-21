@@ -100,6 +100,10 @@ def get_model_meta(path_or_name: str | pathlib.Path,
                 if torch.cuda.is_available():
                     model_meta["wiring_options"].insert(
                         0, {"backend": "torch.jit", "device": "cuda"})
+                    model_meta["wiring_options"].insert(
+                        1, {"backend": "torch.jit", "device": "cuda:0"})
+                    model_meta["wiring_options"].insert(
+                        2, {"backend": "torch.jit", "device": "cuda:1"})
 
         elif dcnm_format_version == "2.0":
             # Extract the model metadata

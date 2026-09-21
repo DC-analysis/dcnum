@@ -15,7 +15,7 @@ class SegmentTorchSTO(TorchSegmenterBase, STOSegmenter):
 
     def log_info(self, logger):
         model_file = self.kwargs["model_file"]
-        device = torch.device(self.kwargs["device"])
+        device = "cuda:0"
 
         logger.info(f"CUDA version: {torch.version.cuda}")
 
@@ -30,7 +30,7 @@ class SegmentTorchSTO(TorchSegmenterBase, STOSegmenter):
 
         model_meta = get_model_meta(model_file,
                                     backend=self.kwargs["backend"],
-                                    device=self.kwargs["device"])
+                                    device=device)
         batch_size = model_meta.get("batch_size_recommended", None)
         logger.info(f"Recommended batch size: {batch_size}")
 
