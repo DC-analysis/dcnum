@@ -29,7 +29,7 @@ class SegmentTorchSTO(TorchSegmenterBase, STOSegmenter):
         logger.info(f"Available GPU memory: {total/1024**3:.1f}GB")
 
         model_meta = get_model_meta(model_file,
-                                    backend=self.kwargs["backend"],
+                                    backend="torch.jit",
                                     device=device)
         batch_size = model_meta.get("batch_size_recommended", None)
         logger.info(f"Recommended batch size: {batch_size}")
