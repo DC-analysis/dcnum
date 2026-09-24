@@ -430,12 +430,17 @@ class SlotRegister:
 
     @count_time()
     def task_segment_images(self,
-                            logger: logging.Logger | None = None
+                            logger: logging.Logger | None = None,
                             ) -> bool:
         """Perform segmentation of images (mask creation)
 
         This method will only perform segmentation for when the `UNISegmenter`
         is used.
+
+        Parameters
+        ----------
+        logger:
+            Optional logger instance
 
         Returns
         -------
