@@ -132,7 +132,8 @@ class UniversalWorker:
         wait_time_writer = 0
 
         # If we are responsible for segmentation, set everything up.
-        if "segment_images" in self.dedications:
+        if ("segment_images" in self.dedications
+                or "segment_images_full_chunk" in self.dedications):
             self.slot_register.segmenter.log_info(logger)
 
         sr = self.slot_register
