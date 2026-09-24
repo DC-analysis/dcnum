@@ -837,9 +837,12 @@ class DCNumJobRunner(threading.Thread):
             f"{slot_register.get_time('task_load_all'):.1f}s")
 
         if issubclass(seg_cls, UNISegmenter):
+            segment_time = (
+                slot_register.get_time('task_segment_images')
+                + slot_register.get_time('task_segment_images_full_chunk')
+            )
             self.logger.info(
-                f"Segmentation time: "
-                f"{slot_register.get_time('task_segment_images'):.1f}s")
+                f"Segmentation time: {segment_time:.1f}s")
 
         self.logger.info(
             f"Labeling time: "

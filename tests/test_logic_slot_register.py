@@ -5,6 +5,7 @@ from dcnum.logic.slot_register import SlotRegister
 from dcnum.logic.job import DCNumPipelineJob
 
 import h5py
+import numpy as np
 
 import pytest
 
@@ -78,8 +79,8 @@ def test_slot_register_chunks_with_odd_remainder():
     with concatenated_hdf5_data(50 * [h5path], path_out=path):
         pass
 
+    # Make chunked dataset
     with h5py.File(path, "a") as h5:
-        # rewrite the image column, making it chunk-less
         images = h5["events/image"][:]
         images_bg = h5["events/image_bg"][:]
         del h5["events/image"]
@@ -89,7 +90,6 @@ def test_slot_register_chunks_with_odd_remainder():
                           chunks=(49, 80, 320))
         h5.create_dataset("events/image_bg",
                           data=images_bg,
-                          # Different chunks!
                           chunks=(49, 80, 320))
 
     hd = HDF5Data(path)
@@ -116,8 +116,8 @@ def test_slot_register_chunks_with_even_remainder():
     with concatenated_hdf5_data(50 * [h5path], path_out=path):
         pass
 
+    # Make chunked dataset
     with h5py.File(path, "a") as h5:
-        # rewrite the image column, making it chunk-less
         images = h5["events/image"][:]
         images_bg = h5["events/image_bg"][:]
         del h5["events/image"]
@@ -127,7 +127,6 @@ def test_slot_register_chunks_with_even_remainder():
                           chunks=(50, 80, 320))
         h5.create_dataset("events/image_bg",
                           data=images_bg,
-                          # Different chunks!
                           chunks=(50, 80, 320))
 
     hd = HDF5Data(path)
@@ -152,8 +151,8 @@ def test_slot_register_task_load_all_with_odd_remainder():
     with concatenated_hdf5_data(50 * [h5path], path_out=path):
         pass
 
+    # Make chunked dataset
     with h5py.File(path, "a") as h5:
-        # rewrite the image column, making it chunk-less
         images = h5["events/image"][:]
         images_bg = h5["events/image_bg"][:]
         del h5["events/image"]
@@ -163,7 +162,6 @@ def test_slot_register_task_load_all_with_odd_remainder():
                           chunks=(49, 80, 320))
         h5.create_dataset("events/image_bg",
                           data=images_bg,
-                          # Different chunks!
                           chunks=(49, 80, 320))
 
     hd = HDF5Data(path)
@@ -187,8 +185,8 @@ def test_slot_register_task_load_all_with_odd_remainder_multi():
     with concatenated_hdf5_data(100 * [h5path], path_out=path):
         pass
 
+    # Make chunked dataset
     with h5py.File(path, "a") as h5:
-        # rewrite the image column, making it chunk-less
         images = h5["events/image"][:]
         images_bg = h5["events/image_bg"][:]
         del h5["events/image"]
@@ -198,7 +196,6 @@ def test_slot_register_task_load_all_with_odd_remainder_multi():
                           chunks=(49, 80, 320))
         h5.create_dataset("events/image_bg",
                           data=images_bg,
-                          # Different chunks!
                           chunks=(49, 80, 320))
 
     hd = HDF5Data(path)
@@ -240,8 +237,8 @@ def test_slot_register_task_load_all_with_even_remainder():
     with concatenated_hdf5_data(50 * [h5path], path_out=path):
         pass
 
+    # make chunked dataset
     with h5py.File(path, "a") as h5:
-        # rewrite the image column, making it chunk-less
         images = h5["events/image"][:]
         images_bg = h5["events/image_bg"][:]
         del h5["events/image"]
@@ -251,7 +248,6 @@ def test_slot_register_task_load_all_with_even_remainder():
                           chunks=(50, 80, 320))
         h5.create_dataset("events/image_bg",
                           data=images_bg,
-                          # Different chunks!
                           chunks=(50, 80, 320))
 
     hd = HDF5Data(path)
@@ -264,3 +260,80 @@ def test_slot_register_task_load_all_with_even_remainder():
     assert slot_register.slots[1].length == 1000
     assert slot_register.slots[0].chunk == 0
     assert slot_register.slots[1].chunk == 1
+
+
+def test_slot_register_segment_images():
+    """Segment images"""
+    h5path = retrieve_data("fmt-hdf5_cytoshot_full-features_2023.zip")
+    path = h5path.with_name("test.hdf5")
+    with concatenated_hdf5_data(50 * [h5path], path_out=path):
+        pass
+
+    # Make chunked dataset
+    with h5py.File(path, "a") as h5:
+        images = h5["events/image"][:]
+        images_bg = h5["events/image_bg"][:]
+        del h5["events/image"]
+        del h5["events/image_bg"]
+        h5.create_dataset("events/image",
+                          data=images,
+                          chunks=(49, 80, 320))
+        h5.create_dataset("events/image_bg",
+                          data=images_bg,
+                          chunks=(49, 80, 320))
+
+    hd = HDF5Data(path)
+
+    job = DCNumPipelineJob(path_in=path)
+    slot_register = SlotRegister(job=job, data=hd, num_slots=2)
+
+    # load data into chunks
+    slot_register.task_load_all()
+    assert slot_register.slots[0].length == 980
+    assert slot_register.slots[1].length == 980
+    assert slot_register.slots[2].length == 40
+    assert slot_register.slots[0].chunk == 0
+    assert slot_register.slots[1].chunk == 1
+    assert slot_register.slots[2].chunk == 2
+
+    # segment images
+    assert slot_register.task_segment_images()
+    assert slot_register.task_segment_images()
+    assert slot_register.task_segment_images()
+    assert not slot_register.task_segment_images()
+    assert np.sum(slot_register.slots[0].mask) == 1260920
+    assert np.sum(slot_register.slots[1].mask) == 1259101
+    assert np.sum(slot_register.slots[2].mask) == 51429
+    masks = np.concatenate([
+        slot_register.slots[0].mask,
+        slot_register.slots[1].mask,
+        slot_register.slots[2].mask[:40],
+    ])
+    assert masks.shape == (2000, 80, 400)
+    assert np.sum(masks) == 2571450
+
+    # reset the masks
+    slot_register.slots[0].mask[:] = False
+    slot_register.slots[1].mask[:] = False
+    slot_register.slots[2].mask[:] = False
+    assert np.sum(slot_register.slots[0].mask) == 0
+    assert np.sum(slot_register.slots[1].mask) == 0
+    assert np.sum(slot_register.slots[2].mask) == 0
+
+    # put slot data into "s" state
+    slot_register.slots[0].state = "s"
+    slot_register.slots[1].state = "s"
+    slot_register.slots[2].state = "s"
+
+    # segment images in chunks (done in while loop)
+    assert slot_register.task_segment_images_full_chunk()
+    assert not slot_register.task_segment_images_full_chunk()
+    masks2 = np.concatenate([
+        slot_register.slots[0].mask,
+        slot_register.slots[1].mask,
+        slot_register.slots[2].mask[:40],
+    ])
+    assert masks2.shape == (2000, 80, 400)
+    assert np.sum(masks2) == 2571450
+
+    assert np.all(masks == masks2)

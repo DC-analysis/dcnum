@@ -98,12 +98,10 @@ def test_universal_worker_get_worker_dedications_torchuni_gpu():
 
     dcs = UniversalWorker.get_worker_dedications(job, 2)
     assert len(dcs) == 2
-    all = {
+    assert set(dcs[0]) == {"segment_images_full_chunk"}
+    assert set(dcs[1]) == {
         "load_all",
-        "segment_images",
         "label_masks",
         "process_labels",
         "extract_features",
-    }
-    assert (all - {"load_all"}) == set(dcs[0])
-    assert (all - {"segment_images"}) == set(dcs[1])
+        }

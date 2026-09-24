@@ -29,6 +29,21 @@ default_dedications = [
     "extract_features",
 ]
 
+valid_dedications = [
+    # load data from disk
+    "load_all",
+    # segment images in sub-chunks
+    "segment_images",
+    # segment full-chunk images (segmenter must support this)
+    "segment_images_full_chunk",
+    # label masks (boolean to integer array)
+    "label_masks",
+    # remove/modify labels
+    "process_labels",
+    # feature extraction from labels
+    "extract_features",
+]
+
 
 class UniversalWorker:
     def __init__(self,
@@ -43,6 +58,10 @@ class UniversalWorker:
         if dedications is None:
             dedications = copy.copy(default_dedications)
         self.dedications = dedications
+
+        for dd in dedications:
+            if dd not in valid_dedications:
+                raise ValueError(f"Invalid dedication: '{dd}'")
 
         self.slot_register = slot_register
         """Chunk slot register"""
@@ -144,6 +163,11 @@ class UniversalWorker:
                 if "segment_images" in self.dedications:
                     # Segmentation is only done for `UNISegmenter` subclasses
                     did_something |= sr.task_segment_images(logger=logger)
+
+                if "segment_images_full_chunk" in self.dedications:
+                    # Segmentation is only done for `UNISegmenter` subclasses
+                    did_something |= sr.task_segment_images_full_chunk(
+                        logger=logger)
 
                 if "label_masks" in self.dedications:
                     # After segmentation, perform mask to label conversion

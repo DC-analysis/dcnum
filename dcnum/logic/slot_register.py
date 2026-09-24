@@ -88,6 +88,7 @@ class SlotRegister:
         self.timers = {
             "task_load_all": mp_spawn.Value("d", 0.0),
             "task_segment_images": mp_spawn.Value("d", 0.0),
+            "task_segment_images_full_chunk": mp_spawn.Value("d", 0.0),
             "task_label_masks": mp_spawn.Value("d", 0.0),
             "task_process_labels": mp_spawn.Value("d", 0.0),
             "task_extract_features": mp_spawn.Value("d", 0.0),
@@ -446,6 +447,10 @@ class SlotRegister:
         -------
         did_something : bool
             Whether images were segmented
+
+        See Also
+        --------
+        task_segment_images_full_chunk: for processing entire chunks
         """
         did_something = False
 
@@ -513,6 +518,71 @@ class SlotRegister:
                     did_something = True
                 else:
                     break
+
+        return did_something
+
+    @count_time()
+    def task_segment_images_full_chunk(self,
+                                       logger: logging.Logger | None = None,
+                                       ) -> bool:
+        """Perform segmentation of images (mask creation) in full chunks
+
+        Segmenting a full chunk is less overhead (no slicing required).
+        This method will only perform segmentation for when the `UNISegmenter`
+        is used.
+
+        Parameters
+        ----------
+        logger:
+            Optional logger instance
+
+        Returns
+        -------
+        did_something : bool
+            Whether images were segmented
+
+        See Also
+        --------
+        task_segment_images: for processing batches of chunks
+        """
+        did_something = False
+
+        if not issubclass(self.segmenter_class, UNISegmenter):
+            return did_something
+
+        logger = logger or logging.getLogger(__name__)
+
+        while True:
+            state_warden = self.reserve_slot_for_task(
+                current_state="s",
+                next_state="m"
+                )
+            if state_warden is not None and state_warden.batch_size:
+                with state_warden as (cs, _):
+                    if self.segmenter.requires_background_correction:
+                        if cs.image_corr is None:
+                            raise ValueError(
+                                f"No background information available in "
+                                f"{self.job['path_in']}"
+                                )
+                        images = cs.image_corr
+                        if cs.bg_off is not None:
+                            bg_off = cs.bg_off
+                        else:
+                            bg_off = None
+                    else:
+                        images = cs.image
+                        bg_off = None
+
+                    # Segment the entire chunk
+                    cs.mask[:] = self.segmenter.segment_batch(
+                        images=images,
+                        bg_off=bg_off
+                        )
+
+                did_something = True
+            else:
+                break
 
         return did_something
 

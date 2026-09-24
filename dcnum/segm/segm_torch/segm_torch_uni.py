@@ -120,11 +120,13 @@ class SegmentTorchUNI(TorchSegmenterBase, UNISegmenter):
             model_meta = SegmentTorchUNI.get_model_meta(
                 job["segmenter_kwargs"])
             if model_meta["device"] != "cpu":
-                # 1st worker segments
+                # 1st worker only segments and in full chunks
+                worker_dedications[0].clear()
+                worker_dedications[0].append("segment_images_full_chunk")
+                # All other workers don't segment
                 for wds in worker_dedications[1:]:
                     wds.remove("segment_images")
-                # 2nd worker loads
-                worker_dedications[0].remove("load_all")
+                # 2nd worker loads and joins remaining tasks
                 worker_dedications[1].insert(0, "load_all")
             return worker_dedications
 

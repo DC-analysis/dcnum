@@ -3,6 +3,7 @@
  - feat: new `torchuni` segmenter with "openvino" and "inductor" backends
  - feat: support (backend-agnostic) dcnm model file format version 2.0
  - feat: `UniversalWorker` has new init kwarg `dedications` for task management
+ - feat: implement `SlotRegister.task_segment_images_full_chunk`
  - fix: possible memory leak in `segment_algorithm_wrapper`
  - fix: loading model for CUDA when device type contains index, e.g. "cuda:0"
  - fix: make SIGINT / KeyboardInterrupt work
