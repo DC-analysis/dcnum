@@ -59,7 +59,7 @@ class SegmentTorchUNI(TorchSegmenterBase, UNISegmenter):
                 self.required_batch_size = model_meta["batch_size"]
 
     def log_info(self, logger):
-        model_meta = SegmentTorchUNI.get_model_meta(self.kwargs)
+        model_meta = SegmentTorchUNI.get_model_meta_full(self.kwargs)
         backend = self.kwargs.get("backend")
         device = self.kwargs.get("device")
         logger.info(f"Segmenter backend '{backend}' with device '{device}'")
@@ -82,7 +82,20 @@ class SegmentTorchUNI(TorchSegmenterBase, UNISegmenter):
 
     @staticmethod
     def get_model_meta(segm_kwargs) -> dict[str, Any]:
+        """Return basic model metadata"""
         model_meta = get_model_meta(
+            segm_kwargs["model_file"],
+            backend=segm_kwargs.get("backend"),
+            device=segm_kwargs.get("device"))
+        return model_meta
+
+    @staticmethod
+    def get_model_meta_full(segm_kwargs) -> dict[str, Any]:
+        """Return model metadata after loading the model
+
+        This will include keys such as "batch_size_recommended".
+        """
+        _, model_meta = load_model(
             segm_kwargs["model_file"],
             backend=segm_kwargs.get("backend"),
             device=segm_kwargs.get("device"))
