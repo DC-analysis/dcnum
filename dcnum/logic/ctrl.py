@@ -733,8 +733,9 @@ class DCNumJobRunner(threading.Thread):
                                      event_queue=event_queue,
                                      num_slots=num_slots)
 
-        self.logger.debug(f"Number of slots: {num_slots}")
         self.logger.debug(f"Number of universal workers: {num_universal}")
+        self.logger.info(f"Number of slots: {num_slots}")
+        self.logger.info(f"Chunk size: {self.dtin.image_chunk_size}")
 
         if self.job["debug"]:
             worker_uni_cls = UniversalWorkerThread
