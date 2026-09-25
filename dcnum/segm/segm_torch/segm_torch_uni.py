@@ -57,8 +57,7 @@ class SegmentTorchUNI(TorchSegmenterBase, UNISegmenter):
             model_meta = SegmentTorchUNI.get_model_meta(self.kwargs)
             self.kwargs["backend"] = model_meta["backend"]
             self.kwargs["device"] = model_meta["device"]
-            if "batch_size" in model_meta:
-                self.required_batch_size = model_meta["batch_size"]
+            self.required_batch_size = model_meta.get("batch_size", 0)
 
     def log_info(self, logger):
         model_meta = SegmentTorchUNI.get_model_meta_full(self.kwargs)
@@ -195,7 +194,9 @@ class SegmentTorchUNI(TorchSegmenterBase, UNISegmenter):
 
             size = len(images)
 
-            if model_meta["device"] == "cpu":
+            if model_meta.get("batch_size", 0):  # self.required_batch_size
+                batch_size = model_meta["batch_size"]
+            elif model_meta["device"] == "cpu":
                 # we only want one batch, because `images` is already a batch
                 batch_size = size
             else:
