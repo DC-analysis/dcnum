@@ -3,6 +3,8 @@ from __future__ import annotations
 import copy
 from typing import TYPE_CHECKING, Any
 
+import numpy as np
+
 from ..segmenter_uni import UNISegmenter
 
 from .segm_torch_base import TorchSegmenterBase
@@ -191,12 +193,37 @@ class SegmentTorchUNI(TorchSegmenterBase, UNISegmenter):
                                            device=device,
                                            )
 
+            size = len(images)
+
+            if model_meta["device"] == "cpu":
+                # we only want one batch, because `images` is already a batch
+                batch_size = size
+            else:
+                # we are using a different computing device (e.g. GPU)
+                batch_size = model_meta.get("batch_size_recommended", 300)
+                # run at least two batches to make use of async on GPU
+                num_batches = int(np.ceil(max(2., size / batch_size)))
+                batch_size = int(np.ceil(size / num_batches))
+
+            # output mask array
+            mask = np.empty(images.shape, dtype=bool)
+
             # Move image tensors to device
-            image_ten_on_device = torch.tensor(images, device=device)
-            # Model inference
-            pred_tensor = model(image_ten_on_device)
+            batch_dev = torch.tensor(images[:batch_size], device=device)
 
             mask_func = model_meta["mask_func"]
-            mask = mask_func(pred_tensor)
+
+            for bidx in range(0, size, batch_size):
+                # Model inference
+                pred_tensor = model(batch_dev)
+
+                if bidx + batch_size < size:
+                    # Copy next batch to device (async)
+                    batch_dev = torch.tensor(
+                        images[bidx + batch_size:bidx + 2 * batch_size],
+                        device=device)
+
+                # Convert tensor to numpy and populate mask
+                mask[bidx:bidx + batch_size] = mask_func(pred_tensor)
 
         return mask
