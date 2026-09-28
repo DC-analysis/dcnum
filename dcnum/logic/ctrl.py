@@ -1,3 +1,4 @@
+import atexit
 import datetime
 import importlib
 import json
@@ -172,12 +173,16 @@ class DCNumJobRunner(threading.Thread):
     @property
     def path_temp_in(self):
         po = pathlib.Path(self.job["path_out"])
-        return po.with_name(po.stem + f"_input_bb_{self.tmp_suffix}.rtdc~")
+        pti = po.with_name(po.stem + f"_input_bb_{self.tmp_suffix}.rtdc~")
+        atexit.register(pti.unlink, missing_ok=True)
+        return pti
 
     @property
     def path_temp_out(self):
         po = pathlib.Path(self.job["path_out"])
-        return po.with_name(po.stem + f"_output_{self.tmp_suffix}.rtdc~")
+        pto = po.with_name(po.stem + f"_output_{self.tmp_suffix}.rtdc~")
+        atexit.register(pto.unlink, missing_ok=True)
+        return pto
 
     @property
     def state(self):
