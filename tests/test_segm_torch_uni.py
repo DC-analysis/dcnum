@@ -34,7 +34,7 @@ else:
 def test_segm_torch_validate_model_file_logs_negate():
     """Test whether model validation fails for invalid logs"""
     model_file = retrieve_model(
-        "segm-torch-model_unet-dcnum-test_g2_a8773.zip")
+        "segm-torch-model_unet-dcnum-test_g2_0901b.zip")
     sm = segm.segm_torch.SegmentTorchUNI
 
     # Creating a specific log file will mak the model invalid
@@ -71,7 +71,7 @@ def test_segm_torch_validate_model_file_logs_negate():
 def test_segm_torch_validate_model_file_meta_value():
     """Test whether model validation fails for invalid metadata"""
     model_file = retrieve_model(
-        "segm-torch-model_unet-dcnum-test_g2_a8773.zip")
+        "segm-torch-model_unet-dcnum-test_g2_0901b.zip")
     sm = segm.segm_torch.SegmentTorchUNI
 
     # Create a test dataset with metadata that will make the model invalid
@@ -114,7 +114,7 @@ def test_segm_torch_uni():
     path = retrieve_data(
         "fmt-hdf5_cytoshot_full-features_2024.zip")
     model_file = retrieve_model(
-        "segm-torch-model_unet-dcnum-test_g1_cb45f.zip")
+        "segm-torch-model_unet-dcnum-test_g1_6784c.zip")
 
     sm = segm.segm_torch.SegmentTorchUNI(model_file=model_file,
                                          backend="inductor",
@@ -138,7 +138,7 @@ def test_segm_torch_uni_no_compile():
     path = retrieve_data(
         "fmt-hdf5_cytoshot_full-features_2024.zip")
     model_file = retrieve_model(
-        "segm-torch-model_unet-dcnum-test_g1_cb45f.zip")
+        "segm-torch-model_unet-dcnum-test_g1_6784c.zip")
 
     sm = segm.segm_torch.SegmentTorchUNI(model_file=model_file,
                                          backend="torch.eager",
@@ -189,7 +189,7 @@ def test_segm_torch_uni_openvino():
     path = retrieve_data(
         "fmt-hdf5_cytoshot_full-features_2024.zip")
     model_file = retrieve_model(
-        "segm-torch-model_unet-dcnum-test_g1_cb45f.zip")
+        "segm-torch-model_unet-dcnum-test_g1_6784c.zip")
 
     sm = segm.segm_torch.SegmentTorchUNI(model_file=model_file,
                                          backend="openvino",

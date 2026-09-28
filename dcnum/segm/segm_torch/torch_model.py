@@ -295,22 +295,37 @@ def load_model_v2_pt2(model_meta: dict[str, Any]):
     # because dynamic dimensions are defined by guards in the ExportedProgram.
     # torch.compiler.set_stance("fail_on_recompile")
 
+    backend = model_meta["backend"]
+    device = model_meta["device"]
+
     # load model
     buffer = io.BytesIO()
     buffer.write(mdat)
     buffer.seek(0)
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", UserWarning)
-        pe = torch.export.load(buffer)
+        mff = model_meta.get("model_file_format")
+        if mff == "ExportedProgram":
+            mod = torch.export.load(buffer)
+        elif mff == "TorchScript":
+            mod = torch.jit.load(buffer, map_location=device)
+            # set model to evaluation mode
+            mod.eval()
+            # optimize for inference on device
+            mod = torch.jit.optimize_for_inference(mod)
+            if backend != "torch.jit":
+                raise ValueError(
+                    f"Expected 'torch.jit' backend, got '{backend}'")
+        else:
+            raise ValueError(f"Unknown model file format '{mff}'")
 
-    backend = model_meta["backend"]
-    device = model_meta["device"]
-
-    if backend == "torch.eager":
-        # In eager mode, nothing is compiled at all.
-        model = pe.module()
+    if backend == "torch.jit":
+        model = mod
         model_meta["mask_func"] = lambda x: x.detach().cpu().numpy()
-
+    elif backend == "torch.eager":
+        # In eager mode, nothing is compiled at all.
+        model = mod.module()
+        model_meta["mask_func"] = lambda x: x.detach().cpu().numpy()
     elif backend == "openvino":
         assert openvino.module_available()
         model_meta["batch_size"] = batch_size = 10
@@ -319,7 +334,7 @@ def load_model_v2_pt2(model_meta: dict[str, Any]):
             high=200,
             size=tuple([batch_size] + model_meta["image_shape"]),
             dtype=torch.uint8)
-        ov_model = openvino.convert_model(pe, example_input=(example,))
+        ov_model = openvino.convert_model(mod, example_input=(example,))
 
         # compile the model for the specified device
         core = openvino.Core()
@@ -348,15 +363,12 @@ def load_model_v2_pt2(model_meta: dict[str, Any]):
         )
         model_meta["mask_func"] = lambda x: next(iter(x.values()))
     else:
-        # Fallback to default "inductor" compiler
         # https://docs.pytorch.org/docs/main/generated/torch.compile.html#torch.compile
         model = torch.compile(
-            pe.module(),
+            mod.module(),
             fullgraph=True,
             dynamic=False,
             backend=backend,
-            # TODO: Pytorch 3.13 supports setting this (avoid recompilations)?
-            # dynamic_shapes=(10, 80, 320),
         )
         model_meta["mask_func"] = lambda x: x.detach().cpu().numpy()
 

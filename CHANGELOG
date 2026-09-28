@@ -1,6 +1,6 @@
 0.31.0
  - feat: introduce `UNISegmenter` which is handled by `UniversalWorker`
- - feat: new `torchuni` segmenter with "openvino" and "inductor" backends
+ - feat: `torchuni` segmenter with openvino/torch.jit/inductor" backends
  - feat: support (backend-agnostic) dcnm model file format version 2.0
  - feat: `UniversalWorker` has new init kwarg `dedications` for task management
  - feat: implement `SlotRegister.task_segment_images_full_chunk`

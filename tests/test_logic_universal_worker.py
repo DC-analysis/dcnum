@@ -54,7 +54,7 @@ def test_universal_worker_get_worker_dedications_torchuni_cpu():
     path_orig = retrieve_data("fmt-hdf5_cytoshot_full-features_2023.zip")
     path_out = path_orig.with_name("out.rtdc")
     model_file = retrieve_model(
-        "segm-torch-model_unet-dcnum-test_g2_02dcd.zip")
+        "segm-torch-model_unet-dcnum-test_g2_0901b.zip")
 
     job = logic.DCNumPipelineJob(path_in=path_orig,
                                  path_out=path_out,
@@ -84,7 +84,7 @@ def test_universal_worker_get_worker_dedications_torchuni_gpu():
     path_orig = retrieve_data("fmt-hdf5_cytoshot_full-features_2023.zip")
     path_out = path_orig.with_name("out.rtdc")
     model_file = retrieve_model(
-        "segm-torch-model_unet-dcnum-test_g2_02dcd.zip")
+        "segm-torch-model_unet-dcnum-test_g2_0901b.zip")
 
     job = logic.DCNumPipelineJob(path_in=path_orig,
                                  path_out=path_out,
