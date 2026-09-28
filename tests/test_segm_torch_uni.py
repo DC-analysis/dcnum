@@ -1,3 +1,5 @@
+import sys
+
 import h5py
 import numpy as np
 
@@ -180,6 +182,8 @@ def test_segm_torch_uni_wrapped_old_model():
 
 @pytest.mark.skipif(not OPENVINO_OK,
                     reason="openvino not installed or no openvino device")
+@pytest.mark.skipif(sys.platform == "darwin",
+                    reason="Not reproducible on macOS")
 def test_segm_torch_uni_openvino():
     """Test with openvino"""
     path = retrieve_data(

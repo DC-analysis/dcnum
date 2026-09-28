@@ -38,9 +38,11 @@ dependencies = [
 dynamic = ["version"]
 
 [project.optional-dependencies]
+openvino = [
+    "openvino",
+]
 torch = [
     "torch>=2.2, <3",
-    "openvino",
 ]
 
 [project.urls]
