@@ -5,6 +5,9 @@
  - fix: register `atexit` removal of temporary files only once per job
  - fix: `bg_off` ignored for padded batches in `task_segment_images`
  - docs: add changelog section, introduction and intersphinx links
+ - docs: add "Getting started" section with installation and usage
+ - docs: add overview of the data pipeline with figures
+ - docs: update outdated pipeline sequence in design section
  - docs: correct description of `bg_off` computation in `BackgroundSparseMed`
  - docs: complete docstrings for the API reference and fix all Sphinx warnings
 0.31.0

@@ -18,6 +18,8 @@ be opened with e.g. `dclab <https://dclab.readthedocs.io>`_ or
    :maxdepth: 2
    :caption: Contents:
 
+   sec_getting_started
+   sec_pipeline
    sec_design
    sec_changelog
 
