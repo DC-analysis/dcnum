@@ -68,9 +68,10 @@ class BackgroundSparseMed(Background):
             variations (e.g. flickering of the illumination source), it
             is useful to have an offset value per frame that can then be
             used in a later step to perform a more accurate background
-            correction. This offset is computed here by taking a 20px wide
-            slice from each frame (where the channel wall is located)
-            and computing the median therein relative to the computed
+            correction. This offset is computed here as the difference
+            between the mean brightness of the top 20 pixel rows of each
+            frame (where the channel wall is located) and the mean
+            brightness of the same region in the corresponding
             background image. The data are written to the "bg_off" feature
             in the output file alongside "image_bg". To obtain the
             corrected background image, add "image_bg" and "bg_off".
@@ -250,9 +251,10 @@ class BackgroundSparseMed(Background):
             variations (e.g. flickering of the illumination source), it
             is useful to have an offset value per frame that can then be
             used in a later step to perform a more accurate background
-            correction. This offset is computed here by taking a 20px wide
-            slice from each frame (where the channel wall is located)
-            and computing the median therein relative to the computed
+            correction. This offset is computed here as the difference
+            between the mean brightness of the top 20 pixel rows of each
+            frame (where the channel wall is located) and the mean
+            brightness of the same region in the corresponding
             background image. The data are written to the "bg_off" feature
             in the output file alongside "image_bg". To obtain the
             corrected background image, add "image_bg" and "bg_off".
