@@ -1,3 +1,5 @@
+"""Segmenter base class and segmenter registry"""
+
 import abc
 import copy
 import functools
@@ -34,17 +36,22 @@ class Segmenter(abc.ABC):
     mask_postprocessing = True
     """Whether to enable mask post-processing.
     If disabled, you should make sure that your mask is properly defined
-    and cleaned or you have to call `process_labels` in your
+    and cleaned or you have to call ``process_labels`` in your
     ``segment_algorithm`` implementation.
     """
 
     mask_default_kwargs = {}
     """Default keyword arguments for mask post-processing.
-    See `process_labels` for available options.
+    See ``process_labels`` for available options.
     """
 
     requires_background_correction = False
-    """Whether the segmenter requires a background-corrected image"""
+    """Whether the segmenter requires a background-corrected image
+
+    If True, the segmenter is given the background-corrected image data
+    (``image_corr``) and the optional background offset (``bg_off``).
+    If False, it is given the raw ``image`` data.
+    """
 
     def __init__(self,
                  *,
@@ -53,21 +60,38 @@ class Segmenter(abc.ABC):
                  **kwargs):
         """Base segmenter class
 
-        This is the base segmenter class for the multiprocessing operation
-        segmenter :class:`.segmenter_mpo.MPOSegmenter` (multiple
-        subprocesses are spawned and each of them works on a queue of images)
-        and the single-threaded operation segmenter
-        :class:`.segmenter_sto.STOSegmenter` (e.g. for batch segmentation on
-        a GPU).
+        Concrete segmenters do not derive from this class directly, but
+        from one of its abstract subclasses, which differ in how a chunk
+        of images is segmented:
+
+        - :class:`.segmenter_mpo.MPOSegmenter` (multiprocessing
+          operation): multiple subprocesses are spawned and each of them
+          segments a part of the chunk image by image
+        - :class:`.segmenter_sto.STOSegmenter` (single-threaded
+          operation): the entire chunk is segmented in batches in one
+          thread (e.g. for batch segmentation on a GPU)
+        - :class:`.segmenter_uni.UNISegmenter`: batches of images are
+          segmented by the workers of the pipeline
+          (:class:`dcnum.logic.universal_worker.UniversalWorker`)
+
+        Subclasses implement the static method ``segment_algorithm``,
+        whose keyword-only arguments define the segmenter keyword
+        arguments. The class attribute ``requires_background_correction``
+        defines which image data the segmenter is given: If True, it
+        receives the background-corrected image data (``image_corr``),
+        e.g. for thresholding; otherwise it receives the raw ``image``
+        data (e.g. for the PyTorch models).
 
         Parameters
         ----------
         kwargs_mask: dict
-            Keyword arguments for mask post-processing (see `process_labels`)
+            Keyword arguments for mask post-processing (see
+            ``process_labels``)
         debug: bool
             Enable debugging mode (e.g. CPU segmenter runs in one thread)
         kwargs:
-            Additional, optional keyword arguments for `segment_batch`.
+            Additional, optional keyword arguments for
+            ``segment_algorithm``.
         """
         self.debug = debug
         self.logger = logging.getLogger(__name__).getChild(
@@ -136,7 +160,7 @@ class Segmenter(abc.ABC):
 
             t=-6^b=0
 
-        KW_MASK represents keyword arguments for `process_labels`.
+        KW_MASK represents keyword arguments for ``process_labels``.
         """
         return self.get_ppid_from_ppkw(self.kwargs, self.kwargs_mask)
 
@@ -225,15 +249,15 @@ class Segmenter(abc.ABC):
 
         This is an optional convenience method that is called for each
         subclass individually. To enable mask post-processing, set
-        `mask_postprocessing=True` in the subclass and specify default
-        `mask_default_kwargs`.
+        ``mask_postprocessing=True`` in the subclass and specify default
+        ``mask_default_kwargs``.
 
         Parameters
         ----------
         labels: 2d uint16 or boolean ndarray
             Labeled input (contains blobs consisting of unique numbers)
         clear_border: bool
-            clear the image boarder using an equivalent of
+            clear the image border using an equivalent of
             :func:`skimage.segmentation.clear_border`
         fill_holes: bool
             binary-fill-holes in the binary mask image using
@@ -321,7 +345,7 @@ class Segmenter(abc.ABC):
 
         The static method ``self.segment_algorithm`` may optionally accept
         the keyword arguments ``self.kwargs``.
-        This method returns a wrapped version of `segment_algorithm` which
+        This method returns a wrapped version of ``segment_algorithm`` which
         only accepts the input images as an argument.
         This simplifies the application of segmentation algorithms
         across different implementations.
@@ -367,22 +391,26 @@ class Segmenter(abc.ABC):
                       chunk: int,
                       slot_list: list,
                       ):
-        """Segment the image data of one `ChunkSlot`
+        """Segment the image data of one chunk slot
 
-        This is a wrapper for `segment_batch`. The image information
-        are extracted from the `chunk_slot.image`/`chunk_slot.image_corr`
-        properties and the boolean mask arrays are written to
-        ``chunk_slot.mask`.
+        This is a wrapper for ``segment_batch``. The image data are
+        taken from the ``image`` or ``image_corr`` property of the chunk
+        slot (depending on ``requires_background_correction``) and the
+        boolean mask arrays are written to its ``mask`` property.
 
         Parameters
         ----------
-        chunk_slot: ChunkSlot
-            The data chunk to perform segmentation on
+        chunk: int
+            The index of the data chunk to perform segmentation on
+        slot_list: list
+            List of :class:`dcnum.logic.chunk_slot.ChunkSlot` instances
+            from which the slot containing ``chunk`` is selected
 
         Returns
         -------
-        mask: np.array
-            The `chunk_slot.mask` numpy view on the shared mask array.
+        mask: np.ndarray
+            The ``mask`` numpy view on the shared mask array of the
+            chunk slot.
         """
         # Find the slot that we are supposed to be working on.
         for cs in slot_list:
@@ -457,7 +485,8 @@ class Segmenter(abc.ABC):
 def assert_labels(arr):
     """Make sure a labeling array is returned
 
-    If `arr``is a boolean array, it is processed with `ndi.label`.
+    If ``arr`` is a boolean array, it is processed with
+    ``scipy.ndimage.label``.
     """
     if arr.dtype == bool:
         # Convert mask image to labels
@@ -472,6 +501,12 @@ def assert_labels(arr):
 
 @functools.cache
 def get_segmenters():
+    """Return dictionary of all segmenters, keyed by their PPID code
+
+    Segmenters are the subclasses of the direct subclasses of
+    :class:`Segmenter`, regardless of whether they are available
+    (see ``get_available_segmenters``).
+    """
     segmenters = {}
     for scls in Segmenter.__subclasses__():
         for cls in scls.__subclasses__():

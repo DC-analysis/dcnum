@@ -1,3 +1,5 @@
+"""Thread that manages chunk-wise segmentation"""
+
 from __future__ import annotations
 
 import logging
@@ -26,12 +28,12 @@ class SegmenterManagerThread(threading.Thread):
         segmenter:
             The segmenter instance to use.
         slot_register:
-            Manages a list of `ChunkSlots`, shared arrays on which
+            Manages a list of chunk slots, shared arrays on which
             to operate
 
         Notes
         -----
-        The working principle of this `SegmenterManagerThread` allows
+        The working principle of this ``SegmenterManagerThread`` allows
         the user to define a fixed number of slots on which the segmenter
         can work on. For instance, if the segmenter is a CPU-based segmenter,
         it does not make sense to have more than one slot (because feature
@@ -55,6 +57,12 @@ class SegmenterManagerThread(threading.Thread):
         """Waiting time counter"""
 
     def run(self):
+        """Segment all chunks of the slot register one after another
+
+        For each chunk, wait until a slot is ready for segmentation,
+        call ``segment_chunk`` of the segmenter, and record the
+        segmentation and waiting times.
+        """
         try:
             self.segmenter.log_info(self.logger)
         except KeyboardInterrupt:

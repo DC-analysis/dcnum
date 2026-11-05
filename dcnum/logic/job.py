@@ -1,3 +1,4 @@
+"""Pipeline job definition"""
 import collections
 import copy
 import inspect
@@ -180,6 +181,39 @@ class DCNumPipelineJob:
         return ds_kw
 
     def get_ppid(self, ret_hash=False, ret_dict=False):
+        """Return the pipeline identifier of this job
+
+        The pipeline identifier (PPID) is composed of the generation
+        identifier and the PPIDs of the data reader, background
+        method, segmenter, feature extractor, and gate, joined by
+        ``"|"``.
+
+        Parameters
+        ----------
+        ret_hash: bool
+            whether to also return the pipeline hash
+        ret_dict: bool
+            whether to also return the dictionary of the individual
+            identifiers
+
+        Returns
+        -------
+        ppid: str
+            pipeline identifier
+        pp_hash: str
+            pipeline hash computed with
+            :func:`~dcnum.meta.ppid.compute_pipeline_hash`
+            (only if ``ret_hash`` is True)
+        pp_dict: collections.OrderedDict
+            individual identifiers with the keys "gen_id", "dat_id",
+            "bg_id", "seg_id", "feat_id", and "gate_id"
+            (only if ``ret_dict`` is True)
+
+        Notes
+        -----
+        If neither ``ret_hash`` nor ``ret_dict`` is set, only the
+        pipeline identifier string is returned, otherwise a list.
+        """
         self.assert_pp_codes()
         pp_hash_kw = collections.OrderedDict()
         pp_hash_kw["gen_id"] = DCNUM_PPID_GENERATION

@@ -1,3 +1,4 @@
+"""Register managing the chunk slots and the pipeline tasks"""
 from __future__ import annotations
 
 import functools
@@ -71,10 +72,34 @@ class SlotRegister:
                  data: HDF5Data,
                  event_queue: mp.Queue | None = None,
                  num_slots: int = 3):
-        """A register for `ChunkSlot`s for shared memory access
+        """A register of chunk slots for shared memory access
 
-        The `SlotRegister` manages all `ChunkSlot` instances and
-        implements methods to interact with individual `ChunkSlot`s.
+        The slot register creates and manages all
+        :class:`~dcnum.logic.chunk_slot.ChunkSlot` instances (``num_slots``
+        regular slots plus one slot for the last, possibly smaller,
+        chunk of the input data) and implements the pipeline tasks that
+        operate on them (``task_*`` methods). The tasks are called by
+        :class:`~dcnum.logic.universal_worker.UniversalWorker` instances
+        in threads or processes; Each task reserves (a batch of frames
+        of) a slot in a given state, processes it, and moves the slot
+        to the next state once all frames are done. The register also
+        holds shared counters, timers, the number of events per frame
+        (``feat_nevents``), the queue to which extracted events are
+        sent (``event_queue``), and its own :attr:`state`, which is
+        used to tell the workers to work, pause, or quit.
+
+        Parameters
+        ----------
+        job: dcnum.logic.job.DCNumPipelineJob
+            pipeline job
+        data: dcnum.read.hdf5_data.HDF5Data
+            input data
+        event_queue: multiprocessing.Queue
+            queue to which extracted events are written as tuples
+            ``(frame_index, events_dict)``; A new queue is created
+            if None.
+        num_slots: int
+            number of regular chunk slots (at least one)
         """
         self.job = job
         self.data = data
@@ -111,7 +136,8 @@ class SlotRegister:
 
         self.feat_nevents = mp_spawn.RawArray("l", self.num_frames)
         """Number of events per frame
-        Shared RawArray of length `len(data)` into which the number of
+
+        Shared RawArray of length ``len(data)`` into which the number of
         events per frame is written.
         """
         # Initialize feat_nevents with -1
@@ -141,7 +167,7 @@ class SlotRegister:
     def chunks_loaded(self):
         """A process-safe counter for the number of chunks loaded
 
-        This number increments as `SlotRegister.task_load_all` is called.
+        This number increments as :meth:`task_load_all` is called.
         """
         return self.get_counter_value("chunks_loaded")
 
@@ -163,7 +189,12 @@ class SlotRegister:
 
     @property
     def segmenter(self):
-        """Current segmenter class"""
+        """Segmenter instance (only for ``UNISegmenter`` subclasses)
+
+        The instance is created on first access. A ``ValueError`` is
+        raised if :attr:`segmenter_class` is not a subclass of
+        :class:`~dcnum.segm.segmenter_uni.UNISegmenter`.
+        """
         if self._segmenter is None:
             if not issubclass(self.segmenter_class, UNISegmenter):
                 raise ValueError(
@@ -176,6 +207,7 @@ class SlotRegister:
 
     @property
     def segmenter_class(self):
+        """Segmenter class defined by ``job["segmenter_code"]``"""
         if self._segmenter_class is None:
             self._segmenter_class = \
                 get_segmenters()[self.job["segmenter_code"]]
@@ -188,18 +220,18 @@ class SlotRegister:
         A large number indicates a slow writer which can be
         a result of a slow hard disk or a slow CPU (since
         is used compression). Used for preventing
-        OOM events by stalling data processing when the writer is slow
+        OOM events by stalling data processing when the writer is slow.
         """
         return self.get_counter_value("write_queue_size")
 
     @property
     def slots(self):
-        """A list of all `ChunkSlots`"""
+        """A list of all chunk slots"""
         return [s for s in self._slots]
 
     @property
     def state(self):
-        """State of the `SlotRegister`, used for communication with workers
+        """State of the slot register, used for communication with workers
 
          - "w": initialized (workers work)
          - "p": paused (all workers pause)
@@ -212,6 +244,7 @@ class SlotRegister:
         self._state.value = value
 
     def close(self):
+        """Set the state to "q", telling all workers to quit"""
         # Let everyone know we are closing
         self._state.value = "q"
 
@@ -219,14 +252,24 @@ class SlotRegister:
                   state: str,
                   chunk: int | None = None
                   ) -> ChunkSlot | None:
-        """Return the first `ChunkSlot` that has the given state
+        """Return the first chunk slot that has the given state
 
         We sort the slots according to the slot chunks so that we
         always process the slot with the smallest slot chunk number
         first. Initially, the slot_chunks array is filled with
         zeros, but we populate it here.
 
-        Return None if no matching slot exists
+        Parameters
+        ----------
+        state: str
+            required slot state
+        chunk: int
+            if set, the slot must also hold this chunk index
+
+        Returns
+        -------
+        chunk_slot: dcnum.logic.chunk_slot.ChunkSlot | None
+            the matching slot or None if no matching slot exists
         """
         for sc in self:
             if (sc.state == state
@@ -237,12 +280,14 @@ class SlotRegister:
         return None
 
     def get_counter_lock(self, name: str) -> _LockType:
+        """Return the (non-recursive) lock of the counter ``name``"""
         if name in self.counters:
             return self.counters[name].get_lock()
         else:
             raise KeyError(f"No counter defined for '{name}'")
 
     def get_counter_value(self, name):
+        """Return the value of the counter ``name`` without locking"""
         if name in self.counters:
             return self.counters[name].get_obj().value
         else:
@@ -307,12 +352,13 @@ class SlotRegister:
         Parameters
         ----------
         current_state:
-            State requried for the task to start
+            State required for the task to start
         next_state:
             State that will be set after the task is done
         chunk_slot:
-            Optional `ChunkSlot` to operate on; if set to None, search
-            for a matching one, and if none can be found, return None
+            Optional :class:`~dcnum.logic.chunk_slot.ChunkSlot` to operate
+            on; if set to None, search for a matching one, and if none
+            can be found, return None
         batch_size:
             Number of frames to reserve for performing the task. Defaults
             to the entire chunk.
@@ -321,7 +367,7 @@ class SlotRegister:
         -------
         state_warden
             Context manager that enforces setting the next state or
-            None if no `ChunkSlot` could be reserved.
+            None if no chunk slot could be reserved.
             Usage:
 
                 if state_warden is not None:
@@ -335,7 +381,7 @@ class SlotRegister:
             parameter.
 
             This context manager will automatically set the slot
-            state to `next_state` when the context is exits
+            state to `next_state` when the context exits
             without exceptions.
         """
         if chunk_slot is None:
@@ -435,8 +481,8 @@ class SlotRegister:
                             ) -> bool:
         """Perform segmentation of images (mask creation)
 
-        This method will only perform segmentation for when the `UNISegmenter`
-        is used.
+        This method will only perform segmentation when a
+        :class:`~dcnum.segm.segmenter_uni.UNISegmenter` is used.
 
         Parameters
         ----------
@@ -506,9 +552,10 @@ class SlotRegister:
                                                   dtype=images.dtype)
                             images_pad[:len(images), :, :] = images
                             if bg_off is not None:
-                                bg_off = np.zeros(batch_size,
-                                                  dtype=bg_off.dtype)
-                                bg_off[:batch_size] = bg_off
+                                bg_off_pad = np.zeros(batch_size,
+                                                      dtype=bg_off.dtype)
+                                bg_off_pad[:len(images)] = bg_off
+                                bg_off = bg_off_pad
                             mask = self.segmenter.segment_batch(
                                 images=images_pad,
                                 bg_off=bg_off,
@@ -528,8 +575,8 @@ class SlotRegister:
         """Perform segmentation of images (mask creation) in full chunks
 
         Segmenting a full chunk is less overhead (no slicing required).
-        This method will only perform segmentation for when the `UNISegmenter`
-        is used.
+        This method will only perform segmentation when a
+        :class:`~dcnum.segm.segmenter_uni.UNISegmenter` is used.
 
         Parameters
         ----------
@@ -590,10 +637,10 @@ class SlotRegister:
     def task_label_masks(self,
                          logger: logging.Logger | None = None
                          ) -> bool:
-        """Perform labeling of mask images for a `ChunkSlot`
+        """Perform labeling of mask images for a chunk slot
 
         This method is process-safe. Multiple processes may call it
-        concurrently, working on the same `ChunkSlot`.
+        concurrently, working on the same chunk slot.
 
         Returns
         -------
@@ -630,10 +677,10 @@ class SlotRegister:
     def task_process_labels(self,
                             logger: logging.Logger | None = None
                             ) -> bool:
-        """Perform label processing (e.g. binary closing) for a `ChunkSlot`
+        """Perform label processing (e.g. binary closing) for a chunk slot
 
         This method is process-safe. Multiple processes may call it
-        concurrently, working on the same `ChunkSlot`.
+        concurrently, working on the same chunk slot.
 
         Returns
         -------
@@ -675,10 +722,10 @@ class SlotRegister:
     def task_extract_features(self,
                               logger: logging.Logger | None = None
                               ) -> bool:
-        """Perform feature extraction for a `ChunkSlot`
+        """Perform feature extraction for a chunk slot
 
         This method is process-safe. Multiple processes may call it
-        concurrently, working on the same `ChunkSlot`.
+        concurrently, working on the same chunk slot.
 
         Returns
         -------
@@ -736,7 +783,7 @@ class SlotRegister:
 
 
 class StateWarden:
-    """Context manager for changing the state of a `ChunkSlot`"""
+    """Context manager for changing the state of a chunk slot"""
     def __init__(self,
                  chunk_slot: ChunkSlot | ChunkSlotData,
                  current_state: str,

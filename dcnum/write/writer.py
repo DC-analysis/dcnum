@@ -1,3 +1,4 @@
+"""Writing deformability cytometry data to HDF5 files"""
 from __future__ import annotations
 
 import hashlib
@@ -77,6 +78,7 @@ class HDF5Writer:
         self.close()
 
     def close(self):
+        """Flush the HDF5 file and close it if it was opened by the writer"""
         self.h5.flush()
         if self.h5_owned:
             self.h5.close()
@@ -560,6 +562,26 @@ def copy_metadata(h5_src: h5py.File,  # type: ignore
 
 def set_default_filter_kwargs(ds_kwds: dict | None = None,
                               compression: bool = True):
+    """Populate HDF5 dataset creation keyword arguments with defaults
+
+    Parameters
+    ----------
+    ds_kwds: dict | None
+        keyword arguments for :meth:`h5py.Group.create_dataset`;
+        This dictionary is modified in-place (a new one is created
+        if None).
+    compression: bool
+        whether to use Zstandard compression (via ``hdf5plugin``,
+        compression level 5) if ``ds_kwds`` does not already define
+        ``"compression"``; If False, compression is disabled unless
+        set in ``ds_kwds``.
+
+    Returns
+    -------
+    ds_kwds: dict
+        the updated keyword arguments, which also enable fletcher32
+        checksums by default
+    """
     if ds_kwds is None:
         ds_kwds = {}
     if compression and "compression" not in ds_kwds:

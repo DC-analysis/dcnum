@@ -1,3 +1,5 @@
+"""Base class for PyTorch segmenters"""
+
 import functools
 import pathlib
 import re
@@ -14,7 +16,18 @@ from .torch_setup import torch
 
 
 class TorchSegmenterBase(Segmenter):
-    """Torch segmenters that use a pretrained model for segmentation"""
+    """Torch segmenters that use a pretrained model for segmentation
+
+    This is a mixin for the concrete PyTorch segmenters
+    :class:`.segm_torch_mpo.SegmentTorchMPO`,
+    :class:`.segm_torch_sto.SegmentTorchSTO`, and
+    :class:`.segm_torch_uni.SegmentTorchUNI`, which also derive from
+    the corresponding segmenter base class. The model is given as a
+    dcnum model file (.dcnm) via the ``model_file`` keyword argument.
+    Since ``requires_background_correction`` is False, the models
+    are given the raw ``image`` data, not the background-corrected
+    image data.
+    """
     requires_background_correction = False
     requires_model_format_version = "0.0"
     mask_postprocessing = True
@@ -26,6 +39,12 @@ class TorchSegmenterBase(Segmenter):
 
     @classmethod
     def get_ppid_from_ppkw(cls, kwargs, kwargs_mask=None):
+        """Return the pipeline ID from given keyword arguments
+
+        If ``model_file`` is an existing path, only the file name is
+        used in the pipeline identifier and the parent directory is
+        registered as a search path for "torch_model_files".
+        """
         kwargs_new = kwargs.copy()
         # Make sure that the `model_file` kwarg is actually just a filename
         # so that the pipeline identifier only contains the name, but not
@@ -67,7 +86,7 @@ class TorchSegmenterBase(Segmenter):
 
         Raises
         ------
-        SegmenterNotApplicable
+        dcnum.segm.segmenter.SegmenterNotApplicableError
             If the segmenter is not applicable to the dataset
         """
         if "model_file" not in segmenter_kwargs:
@@ -140,4 +159,5 @@ class TorchSegmenterBase(Segmenter):
 
     @staticmethod
     def is_available():
+        """Return True if PyTorch is installed"""
         return torch.module_available()

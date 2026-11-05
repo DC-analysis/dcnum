@@ -12,7 +12,7 @@ from ..meta.ppid import kwargs_to_ppid, ppid_to_kwargs
 
 class Gate:
     _default_size_thresh_mask = 10
-    """the default value for `size_thresh_mask` if not given as kwarg"""
+    """the default value for ``size_thresh_mask`` if not given as kwarg"""
 
     def __init__(self, data, *,
                  online_gates: bool = False,
@@ -113,6 +113,7 @@ class Gate:
 
     @classmethod
     def get_ppid_code(cls):
+        """Return the gating method code used in the PPID (``"norm"``)"""
         return "norm"
 
     @classmethod
@@ -131,6 +132,11 @@ class Gate:
 
     @staticmethod
     def get_ppkw_from_ppid(gate_ppid):
+        """Return the :class:`Gate` keyword arguments from a gating PPID
+
+        Raises a :class:`ValueError` if the method code in
+        ``gate_ppid`` does not match :meth:`get_ppid_code`.
+        """
         code, pp_gate_kwargs = gate_ppid.split(":")
         if code != Gate.get_ppid_code():
             raise ValueError(
@@ -141,7 +147,7 @@ class Gate:
         return kwargs
 
     def gate_event(self, event):
-        """Return None if the event should not be used, else `event`"""
+        """Return None if the event should not be used, else ``event``"""
         if self.box_gates and event:
             # Only use those events that are within the limits of the
             # online filters.
@@ -167,7 +173,7 @@ class Gate:
     def gate_feature(self,
                      feat: str,
                      data: numbers.Number | np.ndarray):
-        """Return boolean indicating whether `data` value is in box gate
+        """Return boolean indicating whether ``data`` value is in box gate
 
         ``data`` may be a number or an array. If no box filter is defined
         for ``feat``, True is always returned. Otherwise, either a boolean

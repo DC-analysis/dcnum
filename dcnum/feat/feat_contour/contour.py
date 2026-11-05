@@ -1,3 +1,4 @@
+"""Contour extraction from mask images"""
 import numpy as np
 
 from ...common import LazyLoader

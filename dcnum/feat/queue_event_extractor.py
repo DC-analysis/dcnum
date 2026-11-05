@@ -33,7 +33,7 @@ class QueueEventExtractor:
         """Event extraction from label images
 
         This class is used for extracting events from label images.
-        Events are appended to the `event_queue` for the writer.
+        Events are appended to the ``event_queue`` for the writer.
 
         Parameters
         ----------
@@ -181,7 +181,7 @@ class QueueEventExtractor:
             KEY:KW_APPROACH
 
         Where KEY is e.g. "legacy", and KW_APPROACH is a
-        list of keyword-only arguments for `get_events_from_masks`,
+        list of keyword-only arguments for ``get_events_from_masks``,
         e.g.::
 
             brightness=True^haralick=True
@@ -194,6 +194,7 @@ class QueueEventExtractor:
 
     @classmethod
     def get_ppid_code(cls):
+        """Return the extraction method code used in the PPID"""
         return "legacy"
 
     @classmethod
@@ -205,6 +206,13 @@ class QueueEventExtractor:
 
     @staticmethod
     def get_ppkw_from_ppid(extr_ppid):
+        """Return the extraction keyword arguments from a PPID
+
+        The returned dictionary contains the keyword-only arguments
+        of :meth:`get_events_from_masks`. Raises a :class:`ValueError`
+        if the method code in ``extr_ppid`` does not match
+        :meth:`get_ppid_code`.
+        """
         code, pp_extr_kwargs = extr_ppid.split(":")
         if code != QueueEventExtractor.get_ppid_code():
             raise ValueError(

@@ -1,3 +1,4 @@
+"""Sparse median background image computation with cleansing"""
 import queue
 import time
 
@@ -25,7 +26,7 @@ class BackgroundSparseMed(Background):
         ``split_time`` seconds, but with a larger window (default kernel
         size is 200 frames instead of 100 frames).
 
-        1. At time stamps every `split_time` seconds, a background image is
+        1. At time stamps every ``split_time`` seconds, a background image is
            computed, resulting in a background series.
         2. Cleansing: The background series is checked for images that
            contain event data using a lengthy algorithm that is documented
@@ -41,8 +42,8 @@ class BackgroundSparseMed(Background):
             the "evtens/image" dataset or an array-like object that
             behaves like an image stack (first axis enumerates events).
         output_path: pathlib.Path
-            Path to the output file. If `input_data` is a path, you can
-            set `output_path` to the same path to write directly to the
+            Path to the output file. If ``input_data`` is a path, you can
+            set ``output_path`` to the same path to write directly to the
             input file. The data are written in the "basin_events/image_bg"
             dataset in the output file.
         kernel_size: int
@@ -54,7 +55,7 @@ class BackgroundSparseMed(Background):
             A positive floating point value for scaling the thresholding
             operation when excluding background images from the series.
             Larger values mean more background images are excluded.
-            Set to zero to enforce a fixed fraction via `frac_cleansing`.
+            Set to zero to enforce a fixed fraction via ``frac_cleansing``.
         frac_cleansing: float
             Fraction between 0 and 1 indicating how many background images
             must still be present after cleansing (in case the cleansing
@@ -67,9 +68,10 @@ class BackgroundSparseMed(Background):
             variations (e.g. flickering of the illumination source), it
             is useful to have an offset value per frame that can then be
             used in a later step to perform a more accurate background
-            correction. This offset is computed here by taking a 20px wide
-            slice from each frame (where the channel wall is located)
-            and computing the median therein relative to the computed
+            correction. This offset is computed here as the difference
+            between the mean brightness of the top 20 pixel rows of each
+            frame (where the channel wall is located) and the mean
+            brightness of the same region in the corresponding
             background image. The data are written to the "bg_off" feature
             in the output file alongside "image_bg". To obtain the
             corrected background image, add "image_bg" and "bg_off".
@@ -79,7 +81,7 @@ class BackgroundSparseMed(Background):
             for faster processing.
         num_cpus: int
             Number of CPUs to use for median computation. Defaults to
-            `dcnum.common.cpu_count()`.
+            :func:`dcnum.common.cpu_count`.
 
         .. versionchanged:: 0.23.5
 
@@ -174,13 +176,13 @@ class BackgroundSparseMed(Background):
         # https://stackoverflow.com/questions/37705974
         self.shared_input = np.ctypeslib.as_array(
             self.shared_input_raw).reshape(kernel_size, -1)
-        """numpy array reshaped view on `self.shared_input_raw`.
+        """numpy array reshaped view on ``self.shared_input_raw``.
         The First axis enumerating the events
         """
 
         self.shared_output = np.ctypeslib.as_array(
             self.shared_output_raw).reshape(self.image_shape)
-        """numpy array reshaped view on `self.shared_output_raw`.
+        """numpy array reshaped view on ``self.shared_output_raw``.
         The First axis enumerating the events
         """
 
@@ -236,7 +238,7 @@ class BackgroundSparseMed(Background):
             A positive floating point value for scaling the thresholding
             operation when excluding background images from the series.
             Larger values mean more background images are excluded.
-            Set to 0 (default) to enforce a fixed fraction `frac_cleansing`.
+            Set to 0 (default) to enforce a fixed fraction ``frac_cleansing``.
         frac_cleansing: float
             Fraction between 0 and 1 indicating how many background images
             must still be present after cleansing (in case the cleansing
@@ -249,9 +251,10 @@ class BackgroundSparseMed(Background):
             variations (e.g. flickering of the illumination source), it
             is useful to have an offset value per frame that can then be
             used in a later step to perform a more accurate background
-            correction. This offset is computed here by taking a 20px wide
-            slice from each frame (where the channel wall is located)
-            and computing the median therein relative to the computed
+            correction. This offset is computed here as the difference
+            between the mean brightness of the top 20 pixel rows of each
+            frame (where the channel wall is located) and the mean
+            brightness of the same region in the corresponding
             background image. The data are written to the "bg_off" feature
             in the output file alongside "image_bg". To obtain the
             corrected background image, add "image_bg" and "bg_off".
@@ -397,6 +400,21 @@ class BackgroundSparseMed(Background):
     def process_second(self,
                        ii: int,
                        second: float | int):
+        """Compute one background image of the background series
+
+        The median is computed in parallel by the worker processes
+        over ``kernel_size`` frames, starting at the frame closest in
+        time to ``second`` (shifted to earlier frames if the window
+        would exceed the end of the data). The result is stored in
+        ``self.bg_images[ii]`` and the progress is updated.
+
+        Parameters
+        ----------
+        ii: int
+            index of the background image in the background series
+        second: float | int
+            time [s] of the background image in the series
+        """
         idx_start = np.argmin(np.abs(second - self.time))
         idx_stop = idx_start + self.kernel_size
         if idx_stop >= self.image_count:
@@ -451,7 +469,7 @@ class WorkerSparseMed(mp_spawn.Process):
         self.kernel_size = kernel_size
 
     def run(self):
-        """Main loop of worker process (breaks when `self.counter` <0)"""
+        """Main loop of worker process (breaks when ``self.counter`` <0)"""
         try:
             self.queue.cancel_join_thread()
             # confirm single-threadedness (prints to log)
@@ -496,6 +514,10 @@ class WorkerSparseMed(mp_spawn.Process):
             return
 
     def start(self):
+        """Start the worker process in a single-threaded environment
+
+        See :class:`dcnum.os_env_st.RequestSingleThreaded`.
+        """
         # Set all relevant os environment variables such libraries in the
         # new process only use single-threaded computation.
         with RequestSingleThreaded():
