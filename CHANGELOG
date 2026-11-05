@@ -1,3 +1,5 @@
+0.31.1
+ - docs: add "Getting started" section with installation and usage
 0.31.0
  - feat: introduce `UNISegmenter` which is handled by `UniversalWorker`
  - feat: `torchuni` segmenter with openvino/torch.jit/inductor" backends

@@ -10,6 +10,7 @@ Welcome to dcnum's documentation!
    :maxdepth: 2
    :caption: Contents:
 
+   sec_getting_started
    sec_design
 
 

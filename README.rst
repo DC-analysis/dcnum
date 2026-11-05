@@ -4,7 +4,10 @@
 |PyPI Version| |Build Status| |Coverage Status| |Docs Status|
 
 
-Numerics toolbox for imaging deformability cytometry.
+Numerics toolbox for imaging deformability cytometry. dcnum computes
+background images, segments events (by thresholding or with
+machine-learning models), and extracts event features from raw .rtdc
+measurement data.
 
 Documentation
 -------------
