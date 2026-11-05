@@ -1,3 +1,4 @@
+import atexit
 import time
 
 import h5py
@@ -779,6 +780,66 @@ def test_error_pipeline_log_file_remains():
     assert runner.path_log.exists(), "log file expected"
 
 
+def test_simple_pipeline_bg_off_padded_batch():
+    """In dcnum 0.31.0, bg_off was ignored for padded batches
+
+    Batches are padded for UNISegmenters with a `required_batch_size`
+    when the chunk size is not a multiple of the batch size.
+    """
+    class SegmentThreshBatch(segm.UNISegmenter):
+        mask_postprocessing = True
+        mask_default_kwargs = \
+            segm.segm_thresh.SegmentThresh.mask_default_kwargs
+        requires_background_correction = True
+        required_batch_size = 7
+
+        @staticmethod
+        def segment_algorithm(images, *,
+                              thresh: float = -6):
+            return images < thresh
+
+    segm.get_available_segmenters.cache_clear()
+    segm.get_segmenters.cache_clear()
+
+    try:
+        path_orig = retrieve_data("fmt-hdf5_cytoshot_full-features_2023.zip")
+        path = path_orig.with_name("input.rtdc")
+        with read.concatenated_hdf5_data(5 * [path_orig], path_out=path):
+            pass
+
+        with h5py.File(path, "a") as h5:
+            # artificially brighten every second frame (simulates flickering)
+            images = h5["events/image"][:]
+            del h5["events/image"]
+            images[::2] += 5
+            h5["events/image"] = images
+            num_frames = len(images)
+
+        masks = {}
+        for code in ["thresh", "threshbatch"]:
+            job = logic.DCNumPipelineJob(
+                path_in=path,
+                path_out=path.with_name(f"out_{code}.rtdc"),
+                segmenter_code=code,
+                segmenter_kwargs={"thresh": -6},
+                debug=True,
+            )
+            with logic.DCNumJobRunner(job=job) as runner:
+                runner.run()
+            with h5py.File(job["path_out"]) as h5:
+                assert np.any(np.abs(h5["events/bg_off"][:]) > 3)
+                masks[code] = h5["events/mask"][:]
+
+        # Make sure that there are padded batches.
+        assert num_frames % SegmentThreshBatch.required_batch_size
+        assert masks["thresh"].shape == masks["threshbatch"].shape
+        assert np.all(masks["thresh"] == masks["threshbatch"])
+    finally:
+        del SegmentThreshBatch
+        segm.get_available_segmenters.cache_clear()
+        segm.get_segmenters.cache_clear()
+
+
 def test_get_status():
     path_orig = retrieve_data("fmt-hdf5_cytoshot_full-features_2023.zip")
     path = path_orig.with_name("input.rtdc")
@@ -796,6 +857,18 @@ def test_get_status():
         assert final_status["progress"] == 1
         assert final_status["segm rate"] > 0
         assert final_status["state"] == "done"
+
+
+def test_get_status_progress_cleanup():
+    """In dcnum < 0.31.1, plumbing progress was counted twice"""
+    path_orig = retrieve_data("fmt-hdf5_cytoshot_full-features_2023.zip")
+    job = logic.DCNumPipelineJob(path_in=path_orig, debug=True)
+    with logic.DCNumJobRunner(job=job) as runner:
+        runner.run()
+        # Pretend we are still cleaning up after plumbing
+        runner.state = "cleanup"
+        progress = runner.get_status()["progress"]
+        assert 0.9 < progress < 1
 
 
 def test_invalid_events():
@@ -1272,6 +1345,25 @@ def test_recomputation_of_background_metadata_changed(attr, oldval, newbg):
         else:
             has_old_bg = np.all(h5["events/image_bg"][:, 0, 0] == 200)
         assert not has_old_bg == newbg
+
+
+def test_temporary_files_atexit_registered_once():
+    """In dcnum 0.31.0, atexit was called on every temporary path access"""
+    path_orig = retrieve_data("fmt-hdf5_cytoshot_full-features_2023.zip")
+    job = logic.DCNumPipelineJob(path_in=path_orig, debug=True)
+    ncallbacks = atexit._ncallbacks()
+    with logic.DCNumJobRunner(job=job) as runner:
+        for _ in range(10):
+            runner.path_temp_in
+            runner.path_temp_out
+        assert atexit._ncallbacks() - ncallbacks <= 2
+        runner.run()
+        # Other libraries may register callbacks during the run.
+        ncallbacks_run = atexit._ncallbacks()
+        for _ in range(10):
+            runner.path_temp_in
+            runner.path_temp_out
+        assert atexit._ncallbacks() == ncallbacks_run
 
 
 def test_task_background():
