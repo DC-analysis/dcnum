@@ -1,3 +1,4 @@
+import atexit
 import time
 
 import h5py
@@ -1332,6 +1333,25 @@ def test_recomputation_of_background_metadata_changed(attr, oldval, newbg):
         else:
             has_old_bg = np.all(h5["events/image_bg"][:, 0, 0] == 200)
         assert not has_old_bg == newbg
+
+
+def test_temporary_files_atexit_registered_once():
+    """In dcnum 0.31.0, atexit was called on every temporary path access"""
+    path_orig = retrieve_data("fmt-hdf5_cytoshot_full-features_2023.zip")
+    job = logic.DCNumPipelineJob(path_in=path_orig, debug=True)
+    ncallbacks = atexit._ncallbacks()
+    with logic.DCNumJobRunner(job=job) as runner:
+        for _ in range(10):
+            runner.path_temp_in
+            runner.path_temp_out
+        assert atexit._ncallbacks() - ncallbacks <= 2
+        runner.run()
+        # Other libraries may register callbacks during the run.
+        ncallbacks_run = atexit._ncallbacks()
+        for _ in range(10):
+            runner.path_temp_in
+            runner.path_temp_out
+        assert atexit._ncallbacks() == ncallbacks_run
 
 
 def test_task_background():
