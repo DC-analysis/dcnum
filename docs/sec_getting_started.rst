@@ -76,7 +76,7 @@ and configured with the corresponding ``*_kwargs`` dictionary:
 
     job = DCNumPipelineJob(
         path_in="measurement.rtdc",
-        path_out="measurement_custom.rtdc",
+        path_out="analysis/measurement_custom.rtdc",
         # background computation ("sparsemed", "rollmed", or "copy")
         background_code="sparsemed",
         background_kwargs={"kernel_size": 150},
