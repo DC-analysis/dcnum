@@ -319,7 +319,7 @@ class DCNumJobRunner(threading.Thread):
         if valid_states.index(st) > valid_states.index("plumbing"):
             # plumbing already done
             progress += drw / tot
-        if self._progress_bn is not None:
+        elif self._progress_bn is not None:
             progress += self._progress_bn * drw / tot
 
         if self.state == "done":

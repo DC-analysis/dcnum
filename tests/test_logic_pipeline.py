@@ -798,6 +798,18 @@ def test_get_status():
         assert final_status["state"] == "done"
 
 
+def test_get_status_progress_cleanup():
+    """In dcnum < 0.31.1, plumbing progress was counted twice"""
+    path_orig = retrieve_data("fmt-hdf5_cytoshot_full-features_2023.zip")
+    job = logic.DCNumPipelineJob(path_in=path_orig, debug=True)
+    with logic.DCNumJobRunner(job=job) as runner:
+        runner.run()
+        # Pretend we are still cleaning up after plumbing
+        runner.state = "cleanup"
+        progress = runner.get_status()["progress"]
+        assert 0.9 < progress < 1
+
+
 def test_invalid_events():
     path = retrieve_data("fmt-hdf5_cytoshot_full-features_2023.zip")
 
