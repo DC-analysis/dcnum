@@ -1,3 +1,4 @@
+"""Background thread for writing feature chunks to HDF5"""
 from __future__ import annotations
 
 import collections
@@ -38,9 +39,18 @@ class ChunkWriter(threading.Thread):
             periodically
         ds_kwds:
             keyword arguments for dataset creation,
-            passed to :class:`.HDF5Writer`
+            passed to :class:`~dcnum.write.writer.HDF5Writer`
         mode:
-            HDF5 file opening mode, passed to :class:`.HDF5Writer`
+            HDF5 file opening mode, passed to
+            :class:`~dcnum.write.writer.HDF5Writer`; If set to "w",
+            an existing file at `path_out` is deleted first.
+        parent_logger:
+            optional logger; if set, a child logger "ChunkWriter" is
+            used for logging
+        *args:
+            passed to :class:`threading.Thread`
+        **kwargs:
+            passed to :class:`threading.Thread`
         """
         super().__init__(*args, **kwargs)
         if parent_logger is None:
@@ -64,6 +74,15 @@ class ChunkWriter(threading.Thread):
         self.may_stop_loop = True
 
     def run(self):
+        """Write data from the deque to the output file until stopped
+
+        Feature chunks ``(feat, data)`` are taken from ``self.dq`` and
+        written with
+        :meth:`~dcnum.write.writer.HDF5Writer.store_feature_chunk`.
+        The loop ends when :meth:`abort_loop` was called, or when
+        :meth:`finished_when_queue_empty` was called and the deque
+        is empty. The output file is closed afterward.
+        """
         time_tot = 0
         try:
             while True:

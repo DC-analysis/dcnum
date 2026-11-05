@@ -1,3 +1,4 @@
+"""Shared-memory data arrays and state of a chunk slot"""
 import ctypes
 import multiprocessing as mp
 
@@ -9,6 +10,27 @@ mp_spawn = mp.get_context("spawn")
 
 class ChunkSlotData:
     def __init__(self, shape, available_features=None):
+        """Shared-memory arrays and task bookkeeping for one chunk
+
+        This is the base class of
+        :class:`~dcnum.logic.chunk_slot.ChunkSlot`. It allocates the
+        shared memory arrays for image, mask, and label data of one
+        chunk and keeps track of the slot state as well as of which
+        frames of the chunk are currently reserved or done for the
+        task of the current state (see :meth:`acquire_task_lock` and
+        :meth:`release_task_lock`).
+
+        Parameters
+        ----------
+        shape: tuple of int
+            3D shape ``(frames, height, width)`` of the chunk
+        available_features: list of str
+            features available in the input data; If ``"image_bg"`` is
+            in this list, arrays for background image and
+            background-corrected image are allocated. If ``"bg_off"``
+            is in this list, an array for the brightness offset is
+            allocated.
+        """
         self.shape = shape
         """3D shape of the chunk in this slot"""
 
@@ -80,13 +102,14 @@ class ChunkSlotData:
         - "m": mask labeling (takes mask and populates labels)
         - "l": label processing (modifies labels in-place)
         - "e": feature extraction (requires labels)
-        - "w": writing
-        - "d": done (slot can be repurposed for next chunk)
+        - "w": writing (currently not used by the pipeline)
+        - "d": done (currently not used by the pipeline)
         - "n": not specified
 
-        The pipeline workflow is:
+        The pipeline workflow is (after feature extraction, the slot
+        can be repurposed for the next chunk):
 
-            "0" -> "i" -> "s" -> "m" -> "l" -> "e" -> "w" -> "d" -> "i" ...
+            "0" -> "i" -> "s" -> "m" -> "l" -> "e" -> "i" ...
         """
         return self._state.value
 

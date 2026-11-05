@@ -1,3 +1,5 @@
+"""Chunk-wise caching of image data"""
+
 from __future__ import annotations
 
 import abc
@@ -25,13 +27,32 @@ class BaseImageChunkCache(abc.ABC):
                  chunk_size: int = 1000,
                  cache_size: int = 2,
                  ):
+        """Base class for chunk-wise cached access to image stacks
+
+        Subclasses implement ``_get_chunk_data``, which returns the
+        image data for a slice along the first axis. Indexing with an
+        integer returns a single image; indexing with a slice, list, or
+        array returns a stack of images. At most ``cache_size`` chunks
+        are kept in memory. When the cache is full, the chunk that was
+        loaded first is removed.
+
+        Parameters
+        ----------
+        shape: tuple[int]
+            shape of the full image stack (N, Y, X)
+        chunk_size: int
+            number of images per chunk; limited to the number of
+            images N
+        cache_size: int
+            maximum number of chunks kept in memory
+        """
         self.shape = shape
         self._dtype = None
         chunk_size = min(shape[0], chunk_size)
         self._len = self.shape[0]
 
         self.cache = collections.OrderedDict()
-        """This is a FILO cache for the chunks"""
+        """This is a first-in-first-out cache for the chunks"""
 
         self.image_shape = self.shape[1:]
         self.chunk_shape = (chunk_size,) + self.shape[1:]
@@ -111,6 +132,7 @@ class BaseImageChunkCache(abc.ABC):
         return ch_slice
 
     def iter_chunks(self):
+        """Iterate over the chunk indices (0, 1, 2, ...) of this cache"""
         index = 0
         chunk = 0
         while True:
@@ -135,6 +157,18 @@ class HDF5ImageCache(BaseImageChunkCache):
         loaded, decompressed and from that one image extracted. The
         `HDF5ImageCache` class caches the chunks from the HDF5 files
         into memory, making single-image-access very fast.
+
+        Parameters
+        ----------
+        h5ds: h5py.Dataset | dcnum.read.mapped.MappedHDF5Dataset
+            HDF5 dataset containing the image stack
+        chunk_size: int
+            number of images per chunk
+        cache_size: int
+            maximum number of chunks kept in memory
+        boolean: bool
+            whether to convert the data to boolean arrays (e.g. for
+            mask images)
         """
         super().__init__(
             shape=h5ds.shape,
@@ -160,6 +194,19 @@ class ImageCorrCache(BaseImageChunkCache):
     def __init__(self,
                  image: HDF5ImageCache,
                  image_bg: HDF5ImageCache):
+        """Cache for background-corrected image data
+
+        The chunks are computed on the fly as ``image - image_bg``
+        with data type int16. Chunk size and cache size are taken
+        from ``image``.
+
+        Parameters
+        ----------
+        image: HDF5ImageCache
+            cache of the raw image data
+        image_bg: HDF5ImageCache
+            cache of the background image data
+        """
         super().__init__(
             shape=image.shape,
             chunk_size=image.chunk_size,

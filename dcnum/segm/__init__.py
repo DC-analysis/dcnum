@@ -1,4 +1,6 @@
 # flake8: noqa: F401
+"""Segmenters for detecting events in image data"""
+
 from .segmenter import (
     Segmenter,
     SegmenterNotApplicableError,

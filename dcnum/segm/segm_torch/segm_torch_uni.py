@@ -1,3 +1,5 @@
+"""PyTorch segmenter for use with the universal worker"""
+
 from __future__ import annotations
 
 import copy
@@ -28,12 +30,18 @@ class SegmentTorchUNI(TorchSegmenterBase, UNISegmenter):
                  debug: bool = False,
                  **kwargs
                  ):
-        """Segmenter for use with `UniversalWorker`
+        """PyTorch segmenter for use with ``UniversalWorker``
+
+        If ``model_file`` is given, the ``backend`` and ``device``
+        keyword arguments are updated from the model metadata and
+        ``required_batch_size`` is set from the model's "batch_size"
+        (0 means no restriction).
 
         Parameters
         ----------
         kwargs_mask: dict
-            Keyword arguments for mask post-processing (see `process_labels`)
+            Keyword arguments for mask post-processing (see
+            ``process_labels``)
         backend: str
             Which backend to use for compiling/running the model. This
             parameter is part of the PPID. The default backend is whatever
@@ -60,6 +68,7 @@ class SegmentTorchUNI(TorchSegmenterBase, UNISegmenter):
             self.required_batch_size = model_meta.get("batch_size", 0)
 
     def log_info(self, logger):
+        """Log the backend, device, batch sizes, and GPU information"""
         model_meta = SegmentTorchUNI.get_model_meta_full(self.kwargs)
         backend = self.kwargs.get("backend")
         device = self.kwargs.get("device")
@@ -104,6 +113,11 @@ class SegmentTorchUNI(TorchSegmenterBase, UNISegmenter):
 
     @classmethod
     def get_ppid_from_ppkw(cls, kwargs, kwargs_mask=None):
+        """Return the pipeline ID from given keyword arguments
+
+        If no ``backend`` is given, it is taken from the model
+        metadata. The ``device`` is not part of the pipeline ID.
+        """
         kwargs = copy.copy(kwargs)
         # Make sure the correct backend is given to the PPID generator
         if kwargs.get("backend") is None:
@@ -118,7 +132,7 @@ class SegmentTorchUNI(TorchSegmenterBase, UNISegmenter):
     def update_worker_dedications(job: DCNumPipelineJob,
                                   worker_dedications: list[list[str]],
                                   ) -> list[list[str]]:
-        """Update worker dedictions based on the segmentation approach"""
+        """Update worker dedications based on the segmentation approach"""
         if len(worker_dedications) == 1:
             # Nothing should be changed
             return worker_dedications
@@ -151,11 +165,12 @@ class SegmentTorchUNI(TorchSegmenterBase, UNISegmenter):
                           backend: str | None,
                           device: str | None,
                           ):
-        """
+        """Segment images in batches with a PyTorch model
+
         Parameters
         ----------
         images: 3d ndarray
-            event image
+            image data of shape (N, H, W)
         model_file: str
             path to or name of a dcnum model file (.dcnm); if only a
             name is provided, then the "torch_model_files" directory
@@ -170,8 +185,8 @@ class SegmentTorchUNI(TorchSegmenterBase, UNISegmenter):
 
         Returns
         -------
-        mask: 3d boolean or integer ndarray
-            mask or labeling image for the given index
+        mask: 3d boolean ndarray
+            mask images with the same shape as ``images``
         """
         if model_file is None:
             raise ValueError("Please specify a .dcnm model file!")

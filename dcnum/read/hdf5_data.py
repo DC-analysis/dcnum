@@ -1,3 +1,5 @@
+"""Access to HDF5 (.rtdc) input data"""
+
 from __future__ import annotations
 
 import functools
@@ -36,7 +38,12 @@ class HDF5Data:
                  image_chunk_size: int = 1000,
                  index_mapping: int | slice | list | np.ndarray | None = None,
                  ):
-        """
+        """HDF5 (.rtdc) input file data instance
+
+        Provides access to the features (including features stored in
+        basins), the chunk-cached image data, and the metadata, logs,
+        and tables of a dataset. Instances can be pickled (e.g. for
+        multiprocessing); the HDF5 file is opened lazily.
 
         Parameters
         ----------
@@ -289,20 +296,27 @@ class HDF5Data:
 
     @property
     def h5(self) -> h5py.File:
+        """The underlying HDF5 file, opened lazily in read-only mode"""
         if self._h5 is None:
             self._h5 = h5py.File(self.path, libver="latest")
         return self._h5
 
     @property
     def image(self) -> HDF5ImageCache | None:
+        """Cached "image" data or None if not available"""
         return self.get_image_cache("image")
 
     @property
     def image_bg(self) -> HDF5ImageCache | None:
+        """Cached "image_bg" data or None if not available"""
         return self.get_image_cache("image_bg")
 
     @property
     def image_corr(self) -> ImageCorrCache | None:
+        """Background-corrected image data (``image - image_bg``)
+
+        None if "image" or "image_bg" is not available.
+        """
         if "image_corr" not in self._image_cache:
             if self.image is not None and self.image_bg is not None:
                 image_corr = ImageCorrCache(self.image, self.image_bg)
@@ -318,6 +332,7 @@ class HDF5Data:
 
     @property
     def mask(self):
+        """Cached boolean "mask" data or None if not available"""
         return self.get_image_cache("mask")
 
     @property
@@ -334,6 +349,11 @@ class HDF5Data:
 
     @property
     def pixel_size(self):
+        """Pixel size in µm ("imaging:pixel size" metadata, 0 if not set)
+
+        When set, the pixel size is rounded to eight digits after the
+        decimal point and written to the metadata.
+        """
         return self.meta.get("imaging:pixel size", 0)
 
     @pixel_size.setter
@@ -403,16 +423,36 @@ class HDF5Data:
             self._h5 = None
 
     def get_ppid(self):
+        """Return the pipeline identifier for this dataset
+
+        The identifier encodes the pixel size and the index mapping
+        (see ``get_ppid_from_ppkw``).
+        """
         return self.get_ppid_from_ppkw(
             {"pixel_size": self.pixel_size,
              "index_mapping": self.index_mapping})
 
     @classmethod
     def get_ppid_code(cls):
+        """Return the pipeline identifier code for data ("hdf")"""
         return "hdf"
 
     @classmethod
     def get_ppid_from_ppkw(cls, kwargs):
+        """Return the data pipeline identifier for keyword arguments
+
+        Parameters
+        ----------
+        kwargs: dict
+            keyword arguments with the keys "pixel_size" (required)
+            and "index_mapping" (optional)
+
+        Returns
+        -------
+        ppid: str
+            pipeline identifier of the form
+            ``hdf:p=PIXEL_SIZE^i=INDEX_MAPPING``
+        """
         # Data does not really fit into the PPID scheme we use for the rest
         # of the pipeline. This implementation here is custom.
         code = cls.get_ppid_code()
@@ -446,6 +486,27 @@ class HDF5Data:
 
     @staticmethod
     def get_ppkw_from_ppid(dat_ppid):
+        """Return keyword arguments for a data pipeline identifier
+
+        This is the inverse of ``get_ppid_from_ppkw``.
+
+        Parameters
+        ----------
+        dat_ppid: str
+            data pipeline identifier
+
+        Returns
+        -------
+        kwargs: dict
+            keyword arguments "pixel_size" and/or "index_mapping"
+
+        Raises
+        ------
+        ValueError
+            If the code is not "hdf", if a parameter is unknown, or
+            if the index mapping cannot be inverted (index mappings
+            given as lists or arrays are stored as hashes).
+        """
         # Data does not fit in the PPID scheme we use, but we still
         # would like to pass pixel_size to __init__ if we need it.
         code, kwargs_str = dat_ppid.split(":")
@@ -624,6 +685,7 @@ class HDF5Data:
         return self._image_cache[feat]
 
     def keys(self):
+        """Return sorted list of features, including basin features"""
         if self._keys is None:
             features = sorted(self.h5["/events"].keys())
             # add basin features
@@ -636,6 +698,10 @@ class HDF5Data:
 
 
 def concatenated_hdf5_data(*args, **kwargs):
+    """Deprecated alias for ``hdf5_concat.concatenated_hdf5_data``
+
+    Use :func:`dcnum.read.hdf5_concat.concatenated_hdf5_data` instead.
+    """
     warnings.warn(
         "Please use `dcnum.read.hdf5_concat.concatenated_hdf5_data`. "
         "Accessing this method via `dcnum.read.hdf5_data` is deprecated.",

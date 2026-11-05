@@ -1,3 +1,9 @@
+"""Pipeline identifiers (PPIDs)
+
+Utilities for converting keyword arguments of pipeline steps to
+compact pipeline identifier strings and back, and for computing the
+pipeline hash.
+"""
 from __future__ import annotations
 
 import collections
@@ -19,6 +25,11 @@ previous pipelines unreproducible.
 
 
 class ClassWithPPIDCapabilities(typing.Protocol):
+    """Protocol for pipeline step classes that support pipeline identifiers
+
+    Such classes can be converted to a pipeline identifier (PPID)
+    string and their keyword arguments can be recovered from it.
+    """
     def get_ppid(self) -> str:
         """full pipeline identifier for the class (instance method)"""
         return ""
@@ -38,6 +49,32 @@ class ClassWithPPIDCapabilities(typing.Protocol):
 
 def compute_pipeline_hash(*, bg_id, seg_id, feat_id, gate_id,
                           dat_id="unknown", gen_id=DCNUM_PPID_GENERATION):
+    """Compute the pipeline hash from the individual pipeline identifiers
+
+    The identifiers are joined with ``"|"`` in the order
+    ``gen_id``, ``dat_id``, ``bg_id``, ``seg_id``, ``feat_id``,
+    ``gate_id`` and hashed with MD5.
+
+    Parameters
+    ----------
+    bg_id: str
+        background computation pipeline identifier
+    seg_id: str
+        segmentation pipeline identifier
+    feat_id: str
+        feature extraction pipeline identifier
+    gate_id: str
+        gating pipeline identifier
+    dat_id: str
+        data pipeline identifier
+    gen_id: str
+        pipeline generation, defaults to :const:`DCNUM_PPID_GENERATION`
+
+    Returns
+    -------
+    pipeline_hash: str
+        hexadecimal MD5 hash of the pipeline
+    """
     hasher = hashlib.md5()
     hasher.update("|".join([
         gen_id, dat_id, bg_id, seg_id, feat_id, gate_id]).encode())
@@ -48,7 +85,7 @@ def compute_pipeline_hash(*, bg_id, seg_id, feat_id, gate_id,
 def convert_to_dtype(value, dtype):
     """Convert an object to the correct dtype
 
-    If `dtype` is a Union of types, or a list of types, the first
+    If ``dtype`` is a Union of types, or a list of types, the first
     non-NoneType type is used for conversion.
     """
     if dtype is bool:
@@ -88,12 +125,12 @@ def get_class_method_info(class_obj: ClassWithPPIDCapabilities,
     Parameters
     ----------
     class_obj: object
-        Class to inspect, must implement the `key` method.
+        Class to inspect, must implement the ``get_ppid_code`` method.
     static_kw_methods: list of callable
         The methods to inspect; all kwargs-only keyword arguments
         are extracted.
     static_kw_defaults: dict
-        If a key in this dictionary matches an item in `static_kw_methods`,
+        If a key in this dictionary matches an item in ``static_kw_methods``,
         then these are the default values returned in the "defaults"
         dictionary. This is used in cases where a base class does
         implement some annotations, but the subclass does not actually
@@ -130,6 +167,39 @@ def kwargs_to_ppid(cls: ClassWithPPIDCapabilities,
                    method: str,
                    kwargs: dict,
                    allow_invalid_keys: bool = True):
+    """Convert method keyword arguments to a pipeline method identifier
+
+    All keyword-only arguments of ``method`` are included in the
+    identifier, using the value from ``kwargs`` or the default value.
+    The argument names are abbreviated to their shortest unique
+    prefix (see :func:`get_unique_prefix`) and the entries are
+    joined with ``"^"`` (e.g. ``"a=1^b=2"``). Boolean values are
+    written as integers, integer-valued floats without decimals,
+    and for path-like arguments of existing files only the file
+    name is used.
+
+    Parameters
+    ----------
+    cls: ClassWithPPIDCapabilities
+        Class that defines ``method``
+    method: str
+        Name of the method whose keyword-only arguments define the
+        identifier
+    kwargs: dict
+        Keyword arguments to encode; missing arguments are filled
+        in with their defaults
+    allow_invalid_keys: bool
+        If ``kwargs`` contains keys that are neither keyword-only
+        arguments of ``method`` nor of ``__init__``, issue a
+        :class:`UserWarning` if True, otherwise raise a
+        :class:`KeyError`.
+
+    Returns
+    -------
+    ppid: str
+        pipeline method identifier (empty if ``method`` has no
+        keyword-only arguments with defaults)
+    """
     info = get_class_method_info(cls, [method, "__init__"])
 
     concat_strings = []
@@ -177,9 +247,9 @@ def ppid_to_kwargs(cls, method, ppid):
 
     Notes
     -----
-    Keep in mind that when a `method` is changed in a later
+    Keep in mind that when a ``method`` is changed in a later
     version, new keyword arguments should always be put
-    AT THE VERY END of the keyword list. Otherwise, might will
+    AT THE VERY END of the keyword list. Otherwise, there might
     be ambiguities regarding the abbreviated keys!
     """
     info = get_class_method_info(cls, [method])
@@ -218,10 +288,10 @@ def ppid_to_kwargs(cls, method, ppid):
 def simple_type_eval(type_string: str | type) -> str | type | list:
     """Return the type encoded by a string, e.g. "bool" -> bool
 
-    If `type_string` is already a type, it is passed through.
-    If there is no rule to convert `type_string` to a type,
-    `type_string` is returned as-is.
-    If `type_string` represents a union of types (using '|'), then
+    If ``type_string`` is already a type, it is passed through.
+    If there is no rule to convert ``type_string`` to a type,
+    ``type_string`` is returned as-is.
+    If ``type_string`` represents a union of types (using '|'), then
     a list of types is returned.
     """
     if isinstance(type_string, str):
@@ -243,6 +313,17 @@ def simple_type_eval(type_string: str | type) -> str | type | list:
 
 class AbrvStr:
     def __init__(self, string):
+        """String with an abbreviation that is unique within a set
+
+        Used by :func:`get_unique_prefix`. The abbreviation starts
+        with a length of one and is extended by calling :meth:`meet`
+        with each of the other strings of the set.
+
+        Parameters
+        ----------
+        string: str
+            the full string
+        """
         self.string = string
         self.abrv_lengths = [1]  # initialize with minimum length 1
 
@@ -251,9 +332,25 @@ class AbrvStr:
 
     @property
     def abrv(self):
+        """The shortest abbreviation distinguishing this string from others
+
+        This is the longest of the prefixes required with respect to
+        all strings passed to :meth:`meet` so far.
+        """
         return self.string[:max(self.abrv_lengths)]
 
     def meet(self, other):
+        """Update the abbreviation lengths of this and another string
+
+        Determines the prefix lengths required to distinguish
+        both strings and records them in ``abrv_lengths`` of both
+        instances.
+
+        Parameters
+        ----------
+        other: AbrvStr
+            another instance with a different string
+        """
         assert self.string != other.string
         if len(self.string) >= len(other.string):
             a, b = other, self

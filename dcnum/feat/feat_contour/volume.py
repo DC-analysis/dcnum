@@ -1,3 +1,4 @@
+"""Volume computation from event contours (rotational symmetry)"""
 import numpy as np
 
 
@@ -12,19 +13,25 @@ def volume_from_contours(
 
     Parameters
     ----------
-    contour: list of ndarrays of shape (N,2)
-        One entry is a 2D array that holds the contour of an event
-    pos_x: float ndarray of length N
-        The x coordinate(s) of the centroid of the event(s) [µm]
-    pos_y: float ndarray of length N
-        The y coordinate(s) of the centroid of the event(s) [µm]
+    contour: list of numpy.ndarray
+        One entry per event; each entry is a 2D array of
+        shape ``(M, 2)`` that holds the contour of an event [px]
+        (or None)
+    pos_x: numpy.ndarray
+        The x coordinate(s) of the centroid of the event(s) [µm],
+        float array of length N (number of events)
+    pos_y: numpy.ndarray
+        The y coordinate(s) of the centroid of the event(s) [µm],
+        float array of length N (number of events)
     pixel_size: float
         The detector pixel size in µm.
 
     Returns
     -------
-    volume: float ndarray
-        volume in um^3
+    features: dict
+        Dictionary with the key ``"volume"``, a float array holding
+        the volume in µm³ for each event (NaN for events with
+        fewer than four contour points)
 
     Notes
     -----
@@ -43,7 +50,7 @@ def volume_from_contours(
     ----------
     - https://de.wikipedia.org/wiki/Kegelstumpf#Formeln
     - Yields identical results to the Matlab script by Geoff Olynyk
-      <https://de.mathworks.com/matlabcentral/fileexchange/36525-volrevolve>`_
+      <https://de.mathworks.com/matlabcentral/fileexchange/36525-volrevolve>
     """
     # results are stored in a separate array initialized with nans
     v_avg = np.zeros_like(pos_x, dtype=np.float64) * np.nan
@@ -125,7 +132,13 @@ def vol_revolve(r, z, point_scale=1.):
         coordinate along the axis of rotation
     point_scale: float
         point size in your preferred units; The volume is multiplied
-        by a factor of `point_scale**3`.
+        by a factor of ``point_scale**3``.
+
+    Returns
+    -------
+    volume: float
+        volume of the revolved polygon (in units of ``point_scale``
+        cubed)
 
     Notes
     -----

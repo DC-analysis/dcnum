@@ -1,3 +1,5 @@
+"""Loading of dcnum model files (.dcnm)"""
+
 from __future__ import annotations
 
 import errno

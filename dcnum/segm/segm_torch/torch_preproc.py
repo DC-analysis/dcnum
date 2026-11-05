@@ -1,3 +1,5 @@
+"""Preprocessing of image data for machine-learning segmenters"""
+
 import numpy as np
 
 
@@ -11,8 +13,8 @@ def preprocess_images(images: np.ndarray,
     The transformation includes:
 
     - normalization (division by 255, subtraction of mean, division by std)
-    - cropping and padding of the input images to `image_shape`. For padding,
-      the median of each *individual* image is used.
+    - cropping and padding of the input images to ``image_shape``. For
+      padding, the median of each *individual* image is used.
     - casting the input images to four dimensions
       (batch_size, 1, height, width) where the second axis is "channels"
 
@@ -23,12 +25,12 @@ def preprocess_images(images: np.ndarray,
         2D image, it will be reshaped to a 3D image with a batch_size of 1.
     norm_mean:
         Mean value used for standard score data normalization, i.e.
-        `normalized = `(images / 255 - norm_mean) / norm_std`; Set
+        ``normalized = (images / 255 - norm_mean) / norm_std``; Set
         to None to disable normalization.
     norm_std:
         Standard deviation used for standard score data normalization;
         Set to None to disable normalization (see above).
-    image_shape
+    image_shape:
         Image shape for which the model was created (height, width).
         If the image shape does not match the input image shape, then
         the input images are padded/cropped to fit the image shape of
@@ -36,8 +38,8 @@ def preprocess_images(images: np.ndarray,
 
     Returns
     -------
-    image_proc:
-        3D array with preprocessed image data of shape
+    image_proc: np.ndarray
+        4D float32 array with preprocessed image data of shape
         (batch_size, 1, height, width)
     """
     if len(images.shape) == 2:
