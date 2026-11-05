@@ -79,6 +79,10 @@ release = dcnum.__version__
 # enable enumeration of figures
 numfig = True
 
+# render matplotlib plots in high resolution (PNG for HTML, PDF for LaTeX)
+plot_formats = [("png", 200), "pdf"]
+plot_html_show_formats = False
+
 # include source of matplotlib plots
 plot_include_source = True
 
