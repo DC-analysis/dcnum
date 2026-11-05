@@ -1,3 +1,8 @@
+"""Control the number of threads used by numerical libraries
+
+Helpers for requesting single-threaded operation of libraries such as
+numpy or numba via environment variables.
+"""
 import logging
 import os
 
@@ -33,7 +38,7 @@ class RequestSingleThreaded:
         self.previous_env = {}
 
     def __enter__(self):
-        """Ask nicely for single-threaded computation using `os.environ`
+        """Ask nicely for single-threaded computation using ``os.environ``
 
         Note that this only affects new processes in which the
         relevant libraries have not yet been imported.

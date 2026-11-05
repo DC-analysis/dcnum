@@ -1,3 +1,4 @@
+"""Background "computation" by copying existing background data"""
 from ...common import h5py
 from ...write import HDF5Writer
 from .base import Background
@@ -10,7 +11,7 @@ class BackgroundCopy(Background):
 
     @staticmethod
     def check_user_kwargs():
-        pass
+        """No keyword arguments to check (there are none)"""
 
     def process(self):
         """Copy input data to output dataset"""
@@ -51,8 +52,8 @@ class BackgroundCopy(Background):
         self.image_proc.value = 1
 
     def process_approach(self):
+        """Does nothing; the data are copied in :meth:`process`"""
         # We do the copying in `process`, because we do not want to modify
         # any metadata or delete datasets as is done in the base class.
         # But we still have to implement this method, because it is an
         # abstractmethod in the base class.
-        pass

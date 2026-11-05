@@ -1,3 +1,5 @@
+"""Constants for reading data"""
+
 PROTECTED_FEATURES = [
     "bg_off",
     "flow_rate",

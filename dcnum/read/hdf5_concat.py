@@ -1,3 +1,5 @@
+"""Concatenation of multiple HDF5 files"""
+
 import io
 import pathlib
 import tempfile

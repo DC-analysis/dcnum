@@ -1,3 +1,4 @@
+"""Base class and helpers for background image computation"""
 import abc
 import functools
 import inspect
@@ -29,8 +30,8 @@ class Background(abc.ABC):
             the "evtens/image" dataset or an array-like object that
             behaves like an image stack (first axis enumerates events)
         output_path: pathlib.Path
-            Path to the output file. If `input_data` is a path, you can
-            set `output_path` to the same path to write directly to the
+            Path to the output file. If ``input_data`` is a path, you can
+            set ``output_path`` to the same path to write directly to the
             input file. The data are written in the "events/image_bg"
             dataset in the output file.
         compress: bool
@@ -38,7 +39,7 @@ class Background(abc.ABC):
             for faster processing.
         num_cpus: int
             Number of CPUs to use for median computation. Defaults to
-            `dcnum.common.cpu_count()`.
+            :func:`dcnum.common.cpu_count`.
         kwargs:
             Additional keyword arguments passed to the subclass.
         """
@@ -151,7 +152,7 @@ class Background(abc.ABC):
             KEY:KW_BACKGROUND
 
         Where KEY is e.g. "sparsemed" or "rollmed", and KW_BACKGROUND is a
-        list of keyword arguments for `check_user_kwargs`, e.g.::
+        list of keyword arguments for :meth:`check_user_kwargs`, e.g.::
 
             kernel_size=100^batch_size=10000
 
@@ -163,6 +164,12 @@ class Background(abc.ABC):
 
     @classmethod
     def get_ppid_code(cls):
+        """Return the background method code used in the PPID
+
+        The code is the lower-case class name without the leading
+        ``"background"`` (e.g. ``"sparsemed"`` for
+        ``BackgroundSparseMed``).
+        """
         if cls is Background:
             raise ValueError("Cannot get `key` for `Background` base class!")
         key = cls.__name__.lower()
@@ -204,7 +211,7 @@ class Background(abc.ABC):
         """Perform the background computation
 
         This irreversibly removes/overrides any "image_bg" and
-        "bg_off" features defined in the output file `self.h5out`.
+        "bg_off" features defined in the output file ``self.h5out``.
         """
         t0 = time.perf_counter()
 

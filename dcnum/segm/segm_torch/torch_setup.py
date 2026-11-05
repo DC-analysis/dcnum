@@ -1,3 +1,5 @@
+"""Lazy loading and setup of PyTorch and OpenVINO"""
+
 import os
 import pathlib
 import platform
@@ -18,6 +20,10 @@ os.environ["CUBLAS_WORKSPACE_CONFIG"] = ":4096:8"
 
 
 def setup_openvino():
+    """Generator wrapping the import of OpenVINO
+
+    Before the import, OpenVINO telemetry is disabled (opt-out).
+    """
     # Executed before import.
     # Disable telemetry
     try:
@@ -47,6 +53,12 @@ def setup_openvino():
 
 
 def setup_torch(torch):
+    """Generator wrapping the import of PyTorch
+
+    After the import, PyTorch is configured for reproducible,
+    deterministic, single-threaded computation and a warning is
+    issued if the PyTorch version is older than 2.2.
+    """
     # Executed before import.
     yield
     # Executed after import.
