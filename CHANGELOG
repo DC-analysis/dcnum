@@ -66,7 +66,7 @@
  - enh: lazy-load cv2, h5py, numba-compiled functions, scipy, and torch (#26)
  - enh: introduce logging with queues in `UniversalWorker`
  - enh: move feature extraction to `UniversalWorker` (#48)
- - enh: start `UniversalWorker`s in background thread
+ - enh: start `UniversalWorker` instances in background thread
  - enh: add `HDF5Data.image_num_chunks`
  - enh: mitigate race conditions with `StateWarden`
  - ref: rename `get_lock` to `get_counter_lock` in `SlotRegister`
@@ -260,7 +260,7 @@
 0.19.1
  - enh: support steps when specifying data slices in `index_mapping`
 0.19.0
- - enh: elevate `HDF5Data`s `index_mapping` to pipeline identifier status
+ - enh: elevate `HDF5Data.index_mapping` to pipeline identifier status
    (this changes the pipeline identifier)
  - enh: improve sanity checks for `BackgroundRollMed`
 0.18.0
