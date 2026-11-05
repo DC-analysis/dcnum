@@ -188,9 +188,12 @@ class DCNumJobRunner(threading.Thread):
         """Input data with (corrected) background image"""
         if self._data_temp_in is None:
             if not self.path_temp_in.exists():
-                # create basin-based input file
-                create_with_basins(path_out=self.path_temp_in,
-                                   basin_paths=[self.draw.path])
+                # create basin-based input file (relative basin paths
+                # are resolved relative to `path_temp_in`, so we must
+                # use an absolute path here)
+                create_with_basins(
+                    path_out=self.path_temp_in,
+                    basin_paths=[pathlib.Path(self.draw.path).resolve()])
             # Initialize with the proper kwargs (pixel_size)
             self._data_temp_in = HDF5Data(self.path_temp_in,
                                           **self.job["data_kwargs"])

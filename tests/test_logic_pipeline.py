@@ -1,4 +1,5 @@
 import atexit
+import pathlib
 import time
 
 import h5py
@@ -278,6 +279,30 @@ def test_basin_relative_path():
         for feat in h5["events"]:
             assert len(h5["events"][feat]) == 275
         # The other features are accessed via basins
+        hd = read.HDF5Data(h5)
+        assert "image" in hd
+
+
+def test_basin_relative_path_in_with_path_out_in_other_directory(
+        monkeypatch):
+    """Relative `path_in` with `path_out` in a different directory"""
+    path_orig = retrieve_data("fmt-hdf5_cytoshot_full-features_2024.zip")
+    # work with paths relative to the input directory
+    monkeypatch.chdir(path_orig.parent)
+    path_in = pathlib.Path(path_orig.name)
+    path_out = pathlib.Path("sub") / "out.rtdc"
+    path_out.parent.mkdir()
+
+    job = logic.DCNumPipelineJob(path_in=path_in,
+                                 path_out=path_out,
+                                 background_kwargs={"kernel_size": 150},
+                                 debug=True)
+    with logic.DCNumJobRunner(job=job) as runner:
+        runner.run()
+        assert runner.get_status()["state"] == "done"
+
+    with h5py.File(path_out) as h5:
+        assert "deform" in h5["events"]
         hd = read.HDF5Data(h5)
         assert "image" in hd
 

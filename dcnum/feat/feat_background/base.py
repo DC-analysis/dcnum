@@ -91,7 +91,9 @@ class Background(abc.ABC):
                 self.h5in = h5py.File(input_data, "a", libver="latest")
                 self.h5out = self.h5in
             else:
-                self.paths_ref.append(input_data)
+                # Relative basin paths are resolved relative to
+                # `output_path`, so we must use an absolute path here.
+                self.paths_ref.append(input_data.resolve())
                 self.h5in = h5py.File(input_data, "r", libver="latest")
             # TODO: Properly setup HDF5 caching.
             #  Right now, we are accessing the raw h5ds property of
