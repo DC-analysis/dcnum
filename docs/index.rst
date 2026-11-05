@@ -11,6 +11,7 @@ Welcome to dcnum's documentation!
    :caption: Contents:
 
    sec_getting_started
+   sec_pipeline
    sec_design
 
 
