@@ -552,9 +552,10 @@ class SlotRegister:
                                                   dtype=images.dtype)
                             images_pad[:len(images), :, :] = images
                             if bg_off is not None:
-                                bg_off = np.zeros(batch_size,
-                                                  dtype=bg_off.dtype)
-                                bg_off[:batch_size] = bg_off
+                                bg_off_pad = np.zeros(batch_size,
+                                                      dtype=bg_off.dtype)
+                                bg_off_pad[:len(images)] = bg_off
+                                bg_off = bg_off_pad
                             mask = self.segmenter.segment_batch(
                                 images=images_pad,
                                 bg_off=bg_off,
