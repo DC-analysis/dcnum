@@ -1,3 +1,4 @@
+"""Workers that process chunk slots"""
 from __future__ import annotations
 
 import copy
@@ -52,6 +53,37 @@ class UniversalWorker:
                  dedications: list[str] | None = None,
                  log_level: int = logging.INFO,
                  *args, **kwargs):
+        """Worker that performs the tasks of the processing pipeline
+
+        A universal worker repeatedly asks the
+        :class:`~dcnum.logic.slot_register.SlotRegister` to perform
+        the tasks it is dedicated to (loading image data, segmentation,
+        mask labeling, label processing, and feature extraction) on the
+        :class:`~dcnum.logic.chunk_slot.ChunkSlot` instances in the
+        register. Each task moves a chunk slot to its next state. Since
+        the slot data are in shared memory, multiple workers can operate
+        on the same slot. The worker runs until the state of the slot
+        register is set to "q" (quit) and pauses while it is "p".
+        This class is not used directly; use
+        :class:`~dcnum.logic.universal_worker.UniversalWorkerThread` or
+        :class:`~dcnum.logic.universal_worker.UniversalWorkerProcess`.
+
+        Parameters
+        ----------
+        slot_register: dcnum.logic.slot_register.SlotRegister
+            slot register holding the chunk slots to work on
+        log_queue: multiprocessing.Queue
+            queue to which log records are sent
+        dedications: list of str
+            tasks this worker performs (see ``valid_dedications``);
+            Defaults to ``default_dedications``.
+        log_level: int
+            logging level
+        *args:
+            passed to the thread or process class
+        **kwargs:
+            passed to the thread or process class
+        """
         # Must call super init, otherwise Thread or Process is not initialized
         super().__init__(*args, **kwargs)
 
@@ -81,7 +113,26 @@ class UniversalWorker:
     def get_worker_dedications(job: DCNumPipelineJob,
                                num_universal: int,
                                ) -> list[list[str]]:
-        """Return a worker dedications for each UniversalWorker"""
+        """Return the worker dedications for each UniversalWorker
+
+        By default, all workers perform all tasks. Only the first
+        worker loads image data, and if the segmenter is not a
+        :class:`~dcnum.segm.segmenter_uni.UNISegmenter`, no worker
+        performs segmentation. A ``UNISegmenter`` may further modify
+        the dedications.
+
+        Parameters
+        ----------
+        job: dcnum.logic.job.DCNumPipelineJob
+            pipeline job
+        num_universal: int
+            number of universal workers
+
+        Returns
+        -------
+        dedications: list of list of str
+            list of dedications for each worker
+        """
         # Start with: all workers do everything.
         dcs = [copy.copy(default_dedications) for _ in range(num_universal)]
 
@@ -105,6 +156,12 @@ class UniversalWorker:
         return dcs
 
     def run(self):
+        """Main loop of the worker
+
+        Performs the dedicated tasks via the slot register until its
+        state is set to "q". Processing is stalled while the writer
+        queue is large (slow writer).
+        """
         self.started.value = 1
         # If multiprocessing is used, we now live in our own process.
         confirm_single_threaded()
@@ -212,14 +269,25 @@ class UniversalWorker:
 
 class UniversalWorkerThread(UniversalWorker, threading.Thread):
     def __init__(self, *args, **kwargs):
+        """Universal worker running in a thread
+
+        All arguments are passed to
+        :class:`~dcnum.logic.universal_worker.UniversalWorker`.
+        """
         super().__init__(*args, name="UniversalWorkerThread", **kwargs)
 
 
 class UniversalWorkerProcess(UniversalWorker, mp_spawn.Process):
     def __init__(self, *args, **kwargs):
+        """Universal worker running in a spawned process
+
+        All arguments are passed to
+        :class:`~dcnum.logic.universal_worker.UniversalWorker`.
+        """
         super().__init__(*args, name="UniversalWorkerProcess", **kwargs)
 
     def start(self):
+        """Start the process with single-threaded library settings"""
         # Set all relevant os environment variables such libraries in the
         # new process only use single-threaded computation.
         with RequestSingleThreaded():

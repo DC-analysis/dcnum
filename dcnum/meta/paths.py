@@ -1,3 +1,4 @@
+"""Registry of search paths for locating pipeline resource files"""
 import pathlib
 
 search_path_registry = {}

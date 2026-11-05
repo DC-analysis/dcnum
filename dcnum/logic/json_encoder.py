@@ -1,3 +1,4 @@
+"""JSON encoder for pipeline metadata"""
 import json
 import numbers
 import pathlib
@@ -6,6 +7,12 @@ import numpy as np
 
 
 class ExtendedJSONEncoder(json.JSONEncoder):
+    """Extended JSON encoder for the **dcnum** logic
+
+    In addition to the types supported by :class:`json.JSONEncoder`,
+    this encoder handles ``pathlib.Path``, integer numbers (e.g. numpy
+    integers), ``numpy`` booleans, and slices (see :meth:`default`).
+    """
     def default(self, o):
         """Extended JSON encoder for the **dcnum** logic
 

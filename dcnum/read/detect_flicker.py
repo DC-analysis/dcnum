@@ -1,3 +1,5 @@
+"""Detection of flickering in image data"""
+
 import numpy as np
 
 from .hdf5_data import HDF5Data

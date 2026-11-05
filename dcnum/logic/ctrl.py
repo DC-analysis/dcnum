@@ -1,3 +1,4 @@
+"""Pipeline job runner"""
 import atexit
 import datetime
 import importlib
@@ -54,7 +55,7 @@ valid_states = [
     "done",
     "error",
 ]
-"""Valid states for a `DCNumJobRunner`.
+"""Valid states for a :class:`~dcnum.logic.ctrl.DCNumJobRunner`.
 The states must be in logical order, not in alphabetical order.
 """
 
@@ -64,15 +65,34 @@ class DCNumJobRunner(threading.Thread):
                  job: DCNumPipelineJob,
                  tmp_suffix: str | None = None,
                  *args, **kwargs):
-        """Run a pipeline as defined by a :class:`.job.DCNumPipelineJob`
+        """Run a pipeline as defined by a pipeline job
+
+        The job runner is a thread that executes all steps of the
+        pipeline (see :meth:`run_pipeline`): background computation,
+        segmentation and feature extraction, enforcing the basin
+        strategy, and writing metadata to the output file. Steps whose
+        results are already present in the input file (according to
+        the pipeline identifiers) are skipped. For segmentation and
+        feature extraction, it sets up a
+        :class:`~dcnum.logic.slot_register.SlotRegister`, starts
+        :class:`~dcnum.logic.universal_worker.UniversalWorker` instances
+        (threads in debugging mode, processes otherwise) and a queue
+        writer, and monitors the progress. The current state and
+        progress can be queried via :meth:`get_status`. Log messages
+        from all workers are collected via a logging queue and written
+        to a log file next to the output file.
 
         Parameters
         ----------
-        job: .job.DCNumPipelineJob
+        job: dcnum.logic.job.DCNumPipelineJob
             pipeline job to run
         tmp_suffix: str
             optional unique string for creating temporary files
-            (defaults to hostname)
+            (defaults to hostname and a random string)
+        *args:
+            passed to :class:`threading.Thread`
+        **kwargs:
+            passed to :class:`threading.Thread`
         """
         super().__init__(*args,
                          # Set this thread as a daemon thread, so that Ctrl+C
@@ -85,6 +105,14 @@ class DCNumJobRunner(threading.Thread):
         if tmp_suffix is None:
             tmp_suffix = f"{socket.gethostname()}_{str(uuid.uuid4())[:5]}"
         self.tmp_suffix = tmp_suffix
+        po = pathlib.Path(self.job["path_out"])
+        self._path_temp_in = po.with_name(
+            po.stem + f"_input_bb_{self.tmp_suffix}.rtdc~")
+        self._path_temp_out = po.with_name(
+            po.stem + f"_output_{self.tmp_suffix}.rtdc~")
+        # Remove temporary files at interpreter exit (register only once)
+        for path_temp in [self._path_temp_in, self._path_temp_out]:
+            atexit.register(path_temp.unlink, missing_ok=True)
         self.ppid, self.pphash, self.ppdict = job.get_ppid(ret_hash=True,
                                                            ret_dict=True)
         self.event_count = 0
@@ -160,9 +188,12 @@ class DCNumJobRunner(threading.Thread):
         """Input data with (corrected) background image"""
         if self._data_temp_in is None:
             if not self.path_temp_in.exists():
-                # create basin-based input file
-                create_with_basins(path_out=self.path_temp_in,
-                                   basin_paths=[self.draw.path])
+                # create basin-based input file (relative basin paths
+                # are resolved relative to `path_temp_in`, so we must
+                # use an absolute path here)
+                create_with_basins(
+                    path_out=self.path_temp_in,
+                    basin_paths=[pathlib.Path(self.draw.path).resolve()])
             # Initialize with the proper kwargs (pixel_size)
             self._data_temp_in = HDF5Data(self.path_temp_in,
                                           **self.job["data_kwargs"])
@@ -172,20 +203,26 @@ class DCNumJobRunner(threading.Thread):
 
     @property
     def path_temp_in(self):
-        po = pathlib.Path(self.job["path_out"])
-        pti = po.with_name(po.stem + f"_input_bb_{self.tmp_suffix}.rtdc~")
-        atexit.register(pti.unlink, missing_ok=True)
-        return pti
+        """Path to the temporary, basin-based input file
+
+        The file is located next to the output file and registered for
+        deletion at interpreter exit.
+        """
+        return self._path_temp_in
 
     @property
     def path_temp_out(self):
-        po = pathlib.Path(self.job["path_out"])
-        pto = po.with_name(po.stem + f"_output_{self.tmp_suffix}.rtdc~")
-        atexit.register(pto.unlink, missing_ok=True)
-        return pto
+        """Path to the temporary output file
+
+        The file is located next to the output file and renamed to
+        ``job["path_out"]`` when the pipeline is done. It is
+        registered for deletion at interpreter exit.
+        """
+        return self._path_temp_out
 
     @property
     def state(self):
+        """Current state of the job runner (see ``valid_states``)"""
         return self._state
 
     @state.setter
@@ -195,6 +232,13 @@ class DCNumJobRunner(threading.Thread):
         self._state = state
 
     def close(self, delete_temporary_files=True):
+        """Close input data, stop logging, and clean up
+
+        Parameters
+        ----------
+        delete_temporary_files: bool
+            whether to delete the log file and the temporary input file
+        """
         if self._data_raw is not None:
             self._data_raw.close()
             self._data_raw = None
@@ -220,11 +264,34 @@ class DCNumJobRunner(threading.Thread):
             # is `rename`d to `self.job["path_out"]`.
 
     def join(self, delete_temporary_files=True, *args, **kwargs):
+        """Join the thread and then call :meth:`close`
+
+        Parameters
+        ----------
+        delete_temporary_files: bool
+            passed to :meth:`close`
+        *args:
+            passed to :meth:`threading.Thread.join`
+        **kwargs:
+            passed to :meth:`threading.Thread.join`
+        """
         super().join(*args, **kwargs)
         # Close only after join
         self.close(delete_temporary_files=delete_temporary_files)
 
     def get_status(self):
+        """Return the current status of the pipeline run
+
+        Returns
+        -------
+        status: dict
+            dictionary with the keys "progress" (estimated total
+            progress between 0 and 1, computed from the progress of
+            the individual steps weighted by their typical duration),
+            "segm rate" (mean number of frames processed per second
+            during segmentation and feature extraction), and "state"
+            (the current :attr:`state`)
+        """
         # Compute the total progress. The following weights indicate
         # how much fractional time each processing step takes.
         bgw = 4  # fraction of background
@@ -257,7 +324,7 @@ class DCNumJobRunner(threading.Thread):
         if valid_states.index(st) > valid_states.index("plumbing"):
             # plumbing already done
             progress += drw / tot
-        if self._progress_bn is not None:
+        elif self._progress_bn is not None:
             progress += self._progress_bn * drw / tot
 
         if self.state == "done":
@@ -270,6 +337,13 @@ class DCNumJobRunner(threading.Thread):
         }
 
     def run(self):
+        """Run the pipeline (see :meth:`run_pipeline`)
+
+        On ``KeyboardInterrupt`` or ``DCNUMHaltInterrupt``, the runner
+        is closed. For any other exception, the state is set to "error"
+        and the traceback is stored in ``self.error_tb``; The exception
+        is only re-raised if this method is not run in a started thread.
+        """
         try:
             self.run_pipeline()
         except (KeyboardInterrupt, DCNUMHaltInterrupt):
@@ -692,6 +766,18 @@ class DCNumJobRunner(threading.Thread):
         self.logger.info(f"Enforcing basin strategy time: {t_tot:.1f}s")
 
     def task_segment_extract(self):
+        """Perform segmentation and feature extraction
+
+        A :class:`~dcnum.logic.slot_register.SlotRegister` is created
+        for the input data and
+        :class:`~dcnum.logic.universal_worker.UniversalWorker`
+        instances are started to process the chunks. For segmenters
+        that are not a :class:`~dcnum.segm.segmenter_uni.UNISegmenter`,
+        a :class:`~dcnum.segm.segmenter_manager_thread.SegmenterManagerThread`
+        performs the segmentation. Extracted events are written to
+        :attr:`path_temp_out` by a queue writer. This method blocks
+        until all frames have been written.
+        """
         self.logger.info("Starting segmentation and feature extraction")
 
         seg_cls = get_segmenters()[self.job["segmenter_code"]]
@@ -910,6 +996,19 @@ class DCNumJobRunner(threading.Thread):
 
 
 def get_library_versions_dict(library_name_list):
+    """Return a dictionary with the versions of the given libraries
+
+    Parameters
+    ----------
+    library_name_list: list of str
+        names of the libraries (modules) to import
+
+    Returns
+    -------
+    version_dict: dict
+        library names as keys and their ``__version__`` as values;
+        The value is None for libraries that cannot be imported.
+    """
     version_dict = {}
     for library_name in library_name_list:
         try:

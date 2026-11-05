@@ -1,4 +1,6 @@
 # flake8: noqa: F401
+"""Read and access deformability cytometry (.rtdc) data"""
+
 from .cache import md5sum
 from .const import PROTECTED_FEATURES
 from .detect_flicker import detect_flickering

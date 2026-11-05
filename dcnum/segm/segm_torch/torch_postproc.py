@@ -1,3 +1,5 @@
+"""Postprocessing of masks from machine-learning segmenters"""
+
 from ...common import LazyLoader
 from ..segmenter import Segmenter, STRUCTURING_ELEMENT
 

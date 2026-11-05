@@ -1,3 +1,5 @@
+"""Index-mapped access to HDF5 datasets"""
+
 import functools
 import numbers
 
@@ -53,9 +55,9 @@ def get_mapping_indices(
     ----------
     index_mapping: numbers.Integral | slice | list | np.ndarray
         Several options you have here:
-        - integer: results in np.arrange(integer)
-        - slice: results in np.arrange(slice.start, slice.stop, slice.step)
-        - list or np.ndarray: returns the input as  unit32 array
+        - integer: results in np.arange(integer)
+        - slice: results in np.arange(slice.start, slice.stop, slice.step)
+        - list or np.ndarray: returns the input as uint32 array
     """
     if isinstance(index_mapping, numbers.Integral):
         return _get_mapping_indices_cached(index_mapping)
@@ -89,6 +91,27 @@ def _get_mapping_indices_cached(
 
 
 def get_mapped_object(obj, index_mapping=None):
+    """Return an index-mapped version of an HDF5 dataset
+
+    Parameters
+    ----------
+    obj: h5py.Dataset
+        dataset to map
+    index_mapping: int | slice | list | np.ndarray | None
+        index mapping (see ``get_mapping_indices``); if None,
+        ``obj`` is returned unchanged
+
+    Returns
+    -------
+    mapped_obj: h5py.Dataset | dcnum.read.mapped.MappedHDF5Dataset
+        ``obj`` if ``index_mapping`` is None, otherwise a mapped
+        dataset
+
+    Raises
+    ------
+    ValueError
+        If ``index_mapping`` is set and ``obj`` is not an HDF5 dataset
+    """
     if index_mapping is None:
         return obj
     elif isinstance(obj, h5py.Dataset):
