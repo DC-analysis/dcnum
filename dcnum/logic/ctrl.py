@@ -105,6 +105,14 @@ class DCNumJobRunner(threading.Thread):
         if tmp_suffix is None:
             tmp_suffix = f"{socket.gethostname()}_{str(uuid.uuid4())[:5]}"
         self.tmp_suffix = tmp_suffix
+        po = pathlib.Path(self.job["path_out"])
+        self._path_temp_in = po.with_name(
+            po.stem + f"_input_bb_{self.tmp_suffix}.rtdc~")
+        self._path_temp_out = po.with_name(
+            po.stem + f"_output_{self.tmp_suffix}.rtdc~")
+        # Remove temporary files at interpreter exit (register only once)
+        for path_temp in [self._path_temp_in, self._path_temp_out]:
+            atexit.register(path_temp.unlink, missing_ok=True)
         self.ppid, self.pphash, self.ppdict = job.get_ppid(ret_hash=True,
                                                            ret_dict=True)
         self.event_count = 0
@@ -197,10 +205,7 @@ class DCNumJobRunner(threading.Thread):
         The file is located next to the output file and registered for
         deletion at interpreter exit.
         """
-        po = pathlib.Path(self.job["path_out"])
-        pti = po.with_name(po.stem + f"_input_bb_{self.tmp_suffix}.rtdc~")
-        atexit.register(pti.unlink, missing_ok=True)
-        return pti
+        return self._path_temp_in
 
     @property
     def path_temp_out(self):
@@ -210,10 +215,7 @@ class DCNumJobRunner(threading.Thread):
         ``job["path_out"]`` when the pipeline is done. It is
         registered for deletion at interpreter exit.
         """
-        po = pathlib.Path(self.job["path_out"])
-        pto = po.with_name(po.stem + f"_output_{self.tmp_suffix}.rtdc~")
-        atexit.register(pto.unlink, missing_ok=True)
-        return pto
+        return self._path_temp_out
 
     @property
     def state(self):
