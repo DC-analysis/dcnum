@@ -44,7 +44,7 @@ def polyline(ax, points, ls="-", color=EDGE):
 
 fig, ax = plt.subplots(figsize=(7.5, 9.6))
 ax.set_xlim(0, 100)
-ax.set_ylim(-6, 104)
+ax.set_ylim(-8, 104)
 ax.axis("off")
 
 # segmentation area (two alternative lanes)
