@@ -4,6 +4,7 @@
  - fix: `DCNumJobRunner.get_status` counted plumbing progress twice
  - fix: register `atexit` removal of temporary files only once per job
  - fix: `bg_off` ignored for padded batches in `task_segment_images`
+ - docs: add changelog section, introduction and intersphinx links
  - docs: add "Getting started" section with installation and usage
  - docs: add overview of the data pipeline with figures
  - docs: update outdated pipeline sequence in design section
@@ -68,10 +69,10 @@
  - enh: lazy-load cv2, h5py, numba-compiled functions, scipy, and torch (#26)
  - enh: introduce logging with queues in `UniversalWorker`
  - enh: move feature extraction to `UniversalWorker` (#48)
- - enh: start `UniversalWorker`s in background thread
+ - enh: start `UniversalWorker` instances in background thread
  - enh: add `HDF5Data.image_num_chunks`
  - enh: mitigate race conditions with `StateWarden`
- - ref: rename `get_lock` to ``get_counter_lock` in `SlotRegister`
+ - ref: rename `get_lock` to `get_counter_lock` in `SlotRegister`
  - ref: generalized interface for counters in `SlotRegister`
  - ref: move invalid mask notification to `DCNumJobRunner`
  - ref: migrate `write_queue_size` from `DCNumJobRunner` to `SlotRegister`
@@ -181,13 +182,13 @@
  - setup: pin dependencies
 0.25.1
  - fix: catch ValueError when computing relative path on different anchors
- - ref: replace np.string_ with np.bytes_
+ - ref: replace `np.string_` with `np.bytes_`
  - ref: remove unused `data` argument to QueueCollectorThread
  - ref: minor speed-up for QueueCollectorThread
 0.25.0
  - feat: identify flickering in raw data via dcnum.read.detect_flickering
  - fix: handle out-of-bounds slice indexing for BaseImageChunkCache
- - fix: np.bool_ and np.floating not recognized in PPID parsing
+ - fix: `np.bool_` and `np.floating` not recognized in PPID parsing
 0.24.0
  - feat: add support for internal basins
  - feat: "image_bg" as internal basin for "sparsemed" background computer
@@ -262,7 +263,7 @@
 0.19.1
  - enh: support steps when specifying data slices in `index_mapping`
 0.19.0
- - enh: elevate `HDF5Data`s `index_mapping` to pipeline identifier status
+ - enh: elevate `HDF5Data.index_mapping` to pipeline identifier status
    (this changes the pipeline identifier)
  - enh: improve sanity checks for `BackgroundRollMed`
 0.18.0
@@ -487,7 +488,7 @@
  - enh: make sure that masks are written as uint8 to HDF5 files
  - ref: haralick texture computation now returns dict instead of recarray
  - ref: renamed HDF5WriterThread to DequeWriterThread
- - ref: renamed feature submodules (prepended "feat_")
+ - ref: renamed feature submodules (prepended `feat_`)
 0.0.7
  - enh: dataset keyword arguments and mode HDF5WriterThread
  - enh: speed-up of brightness feature computation
