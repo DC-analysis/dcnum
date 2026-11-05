@@ -13,16 +13,14 @@ from dcnum.segm.segm_thresh import SegmentThresh
 # example dataset shipped with the dcnum test suite
 path_zip = pathlib.Path("../../tests/data/"
                         "fmt-hdf5_cytoshot_full-features_2024.zip")
-tmp_dir = pathlib.Path(tempfile.mkdtemp(prefix="dcnum_docs_"))
-with zipfile.ZipFile(path_zip) as zf:
-    path_rtdc = pathlib.Path(zf.extract("dcnum_thresh_example.rtdc",
-                                        tmp_dir))
-
 idx = 4
-with HDF5Data(path_rtdc) as hd:
-    image = hd.image[idx]
-    image_bg = hd.image_bg[idx]
-    bg_off = hd["bg_off"][idx]
+with tempfile.TemporaryDirectory(prefix="dcnum_docs_") as tmp_dir:
+    with zipfile.ZipFile(path_zip) as zf:
+        path_rtdc = zf.extract("dcnum_thresh_example.rtdc", tmp_dir)
+    with HDF5Data(path_rtdc) as hd:
+        image = hd.image[idx]
+        image_bg = hd.image_bg[idx]
+        bg_off = hd["bg_off"][idx]
 
 # background correction (as done in the pipeline)
 image_corr = np.asarray(image, dtype=np.int16) - image_bg - bg_off
