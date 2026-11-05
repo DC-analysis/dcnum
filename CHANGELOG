@@ -1,4 +1,5 @@
 0.31.1
+ - fix: `bg_off` ignored for padded batches in `task_segment_images`
  - docs: complete docstrings for the API reference and fix all Sphinx warnings
 0.31.0
  - feat: introduce `UNISegmenter` which is handled by `UniversalWorker`
