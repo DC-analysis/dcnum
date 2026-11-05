@@ -1,3 +1,4 @@
+"""Sorting unordered events into contiguous arrays"""
 import numpy as np
 
 

@@ -1,3 +1,4 @@
+"""Names of the Haralick texture features"""
 haralick_names = [
     'tex_asm_avg',
     'tex_asm_ptp',

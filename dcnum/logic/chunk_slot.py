@@ -1,3 +1,4 @@
+"""Shared-memory slot holding one chunk of input data"""
 import multiprocessing as mp
 
 import numpy as np
@@ -14,6 +15,33 @@ class ChunkSlot(ChunkSlotData):
     _instance_counter = 0
 
     def __init__(self, job, data, is_remainder=False):
+        """A slot holding one chunk of image data in shared memory
+
+        A chunk slot holds the image data (and, if available,
+        background image, background-corrected image, and brightness
+        offset data) of one chunk of the input dataset, together with
+        the mask and label arrays computed from it. All arrays live in
+        shared memory, so that multiple worker processes can operate
+        on the same chunk. Chunk slots are created and managed by a
+        :class:`~dcnum.logic.slot_register.SlotRegister`, and workers
+        move them through the states defined in
+        :attr:`~dcnum.logic.chunk_slot_data.ChunkSlotData.state`
+        (loading, segmentation, labeling, label processing, feature
+        extraction). Once all tasks are done, a slot is reused for
+        the next chunk.
+
+        Parameters
+        ----------
+        job: dcnum.logic.job.DCNumPipelineJob
+            pipeline job; ``job["segmenter_code"]`` defines the
+            segmenter class
+        data: dcnum.read.hdf5_data.HDF5Data
+            input data from which chunks are loaded
+        is_remainder: bool
+            whether this slot is used only for the last chunk of the
+            input data, whose size may be smaller than the regular
+            chunk size
+        """
         ChunkSlot._instance_counter += 1
         self.index = ChunkSlot._instance_counter
 
@@ -45,7 +73,25 @@ class ChunkSlot(ChunkSlotData):
                 f"with chunk {self.chunk} at {hex(id(self))}>")
 
     def load(self, idx):
-        """Load chunk `idx` into `self.mp_image` and return numpy views"""
+        """Load chunk ``idx`` into shared memory and return numpy views
+
+        Parameters
+        ----------
+        idx: int
+            index of the chunk in the input data
+
+        Returns
+        -------
+        image: np.ndarray
+            image data
+        image_bg: np.ndarray | None
+            background image data (None if not available)
+        image_corr: np.ndarray | None
+            background-corrected image data, ``image - image_bg``
+            (None if no background is available)
+        bg_off: np.ndarray | None
+            brightness offset data (None if not available)
+        """
         # create views on image arrays
         image = self.image
         image[:] = self.data.image.get_chunk(idx)

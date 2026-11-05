@@ -1,3 +1,4 @@
+"""Names of the brightness features"""
 brightness_names = [
     "bg_med",
     "bright_avg",

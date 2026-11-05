@@ -1,3 +1,5 @@
+"""Segmenter base class for use with the universal worker"""
+
 from __future__ import annotations
 
 import abc
@@ -21,12 +23,21 @@ class UNISegmenter(Segmenter, abc.ABC):
                  debug: bool = False,
                  **kwargs
                  ):
-        """Segmenter for use with `UniversalWorker`
+        """Segmenter for use with ``UniversalWorker``
+
+        Subclasses implement ``segment_algorithm`` for a 3D stack of
+        images. Batches of images are segmented directly by the
+        workers of the pipeline
+        (:class:`dcnum.logic.universal_worker.UniversalWorker`).
+        A subclass may require a fixed batch size
+        (``required_batch_size``) and may adjust which tasks the
+        workers perform (``update_worker_dedications``).
 
         Parameters
         ----------
         kwargs_mask: dict
-            Keyword arguments for mask post-processing (see `process_labels`)
+            Keyword arguments for mask post-processing (see
+            ``process_labels``)
         debug: bool
             Debugging parameters
         kwargs:
@@ -48,7 +59,7 @@ class UNISegmenter(Segmenter, abc.ABC):
                       images: np.ndarray,
                       bg_off: np.ndarray | None = None,
                       ) -> np.ndarray:
-        """Perform batch segmentation of `images`
+        """Perform batch segmentation of ``images``
 
         Before segmentation, an optional background offset correction with
         ``bg_off`` is performed. After segmentation, mask postprocessing is
@@ -56,16 +67,17 @@ class UNISegmenter(Segmenter, abc.ABC):
 
         Parameters
         ----------
-        images: 3d np.ndarray of shape (N, Y, X)
-            The time-series image data. First axis is time.
-        bg_off: 1D np.ndarray of length N
-            Optional 1D numpy array with background offset
+        images: np.ndarray
+            The time-series image data of shape (N, Y, X). First axis
+            is time.
+        bg_off: np.ndarray
+            Optional 1D numpy array of length N with background offset
 
         Notes
         -----
         - If the segmentation algorithm only accepts background-corrected
-          images, then `images` must already be background-corrected,
-          except for the optional `bg_off`.
+          images, then ``images`` must already be background-corrected,
+          except for the optional ``bg_off``.
         """
         segm = self.segment_algorithm_wrapper()
 
@@ -83,7 +95,7 @@ class UNISegmenter(Segmenter, abc.ABC):
         return mask_out
 
     def segment_single(self, image, bg_off: float | None = None):
-        """This is a convenience-wrapper around `segment_batch`"""
+        """This is a convenience-wrapper around ``segment_batch``"""
         if self.required_batch_size > 1:
             raise ValueError(f"Segmenter {self} only supports segmenting "
                              f"batches of size {self.required_batch_size}")

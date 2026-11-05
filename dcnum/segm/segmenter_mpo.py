@@ -1,3 +1,5 @@
+"""Segmenter base class for multiprocessing operation"""
+
 import abc
 import multiprocessing as mp
 import time
@@ -25,12 +27,19 @@ class MPOSegmenter(Segmenter, abc.ABC):
                  **kwargs):
         """Segmenter with multiprocessing operation
 
+        Subclasses implement ``segment_algorithm`` for a single 2D
+        image. A chunk is split into equal parts and each part is
+        segmented image by image by one worker. In debugging mode, a
+        single worker thread is used instead of worker processes.
+
         Parameters
         ----------
-        num_workers
-            Number of workers (processes) to spawn
+        num_workers: int
+            Number of workers (processes) to spawn; defaults to the
+            number of CPUs
         kwargs_mask: dict
-            Keyword arguments for mask post-processing (see `process_labels`)
+            Keyword arguments for mask post-processing (see
+            ``process_labels``)
         debug: bool
             Debugging parameters
         kwargs:
@@ -98,6 +107,14 @@ class MPOSegmenter(Segmenter, abc.ABC):
         self._workers.clear()
 
     def reinitialize_workers(self, slot_list):
+        """Join the current workers and start new workers for a slot list
+
+        Parameters
+        ----------
+        slot_list: list
+            List of :class:`dcnum.logic.chunk_slot.ChunkSlot` instances
+            the workers operate on
+        """
         self.join_workers()
         self.slot_list = slot_list
         self.mp_shutdown.clear()
@@ -138,7 +155,7 @@ class MPOSegmenter(Segmenter, abc.ABC):
                       images: np.ndarray,
                       bg_off: np.ndarray | None = None,
                       ):
-        """Perform batch segmentation of `images`
+        """Perform batch segmentation of ``images``
 
         Before segmentation, an optional background offset correction with
         ``bg_off`` is performed. After segmentation, mask postprocessing is
@@ -146,16 +163,17 @@ class MPOSegmenter(Segmenter, abc.ABC):
 
         Parameters
         ----------
-        images: 3d np.ndarray of shape (N, Y, X)
-            The time-series image data. First axis is time.
-        bg_off: 1D np.ndarray of length N
-            Optional 1D numpy array with background offset
+        images: np.ndarray
+            The time-series image data of shape (N, Y, X). First axis
+            is time.
+        bg_off: np.ndarray
+            Optional 1D numpy array of length N with background offset
 
         Notes
         -----
         - If the segmentation algorithm only accepts background-corrected
-          images, then `images` must already be background-corrected,
-          except for the optional `bg_off`.
+          images, then ``images`` must already be background-corrected,
+          except for the optional ``bg_off``.
         """
         from ..logic.chunk_slot_data import ChunkSlotData
         available_features = ["image_bg"]
@@ -190,19 +208,21 @@ class MPOSegmenter(Segmenter, abc.ABC):
                       chunk: int,  # noqa: F821
                       slot_list: list,
                       ):
-        """Segment the image data of one `ChunkSlot`
+        """Segment the image data of one chunk slot
 
         Parameters
         ----------
-        chunk:
+        chunk: int
             The data chunk index to perform segmentation on
-        slot_list:
-            List of `ChunkSlotData` instances (e.g. `SlotRegister.slots`)
+        slot_list: list
+            List of :class:`dcnum.logic.chunk_slot_data.ChunkSlotData`
+            instances (e.g. ``SlotRegister.slots``)
 
         Returns
         -------
-        mask: np.array
-            The `chunk_slot.mask` numpy view on the shared boolean mask array.
+        mask: np.ndarray
+            The ``mask`` numpy view on the shared boolean mask array of
+            the chunk slot.
         """
         self.mp_active.clear()
 
@@ -257,6 +277,7 @@ class MPOSegmenter(Segmenter, abc.ABC):
         return mask
 
     def close(self):
+        """Join all workers"""
         self.join_workers()
 
 
@@ -270,7 +291,7 @@ class MPOSegmenterWorker:
 
         Parameters
         ----------
-        segmenter: .segmenter_mpo.MPOSegmenter
+        segmenter: dcnum.segm.segmenter_mpo.MPOSegmenter
             The segmentation instance
         sl_start: int
             Start of slice of input array to process
@@ -300,6 +321,13 @@ class MPOSegmenterWorker:
         self.sl_stop = sl_stop
 
     def run(self):
+        """Segment the assigned images of the active slot until shutdown
+
+        For every new chunk in the active slot, the images in the
+        range ``sl_start:sl_stop`` are segmented with
+        ``segment_single`` and the result is written to the ``mask``
+        array of the slot.
+        """
         # confirm single-threadedness (prints to log)
         confirm_single_threaded()
         last_chunk = -1
@@ -341,9 +369,14 @@ class MPOSegmenterWorker:
 
 class MPOSegmenterWorkerProcess(MPOSegmenterWorker, mp_spawn.Process):
     def __init__(self, *args, **kwargs):
+        """Segmenter worker running in a spawned subprocess
+
+        See :class:`MPOSegmenterWorker` for the arguments.
+        """
         super().__init__(*args, **kwargs)
 
     def start(self):
+        """Start the process, requesting single-threaded computation"""
         # Set all relevant os environment variables such libraries in the
         # new process only use single-threaded computation.
         with RequestSingleThreaded():
@@ -352,4 +385,8 @@ class MPOSegmenterWorkerProcess(MPOSegmenterWorker, mp_spawn.Process):
 
 class MPOSegmenterWorkerThread(MPOSegmenterWorker, threading.Thread):
     def __init__(self, *args, **kwargs):
+        """Segmenter worker running in a thread (for debugging)
+
+        See :class:`MPOSegmenterWorker` for the arguments.
+        """
         super().__init__(*args, **kwargs)

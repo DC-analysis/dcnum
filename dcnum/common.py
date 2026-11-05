@@ -1,3 +1,4 @@
+"""Common helpers: lazy module loading, CPU counting, and worker handling"""
 from collections.abc import Callable
 import importlib
 import logging
@@ -100,9 +101,10 @@ def cpu_count() -> int:
 
     This method handles both cases by:
 
-    1. Get the number of physical CPUs using `psutil.cpu_count(logical=False)`
+    1. Get the number of physical CPUs using
+       ``psutil.cpu_count(logical=False)``
     2. Get the number of CPUs according to process affinity
-    3. Get the number of CPUs using `multiprocessing.cpu_count()`
+    3. Get the number of CPUs using ``multiprocessing.cpu_count()``
     4. Return the minimum of all of the above
     """
     num_cpus = []
@@ -151,6 +153,30 @@ def join_worker(worker,
 
 
 def start_workers_threaded(worker_list, logger, name):
+    """Start a list of workers sequentially in a separate thread
+
+    The workers' ``start`` methods are called one after another in a
+    background thread, so that spawning (which may take a while for
+    processes) does not block the calling thread. If a worker fails
+    to spawn with a :class:`BrokenPipeError`, an error is logged and
+    :class:`DCNUMHaltInterrupt` is raised in that thread.
+
+    Parameters
+    ----------
+    worker_list: list
+        Workers (e.g. :class:`threading.Thread` or
+        :class:`multiprocessing.Process` instances) to start
+    logger: logging.Logger
+        Logger used for reporting the spawn time and errors
+    name: str
+        Name describing the workers, used in log messages
+
+    Returns
+    -------
+    thread: threading.Thread
+        The (already started) thread that starts the workers;
+        join it to wait until all workers are started
+    """
     def target(worker_list, logger, name):
         tw0 = time.perf_counter()
         w = None

@@ -1,3 +1,5 @@
+"""Segmenter base class for single-threaded operation"""
+
 import abc
 
 import numpy as np
@@ -15,10 +17,17 @@ class STOSegmenter(Segmenter, abc.ABC):
                  ):
         """Segmenter with single thread operation
 
+        Subclasses implement ``segment_algorithm`` for a 3D stack of
+        images, which is segmented at once in the calling thread
+        (e.g. on a GPU).
+
         Parameters
         ----------
+        num_workers: int
+            Must be None or 1 (a ValueError is raised otherwise)
         kwargs_mask: dict
-            Keyword arguments for mask post-processing (see `process_labels`)
+            Keyword arguments for mask post-processing (see
+            ``process_labels``)
         debug: bool
             Debugging parameters
         kwargs:
@@ -36,7 +45,7 @@ class STOSegmenter(Segmenter, abc.ABC):
                       images: np.ndarray,
                       bg_off: np.ndarray | None = None,
                       ):
-        """Perform batch segmentation of `images`
+        """Perform batch segmentation of ``images``
 
         Before segmentation, an optional background offset correction with
         ``bg_off`` is performed. After segmentation, mask postprocessing is
@@ -44,16 +53,17 @@ class STOSegmenter(Segmenter, abc.ABC):
 
         Parameters
         ----------
-        images: 3d np.ndarray of shape (N, Y, X)
-            The time-series image data. First axis is time.
-        bg_off: 1D np.ndarray of length N
-            Optional 1D numpy array with background offset
+        images: np.ndarray
+            The time-series image data of shape (N, Y, X). First axis
+            is time.
+        bg_off: np.ndarray
+            Optional 1D numpy array of length N with background offset
 
         Notes
         -----
         - If the segmentation algorithm only accepts background-corrected
-          images, then `images` must already be background-corrected,
-          except for the optional `bg_off`.
+          images, then ``images`` must already be background-corrected,
+          except for the optional ``bg_off``.
         """
         segm = self.segment_algorithm_wrapper()
 
@@ -72,7 +82,7 @@ class STOSegmenter(Segmenter, abc.ABC):
         return mask
 
     def segment_single(self, image, bg_off: float | None = None):
-        """This is a convenience-wrapper around `segment_batch`"""
+        """This is a convenience-wrapper around ``segment_batch``"""
         if bg_off is None:
             bg_off_batch = None
         else:

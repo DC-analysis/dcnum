@@ -1,3 +1,4 @@
+"""Rolling median background image computation"""
 import queue
 import time
 
@@ -17,16 +18,16 @@ class BackgroundRollMed(Background):
                  batch_size=10000, compress=True, num_cpus=None):
         """Rolling median RT-DC background image computation
 
-        1. There is one big shared array `shared_input` that contains
+        1. There is one big shared array ``shared_input`` that contains
            the image data for each batch.
         2. User specifies batch size (10000) and kernel size (default
            is 100)
-        3. There is a second shared array `shared_output` that contains
-           the median values corresponding to the data in `shared_input`.
+        3. There is a second shared array ``shared_output`` that contains
+           the median values corresponding to the data in ``shared_input``.
         4. Background computation is done by copying the input images
            from a file into the shared array.
         5. The input array is split into and workers compute the
-           rolling median for each point in `shared_input`.
+           rolling median for each point in ``shared_input``.
 
         Parameters
         ----------
@@ -35,8 +36,8 @@ class BackgroundRollMed(Background):
             the "evtens/image" dataset or an array-like object that
             behaves like an image stack (first axis enumerates events)
         output_path: pathlib.Path
-            Path to the output file. If `input_data` is a path, you can
-            set `output_path` to the same path to write directly to the
+            Path to the output file. If ``input_data`` is a path, you can
+            set ``output_path`` to the same path to write directly to the
             input file. The data are written in the "events/image_bg"
             dataset in the output file.
         kernel_size: int
@@ -52,7 +53,7 @@ class BackgroundRollMed(Background):
             for faster processing.
         num_cpus: int
             Number of CPUs to use for median computation. Defaults to
-            `dcnum.common.cpu_count()`.
+            :func:`dcnum.common.cpu_count`.
         """
         super().__init__(
             input_data=input_data,
@@ -89,18 +90,18 @@ class BackgroundRollMed(Background):
         # https://stackoverflow.com/questions/37705974
         self.shared_input = np.ctypeslib.as_array(
             self.shared_input_raw).reshape(batch_size + kernel_size, -1)
-        """numpy array reshaped view on `self.shared_input_raw`.
+        """numpy array reshaped view on ``self.shared_input_raw``.
         The first axis enumerating the events
         """
 
         self.shared_output = np.ctypeslib.as_array(
             self.shared_output_raw).reshape(batch_size, -1)
-        """numpy array reshaped view on `self.shared_output_raw`.
+        """numpy array reshaped view on ``self.shared_output_raw``.
         The first axis enumerating the events
         """
 
         self.current_batch = 0
-        """current batch index (see `self.process` and `process_next_batch`)"""
+        """current batch index (see ``process`` and ``process_next_batch``)"""
 
         self.worker_counter = mp_spawn.Value("q", 0)
         """counter tracking process of workers"""
@@ -153,7 +154,7 @@ class BackgroundRollMed(Background):
     def get_slices_for_batch(self, batch_index=0):
         """Returns slices for getting the input and writing to output
 
-        The input slice is `self.kernel_size` longer.
+        The input slice is ``self.kernel_size`` longer.
         """
         # We always take `kernel_size` more events from the input data,
         # but we increment with `batch_size`.
@@ -171,7 +172,7 @@ class BackgroundRollMed(Background):
         return slice_in, slice_out, output_size
 
     def map_iterator(self):
-        """Iterates over arguments for `compute_median_for_slice`"""
+        """Iterates over arguments for ``compute_median_for_slice``"""
         pixels_per_job = self.image_shape[0]
         ii = 0
         while True:  # TODO: turn into for-loop using data size
@@ -253,7 +254,7 @@ class WorkerRollMed(mp_spawn.Process):
         self.kernel_size = kernel_size
 
     def run(self):
-        """Main loop of worker process (breaks when `self.counter` <0)"""
+        """Main loop of worker process (breaks when ``self.counter`` <0)"""
         try:
             # confirm single-threadedness (prints to log)
             confirm_single_threaded()
@@ -281,6 +282,10 @@ class WorkerRollMed(mp_spawn.Process):
             return
 
     def start(self):
+        """Start the worker process in a single-threaded environment
+
+        See :class:`dcnum.os_env_st.RequestSingleThreaded`.
+        """
         # Set all relevant os environment variables such libraries in the
         # new process only use single-threaded computation.
         with RequestSingleThreaded():
@@ -300,7 +305,7 @@ def compute_median_for_slice(shared_input, shared_output, kernel_size,
         The total size of this array is
         ``batch_size * kernel_size * number_of_pixels_in_the_image``.
     shared_output: multiprocessing.RawArray
-        Used for storing the result. Note that the last `kernel_size`
+        Used for storing the result. Note that the last ``kernel_size``
         elements for each pixel in this output array are junk data
         (because it is a rolling median).
     kernel_size: int
@@ -311,10 +316,10 @@ def compute_median_for_slice(shared_input, shared_output, kernel_size,
         compute the rolling median. Note that output_size + kernel_size
         events are taken from shared_input
     job_slice: slice
-        Now this is the important part. We can write to `shared_input`
+        Now this is the important part. We can write to ``shared_input``
         and shared_output from multiple processes. This slice tells
         us which part of the data we are working on. Only this slice
-        will be edited in `shared_output`. This slice defines how
+        will be edited in ``shared_output``. This slice defines how
         many pixels we are looking at.
     """
     input_size = output_size + kernel_size

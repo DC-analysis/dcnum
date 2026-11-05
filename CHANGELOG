@@ -1,6 +1,13 @@
 0.31.1
+ - fix: pipeline failed for relative `path_in` when `path_out` is in a
+   different directory (basin path resolved relative to the wrong directory)
+ - fix: `DCNumJobRunner.get_status` counted plumbing progress twice
+ - fix: register `atexit` removal of temporary files only once per job
+ - fix: `bg_off` ignored for padded batches in `task_segment_images`
  - docs: add overview of the data pipeline with figures
  - docs: update outdated pipeline sequence in design section
+ - docs: correct description of `bg_off` computation in `BackgroundSparseMed`
+ - docs: complete docstrings for the API reference and fix all Sphinx warnings
 0.31.0
  - feat: introduce `UNISegmenter` which is handled by `UniversalWorker`
  - feat: `torchuni` segmenter with openvino/torch.jit/inductor" backends

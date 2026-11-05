@@ -1,3 +1,4 @@
+"""Base class for collecting events from a queue and writing them"""
 import collections
 from collections import deque
 import logging
@@ -30,9 +31,12 @@ class QueueWriterBase:
         """Write events from a queue to an .rtdc file
 
         Events coming from a queue cannot be guaranteed to be in order.
-        The :class:`.QueueWriterThread` uses a :class:`.EventStash`
+        This base class is used by
+        :class:`~dcnum.write.queue_writer_thread.QueueWriterThread` and
+        :class:`~dcnum.write.queue_writer_process.QueueWriterProcess`,
+        which use an :class:`~dcnum.write.event_stash.EventStash`
         to sort events into the correct order before sending them to
-        the :class:`ChunkWriter` for storage.
+        the :class:`~dcnum.write.chunk_writer.ChunkWriter` for storage.
 
         Parameters
         ----------
@@ -42,7 +46,7 @@ class QueueWriterBase:
         write_queue_size:
             A `mp.Value` that is populated with the number of event
             chunks waiting to be written to the output file by
-            the `ChunkWriter`.
+            the :class:`~dcnum.write.chunk_writer.ChunkWriter`.
         feat_nevents:
             This 1D array contains the number of events for each frame
             in the input data. This serves two purposes: (1) it allows
@@ -62,8 +66,10 @@ class QueueWriterBase:
             once and put into `writer_dq`. For instance, with a value of
             500, at least 500 items are taken from the `event_queue`
             (they should match the expected frame index, frame indices
-            that do not match are kept in a :class:`.EventStash`). Then,
-            for each frame, we may have multiple or None events, so the
+            that do not match are kept in a buffer until the
+            corresponding :class:`~dcnum.write.event_stash.EventStash`
+            is created). Then, for each frame, we may have multiple or
+            None events, so the
             output size could be 513 which is computed via
             `np.sum(feat_nevents[idx:idx+write_threshold])`.
         """
@@ -99,6 +105,7 @@ class QueueWriterBase:
         """Number of frames from `data` written to `writer_dq`"""
 
     def get_logger(self):
+        """Return a logger for this writer with ``self.log_level`` set"""
         # We do not set the `self.logger` property, because that will cause
         # problems with the QueueWriterProcess (since logger has a thread
         # attached to it). It is safer to create the logger in `run` instead.

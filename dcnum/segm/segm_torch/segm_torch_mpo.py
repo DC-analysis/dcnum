@@ -1,3 +1,5 @@
+"""PyTorch segmenter (multiprocessing operation)"""
+
 import numpy as np
 
 from ..segmenter_mpo import MPOSegmenter
@@ -16,7 +18,8 @@ class SegmentTorchMPO(TorchSegmenterBase, MPOSegmenter):
     @staticmethod
     def segment_algorithm(image, *,
                           model_file: str | None = None):
-        """
+        """Segment a single image with a PyTorch model on the CPU
+
         Parameters
         ----------
         image: 2d ndarray
@@ -28,8 +31,8 @@ class SegmentTorchMPO(TorchSegmenterBase, MPOSegmenter):
 
         Returns
         -------
-        mask: 2d boolean or integer ndarray
-            mask or labeling image for the give index
+        mask: 2d boolean ndarray
+            mask image with the same shape as ``image``
         """
         if model_file is None:
             raise ValueError("Please specify a .dcnm model file!")

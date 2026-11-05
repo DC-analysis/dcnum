@@ -1,3 +1,5 @@
+"""PyTorch segmenter (single-threaded operation)"""
+
 import numpy as np
 
 from ..segmenter_sto import STOSegmenter
@@ -14,6 +16,7 @@ class SegmentTorchSTO(TorchSegmenterBase, STOSegmenter):
     requires_model_format_version = "1.0"
 
     def log_info(self, logger):
+        """Log information about the GPU and the recommended batch size"""
         model_file = self.kwargs["model_file"]
         device = "cuda:0"
 
@@ -36,6 +39,7 @@ class SegmentTorchSTO(TorchSegmenterBase, STOSegmenter):
 
     @staticmethod
     def is_available():
+        """Return True if PyTorch is installed and CUDA is available"""
         available = False
         if TorchSegmenterBase.is_available():
             available = torch.cuda.is_available()
@@ -104,7 +108,8 @@ class SegmentTorchSTO(TorchSegmenterBase, STOSegmenter):
     def segment_algorithm(images,
                           *,
                           model_file: str | None = None):
-        """
+        """Segment images in batches with a PyTorch model on the GPU
+
         Parameters
         ----------
         images: 3d ndarray
@@ -116,7 +121,7 @@ class SegmentTorchSTO(TorchSegmenterBase, STOSegmenter):
 
         Returns
         -------
-        mask: 2d boolean or integer ndarray
+        mask: 3d boolean ndarray
             mask images of shape (N, H, W)
         """
         if model_file is None:
