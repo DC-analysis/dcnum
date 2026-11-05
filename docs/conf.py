@@ -23,6 +23,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).parent / "extensions"))
 # -- Project information -----------------------------------------------------
 
 project = 'dcnum'
+github_project = 'DC-analysis/' + project
 copyright = '2023, Paul Müller'
 author = 'Paul Müller'
 
@@ -80,6 +81,15 @@ numfig = True
 
 # include source of matplotlib plots
 plot_include_source = True
+
+# link to the documentation of other projects
+intersphinx_mapping = {
+    "python": ("https://docs.python.org/3", None),
+    "h5py": ("https://docs.h5py.org/en/stable/", None),
+    "numpy": ("https://numpy.org/doc/stable/", None),
+    "scipy": ("https://docs.scipy.org/doc/scipy/", None),
+    "skimage": ("https://scikit-image.org/docs/stable/", None),
+}
 
 autoapi_dirs = ['../dcnum']
 autoapi_python_class_content = "init"

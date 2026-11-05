@@ -1,3 +1,5 @@
+0.31.1
+ - docs: add changelog section, introduction and intersphinx links
 0.31.0
  - feat: introduce `UNISegmenter` which is handled by `UniversalWorker`
  - feat: `torchuni` segmenter with openvino/torch.jit/inductor" backends
@@ -60,7 +62,7 @@
  - enh: start `UniversalWorker`s in background thread
  - enh: add `HDF5Data.image_num_chunks`
  - enh: mitigate race conditions with `StateWarden`
- - ref: rename `get_lock` to ``get_counter_lock` in `SlotRegister`
+ - ref: rename `get_lock` to `get_counter_lock` in `SlotRegister`
  - ref: generalized interface for counters in `SlotRegister`
  - ref: move invalid mask notification to `DCNumJobRunner`
  - ref: migrate `write_queue_size` from `DCNumJobRunner` to `SlotRegister`
@@ -170,13 +172,13 @@
  - setup: pin dependencies
 0.25.1
  - fix: catch ValueError when computing relative path on different anchors
- - ref: replace np.string_ with np.bytes_
+ - ref: replace `np.string_` with `np.bytes_`
  - ref: remove unused `data` argument to QueueCollectorThread
  - ref: minor speed-up for QueueCollectorThread
 0.25.0
  - feat: identify flickering in raw data via dcnum.read.detect_flickering
  - fix: handle out-of-bounds slice indexing for BaseImageChunkCache
- - fix: np.bool_ and np.floating not recognized in PPID parsing
+ - fix: `np.bool_` and `np.floating` not recognized in PPID parsing
 0.24.0
  - feat: add support for internal basins
  - feat: "image_bg" as internal basin for "sparsemed" background computer
@@ -476,7 +478,7 @@
  - enh: make sure that masks are written as uint8 to HDF5 files
  - ref: haralick texture computation now returns dict instead of recarray
  - ref: renamed HDF5WriterThread to DequeWriterThread
- - ref: renamed feature submodules (prepended "feat_")
+ - ref: renamed feature submodules (prepended `feat_`)
 0.0.7
  - enh: dataset keyword arguments and mode HDF5WriterThread
  - enh: speed-up of brightness feature computation
