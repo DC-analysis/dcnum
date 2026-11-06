@@ -1,5 +1,7 @@
 0.31.2
  - fix: online gates for `size_x` and `size_y` were ignored (regression in 0.16.6)
+ - fix: "pipeline:dcnum yield" and "experiment:event count" were set to
+   zero when the pipeline did not have to be rerun on a dcnum output file
 0.31.1
  - fix: pipeline failed for relative `path_in` when `path_out` is in a
    different directory (basin path resolved relative to the wrong directory)

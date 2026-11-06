@@ -1305,6 +1305,52 @@ def test_simple_pipeline_in_thread():
         runner.join()
 
 
+@pytest.mark.parametrize("basin_strategy", ["drain", "tap"])
+def test_recomputation_not_necessary_event_count(basin_strategy):
+    """Event count must be preserved when the pipeline is not rerun
+
+    In dcnum 0.31.1, running the pipeline on its own output with
+    identical settings resulted in "pipeline:dcnum yield" and
+    "experiment:event count" being set to zero.
+    """
+    path_orig = retrieve_data("fmt-hdf5_cytoshot_full-features_2023.zip")
+    path = path_orig.with_name("input.rtdc")
+    with read.concatenated_hdf5_data(5 * [path_orig], path_out=path):
+        pass
+    path_out1 = path_orig.with_name("out1.rtdc")
+    path_out2 = path_orig.with_name("out2.rtdc")
+
+    job1 = logic.DCNumPipelineJob(path_in=path,
+                                  path_out=path_out1,
+                                  basin_strategy=basin_strategy,
+                                  debug=True)
+    with logic.DCNumJobRunner(job=job1) as runner:
+        runner.run()
+
+    with h5py.File(path_out1) as h5:
+        evyield = h5.attrs["pipeline:dcnum yield"]
+        assert evyield > 0, "sanity check"
+        assert h5.attrs["experiment:event count"] == evyield
+
+    # The log names contain the start time in seconds.
+    time.sleep(1.1)
+
+    job2 = logic.DCNumPipelineJob(path_in=path_out1,
+                                  path_out=path_out2,
+                                  basin_strategy=basin_strategy,
+                                  debug=True)
+    with logic.DCNumJobRunner(job=job2) as runner:
+        runner.run()
+
+    with h5py.File(path_out2) as h5:
+        assert h5.attrs["pipeline:dcnum yield"] == evyield
+        assert h5.attrs["experiment:event count"] == evyield
+
+    with read.HDF5Data(path_out2) as hd:
+        assert len(hd) == evyield
+        assert len(hd["deform"]) == evyield
+
+
 @pytest.mark.parametrize("attr,oldval,newbg", [
     # Changes that trigger computation of new background
     ["pipeline:dcnum generation", "1", True],
