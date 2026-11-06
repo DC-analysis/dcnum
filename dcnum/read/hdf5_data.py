@@ -24,6 +24,43 @@ class BasinIdentifierMismatchError(BaseException):
     """Used when basin identifiers do not match"""
 
 
+class BasinFileGroup:
+    def __init__(self,
+                 h5group: h5py.Group,  # type: ignore
+                 nested_data: dict):
+        """The "events" group of a file basin including nested features
+
+        Parameters
+        ----------
+        h5group: h5py.Group
+            the "events" group of the basin file
+        nested_data: dict
+            (index-mapped) datasets of features that are not
+            in `h5group`, but in internal basins of the basin file
+        """
+        self.h5group = h5group
+        self.nested_data = nested_data
+
+    def __contains__(self, feat):
+        return feat in self.nested_data or feat in self.h5group
+
+    def __getitem__(self, feat):
+        if feat in self.nested_data:
+            return self.nested_data[feat]
+        return self.h5group[feat]
+
+    @property
+    def file(self):
+        return self.h5group.file
+
+    @property
+    def id(self):
+        return self.h5group.id
+
+    def keys(self):
+        return sorted(set(self.h5group.keys()) | set(self.nested_data))
+
+
 class HDF5Data:
     """HDF5 (.rtdc) input file data instance"""
     def __init__(self,
@@ -630,7 +667,35 @@ class HDF5Data:
                 # metadata, then these basins are indeed nested, and
                 # we consider that ok as well.
                 features = sorted(h5group.keys())
+            elif nested := [f for f in features if f not in h5group]:
+                # The basin file may define these features in its own
+                # internal basins (e.g. "image_bg" from sparsemed
+                # background correction, see :func:`create_with_basins`).
+                nested_data = self._get_basin_data_file_nested(h5, nested)
+                h5group = BasinFileGroup(h5group, nested_data)
+                # Do not advertise features we cannot access.
+                features = [f for f in features if f in h5group]
         return h5group, features
+
+    @staticmethod
+    def _get_basin_data_file_nested(h5, features):
+        """Return (mapped) datasets of `features` in internal basins"""
+        nested_data = {}
+        for bn_dict in HDF5Data.extract_basin_dicts(h5, check=False):
+            if bn_dict["type"] != "internal":
+                continue
+            bn_grp = h5[bn_dict["paths"][0]]
+            for feat in bn_dict["features"]:
+                if (feat in features
+                        and feat not in nested_data
+                        and feat in bn_grp):
+                    ds = bn_grp[feat]
+                    if (basinmap := bn_dict.get("mapping")) is not None:
+                        ds = get_mapped_object(
+                            obj=ds,
+                            index_mapping=h5["events"][basinmap][:])
+                    nested_data[feat] = ds
+        return nested_data
 
     def _get_basin_data_internal(self, bn_dict):
         # The group name is normally "basin_events"

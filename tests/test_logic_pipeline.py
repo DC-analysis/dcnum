@@ -1351,6 +1351,57 @@ def test_recomputation_not_necessary_event_count(basin_strategy):
         assert len(hd["deform"]) == evyield
 
 
+@pytest.mark.parametrize("basin_strategy", ["drain", "tap"])
+def test_recomputation_segmentation_only_internal_background(basin_strategy):
+    """Rerun only segmentation for an input with internal "image_bg" basin
+
+    In dcnum 0.31.1, the pipeline hung forever, because the background
+    images were not accessible via the temporary input file.
+    """
+    path_orig = retrieve_data("fmt-hdf5_cytoshot_full-features_2023.zip")
+    path = path_orig.with_name("input.rtdc")
+    with read.concatenated_hdf5_data(5 * [path_orig], path_out=path):
+        pass
+    path_out1 = path_orig.with_name("out1.rtdc")
+    path_out2 = path_orig.with_name("out2.rtdc")
+
+    job1 = logic.DCNumPipelineJob(path_in=path,
+                                  path_out=path_out1,
+                                  basin_strategy=basin_strategy,
+                                  debug=True)
+    with logic.DCNumJobRunner(job=job1) as runner:
+        runner.run()
+
+    with h5py.File(path_out1) as h5:
+        # sparsemed background images are stored in an internal basin
+        assert "image_bg" in h5["basin_events"], "sanity check"
+        bg_id = h5.attrs["pipeline:dcnum background"]
+
+    # The log names contain the start time in seconds.
+    time.sleep(1.1)
+
+    # different segmenter, same background
+    job2 = logic.DCNumPipelineJob(path_in=path_out1,
+                                  path_out=path_out2,
+                                  segmenter_kwargs={"thresh": -4},
+                                  basin_strategy=basin_strategy,
+                                  debug=True)
+    with logic.DCNumJobRunner(job=job2) as runner:
+        runner.run()
+
+    with h5py.File(path_out2) as h5:
+        assert h5.attrs["pipeline:dcnum background"] == bg_id
+        assert h5.attrs["pipeline:dcnum yield"] > 0
+        assert "image_bg" in h5["basin_events"]
+        basinmap0 = h5["events/basinmap0"][:]
+
+    with read.HDF5Data(path_out1) as hd1, read.HDF5Data(path_out2) as hd2:
+        assert "image_bg" in hd2
+        for idx2, idx1 in enumerate(basinmap0):
+            assert np.array_equal(hd2["image_bg"][idx2],
+                                  hd1["image_bg"][idx1])
+
+
 @pytest.mark.parametrize("attr,oldval,newbg", [
     # Changes that trigger computation of new background
     ["pipeline:dcnum generation", "1", True],

@@ -2,6 +2,10 @@
  - fix: online gates for `size_x` and `size_y` were ignored (regression in 0.16.6)
  - fix: "pipeline:dcnum yield" and "experiment:event count" were set to
    zero when the pipeline did not have to be rerun on a dcnum output file
+ - fix: features stored in internal basins of a file basin (e.g. sparsemed
+   "image_bg" in files from `create_with_basins`) could not be accessed,
+   causing the pipeline to hang when only segmentation was rerun on a dcnum
+   output file (regression in 0.26.0)
 0.31.1
  - fix: pipeline failed for relative `path_in` when `path_out` is in a
    different directory (basin path resolved relative to the wrong directory)
