@@ -446,6 +446,9 @@ class DCNumJobRunner(threading.Thread):
             self.task_segment_extract()
         else:
             # scenario A
+            # The sanity check above made sure that the input file
+            # contains exactly the events of the previous pipeline run.
+            self.event_count = len(self.draw)
             # Access the temporary input HDF5Data so that the underlying
             # basin file is created and close it immediately afterward.
             self.dtin.close()
