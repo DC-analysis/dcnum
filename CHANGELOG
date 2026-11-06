@@ -1,5 +1,6 @@
-0.31.1
+0.31.2
  - fix: online gates for `size_x` and `size_y` were ignored (regression in 0.16.6)
+0.31.1
  - fix: pipeline failed for relative `path_in` when `path_out` is in a
    different directory (basin path resolved relative to the wrong directory)
  - fix: `DCNumJobRunner.get_status` counted plumbing progress twice
