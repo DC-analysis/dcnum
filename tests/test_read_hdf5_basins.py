@@ -414,3 +414,49 @@ def test_basin_sorting(mapping, numevents):
         # The others should be sorted
         assert hd.basins[1]["name"] == "test basin A"
         assert hd.basins[2]["name"] == "test basin R"
+
+
+@pytest.mark.parametrize("index_mapping", [None, [3, 1, 7]])
+def test_basin_nested_internal_basin(index_mapping):
+    """File basins may list features from internal basins of the basin file
+
+    This is the case for files created with :func:`write.create_with_basins`
+    from a dcnum output file with sparsemed background correction (the
+    "image_bg" feature is stored in an internal basin). In dcnum 0.31.1,
+    accessing these features resulted in a KeyError.
+    """
+    path_orig = retrieve_data("fmt-hdf5_cytoshot_full-features_2023.zip")
+    path_src = path_orig.with_name("source.rtdc")
+    path = path_orig.with_name("nested.rtdc")
+
+    # Create a source file with "image_bg" in an internal basin
+    with h5py.File(path_orig) as h5:
+        image = h5["events/image"][:]
+    size = image.shape[0]
+    bg_images = np.zeros((2,) + image.shape[1:], dtype=np.uint8)
+    bg_images[0] = 100
+    bg_images[1] = 200
+    bg_map = np.zeros(size, dtype=np.uint64)
+    bg_map[size // 2:] = 1
+    with h5py.File(path_orig) as src, h5py.File(path_src, "w") as dst:
+        write.copy_metadata(h5_src=src, h5_dst=dst)
+        hw = write.HDF5Writer(dst)
+        hw.store_feature_chunk("image", image)
+        hw.store_basin(name="background images",
+                       description="internal basin",
+                       mapping=bg_map,
+                       internal_data={"image_bg": bg_images},
+                       )
+
+    write.create_with_basins(path_out=path, basin_paths=[path_src])
+
+    with read.HDF5Data(path_src, index_mapping=index_mapping) as hs, \
+            read.HDF5Data(path, index_mapping=index_mapping) as hd:
+        assert "image_bg" in hs
+        assert "image_bg" in hd
+        assert len(hd) == len(hs)
+        assert np.array_equal(hd["image_bg"][:], hs["image_bg"][:])
+        assert np.array_equal(hd["image"][:], hs["image"][:])
+        if index_mapping is None:
+            assert np.all(hd["image_bg"][0] == 100)
+            assert np.all(hd["image_bg"][size - 1] == 200)

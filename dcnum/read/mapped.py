@@ -95,7 +95,7 @@ def get_mapped_object(obj, index_mapping=None):
 
     Parameters
     ----------
-    obj: h5py.Dataset
+    obj: h5py.Dataset | dcnum.read.mapped.MappedHDF5Dataset
         dataset to map
     index_mapping: int | slice | list | np.ndarray | None
         index mapping (see ``get_mapping_indices``); if None,
@@ -110,7 +110,8 @@ def get_mapped_object(obj, index_mapping=None):
     Raises
     ------
     ValueError
-        If ``index_mapping`` is set and ``obj`` is not an HDF5 dataset
+        If ``index_mapping`` is set and ``obj`` is not a (mapped) HDF5
+        dataset
     """
     if index_mapping is None:
         return obj
@@ -118,6 +119,12 @@ def get_mapped_object(obj, index_mapping=None):
         return MappedHDF5Dataset(
             obj,
             mapping_indices=get_mapping_indices(index_mapping))
+    elif isinstance(obj, MappedHDF5Dataset):
+        # combine both mappings
+        return MappedHDF5Dataset(
+            obj.h5ds,
+            mapping_indices=obj.mapping_indices[
+                get_mapping_indices(index_mapping)])
     else:
         raise ValueError(f"No recipe to convert object of type {type(obj)} "
                          f"({obj}) to an index-mapped object")

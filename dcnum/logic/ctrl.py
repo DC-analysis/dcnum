@@ -685,24 +685,30 @@ class DCNumJobRunner(threading.Thread):
                 [self.draw.h5, ["image", "bg_off"], "optional"],
             ]
 
-            # Store image_bg as an internal basin, if defined in input
-            for idx in range(len(self.dtin.basins)):
-                bn_dict = self.dtin.basins[idx]
+            # Store image_bg as an internal basin, if defined in input.
+            # Recomputed background images are stored in `self.dtin`.
+            # Otherwise, they are only referenced by `self.dtin` and we
+            # have to get them from `self.draw` (identical event indices).
+            bg_sources = [self.dtin]
+            if "image_bg" not in self.dtin.h5["events"]:
+                bg_sources.append(self.draw)
+            internal_bg_basins = [(hd, bn_dict)
+                                  for hd in bg_sources
+                                  for bn_dict in hd.basins]
+            for hd, bn_dict in internal_bg_basins:
                 if (bn_dict["type"] == "internal"
                         and "image_bg" in bn_dict["features"]):
                     self.logger.info(
                         "Copying internal basin background images")
-                    bn_grp, bn_feats, bn_map = self.dtin.get_basin_data(idx)
-                    assert "image_bg" in bn_feats
                     # Load all images into memory (should only be ~600)
-                    bg_images1 = self.dtin.h5["basin_events"]["image_bg"][:]
+                    bg_images1 = hd.h5["basin_events"]["image_bg"][:]
                     # Get the original internal mapping for these images
                     # Note that `basinmap0` always refers to indices in the
                     # original raw input file, and not to indices in an
                     # optional mapped input file (using `index_mapping`).
-                    # Therefore, we do `self.dtin.h5["events"]["basinmap0"]`
-                    # instead of `self.dtin["basinmap0"]`
-                    basinmap_in = self.dtin.h5["events"][bn_dict["mapping"]][:]
+                    # Therefore, we do `hd.h5["events"]["basinmap0"]`
+                    # instead of `hd["basinmap0"]`
+                    basinmap_in = hd.h5["events"][bn_dict["mapping"]][:]
                     # Now we have to convert the indices in `basinmap_in`
                     # to indices in the output file.
                     basinmap1 = basinmap_in[basinmap0]
