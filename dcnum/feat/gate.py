@@ -81,10 +81,9 @@ class Gate:
 
         # This is somehow hard-coded in Shape-In (minimum size is 3px)
         px_size = data.pixel_size
-        ogates["size_x"] = [
-            max(ogates.get("size_x min", 0), 3 * px_size), None]
-        ogates["size_y"] = [
-            max(ogates.get("size_y min", 0), 3 * px_size), None]
+        for feat in ["size_x", "size_y"]:
+            fmin, fmax = ogates.get(feat, [None, None])
+            ogates[feat] = [max(fmin or 0, 3 * px_size), fmax]
 
         return ogates
 

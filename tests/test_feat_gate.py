@@ -83,6 +83,37 @@ def test_gate_events():
         assert np.all(exp == act)
 
 
+def test_gate_events_size_limits():
+    """In dcnum 0.16.6 to 0.31.1, online gates for size_x/size_y were lost"""
+    path = retrieve_data(
+        "fmt-hdf5_cytoshot_full-features_legacy_allev_2023.zip")
+    with h5py.File(path, "a") as h5:
+        h5.attrs["online_filter:size_x min"] = 5
+        h5.attrs["online_filter:size_x max"] = 20
+        h5.attrs["online_filter:size_x soft limit"] = False
+        h5.attrs["online_filter:size_y max"] = 10
+        h5.attrs["online_filter:size_y soft limit"] = False
+
+    with HDF5Data(path) as hd:
+        px_size = hd.pixel_size
+        gt = Gate(data=hd, online_gates=True)
+        assert gt.box_gates["size_x"] == [5, 20]
+        # the minimum size of 3 pixels (Shape-In) still applies
+        assert gt.box_gates["size_y"] == [3 * px_size, 10]
+
+        act = gt.gate_events(dict(
+            size_x=np.array([2, 10, 50], dtype=float),
+            size_y=np.array([5, 5, 5], dtype=float),
+        ))
+        assert np.all(act == [False, True, False])
+
+        act = gt.gate_events(dict(
+            size_x=np.array([10, 10, 10], dtype=float),
+            size_y=np.array([0.5, 5, 50], dtype=float),
+        ))
+        assert np.all(act == [False, True, False])
+
+
 def test_gate_feature():
     path = retrieve_data(
         "fmt-hdf5_cytoshot_full-features_legacy_allev_2023.zip")
