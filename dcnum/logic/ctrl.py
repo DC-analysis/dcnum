@@ -689,9 +689,9 @@ class DCNumJobRunner(threading.Thread):
             # Recomputed background images are stored in `self.dtin`.
             # Otherwise, they are only referenced by `self.dtin` and we
             # have to get them from `self.draw` (identical event indices).
-            bg_sources = [self.dtin]
-            if "image_bg" not in self.dtin.h5["events"]:
-                bg_sources.append(self.draw)
+            # The following for-loop will check `self.dtin` first, and
+            # break when `image_bg` was found.
+            bg_sources = [self.dtin, self.draw]
             internal_bg_basins = [(hd, bn_dict)
                                   for hd in bg_sources
                                   for bn_dict in hd.basins]
