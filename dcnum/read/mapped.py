@@ -26,8 +26,14 @@ class MappedHDF5Dataset:
         self.shape = (mapping_indices.size,) + h5ds.shape[1:]
 
     def __getitem__(self, idx):
+        if isinstance(idx, tuple):
+            # Only the first index refers to events, the remaining
+            # indices are applied to the event data (e.g. image ROI).
+            idx, idx_data = idx[0], idx[1:]
+        else:
+            idx_data = ()
         if isinstance(idx, numbers.Integral):
-            return self.h5ds[self.mapping_indices[idx]]
+            return self.h5ds[(self.mapping_indices[idx],) + idx_data]
         else:
             midx = self.mapping_indices[idx]
             start = np.min(midx)
@@ -37,7 +43,7 @@ class MappedHDF5Dataset:
             # Since h5py is very slow at indexing with arrays,
             # we instead read the data in chunks from the input file,
             # and perform the mapping afterward using the numpy arrays.
-            data_in = self.h5ds[start:stop]
+            data_in = self.h5ds[(slice(start, stop),) + idx_data]
             # Determine the indices that we need from that chunk.
             data = data_in[midx - start]
             return data
