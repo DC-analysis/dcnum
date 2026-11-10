@@ -974,6 +974,29 @@ def test_no_events_found():
         assert "No events found" in logdat
 
 
+def test_simple_pipeline_load_error(monkeypatch):
+    """A data loading error must stop the pipeline
+
+    In dcnum 0.31.2, the error was logged and loading was retried
+    indefinitely (the pipeline hung).
+    """
+    path_orig = retrieve_data("fmt-hdf5_cytoshot_full-features_2023.zip")
+
+    def load_error(self, idx):
+        raise OSError(f"Cannot load chunk {idx}")
+
+    monkeypatch.setattr(logic.chunk_slot.ChunkSlot, "load", load_error)
+
+    job = logic.DCNumPipelineJob(path_in=path_orig, debug=True)
+    with logic.DCNumJobRunner(job=job) as runner:
+        runner.start()
+        runner.join(timeout=60)
+        assert not runner.is_alive()
+        assert runner.state == "error"
+        assert "Universal worker failed" in runner.error_tb
+    assert not job["path_out"].exists()
+
+
 @pytest.mark.parametrize("debug", [True, False])
 def test_simple_pipeline(debug):
     path_orig = retrieve_data("fmt-hdf5_cytoshot_full-features_2023.zip")

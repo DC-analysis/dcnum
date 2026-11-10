@@ -468,9 +468,6 @@ class SlotRegister:
             except KeyboardInterrupt:
                 self.event_queue.cancel_join_thread()
                 raise
-            except BaseException:
-                if logger is not None:
-                    logger.error(traceback.format_exc())
             finally:
                 lock.release()
         return did_something
