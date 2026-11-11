@@ -209,6 +209,59 @@ def test_basin_strategy_tap():
             assert False, "Something went wrong, the basin is missing"
 
 
+@pytest.mark.parametrize("basin_strategy", ["drain", "tap"])
+@pytest.mark.parametrize("index_mapping", [None, slice(0, 100)])
+def test_basin_strategy_tap_input(basin_strategy, index_mapping):
+    """Process an output file that was created with "tap" strategy
+
+    In dcnum 0.31.2, the features that the input file only provided
+    via basins (e.g. "image" or "frame") were missing in the output.
+    """
+    path_orig = retrieve_data("fmt-hdf5_cytoshot_full-features_2023.zip")
+    path = path_orig.with_name("input.rtdc")
+    with read.concatenated_hdf5_data(5 * [path_orig], path_out=path):
+        pass
+    path_tap = path_orig.with_name("tap.rtdc")
+    path_out = path_orig.with_name("out.rtdc")
+
+    job1 = logic.DCNumPipelineJob(path_in=path,
+                                  path_out=path_tap,
+                                  basin_strategy="tap",
+                                  debug=True)
+    with logic.DCNumJobRunner(job=job1) as runner:
+        runner.run()
+
+    with h5py.File(path_tap) as h5:
+        assert "image" not in h5["events"], "sanity check"
+        assert "frame" not in h5["events"], "sanity check"
+
+    # The log names contain the start time in seconds.
+    time.sleep(1.1)
+
+    job2 = logic.DCNumPipelineJob(path_in=path_tap,
+                                  path_out=path_out,
+                                  segmenter_kwargs={"thresh": -4},
+                                  data_kwargs={"index_mapping": index_mapping},
+                                  basin_strategy=basin_strategy,
+                                  debug=True)
+    with logic.DCNumJobRunner(job=job2) as runner:
+        runner.run()
+
+    with h5py.File(path_out) as h5:
+        for feat in ["image", "frame"]:
+            assert (feat in h5["events"]) == (basin_strategy == "drain")
+
+    with read.HDF5Data(path) as hd_in, read.HDF5Data(path_out) as hd:
+        assert len(hd) > 0
+        frame_in = hd_in["frame"][:]
+        assert "image" in hd
+        assert "frame" in hd
+        # The images must match the frame numbers
+        for idx in range(len(hd)):
+            idx_in = np.where(frame_in == hd["frame"][idx])[0][0]
+            assert np.array_equal(hd["image"][idx], hd_in["image"][idx_in])
+
+
 def test_basin_strategy_tap_rollmed():
     """When basin strategy is "tap", features are mapped from the input"""
     path_orig = retrieve_data("fmt-hdf5_cytoshot_full-features_2023.zip")

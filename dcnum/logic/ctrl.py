@@ -731,6 +731,17 @@ class DCNumJobRunner(threading.Thread):
 
             # Copy the features required in the output file.
             for hin, feats, importance in feats_raw:
+                if hin == self.draw.h5:
+                    # Features that the raw input file only defines via
+                    # file basins (e.g. "image" or "frame" if the input
+                    # file was created with the "tap" basin strategy).
+                    self._transfer_raw_basin_features(
+                        hw=hw,
+                        feats=[f for f in feats
+                               if (f not in hin["events"]
+                                   and f not in hout["events"])],
+                        basinmap0=basinmap0,
+                    )
                 # Only consider features that are available in the input
                 # and that are not already in the output.
                 feats = [f for f in feats
@@ -773,6 +784,75 @@ class DCNumJobRunner(threading.Thread):
                 self._progress_bn += 1 / len(feats_raw)
         t_tot = time.perf_counter() - t0
         self.logger.info(f"Enforcing basin strategy time: {t_tot:.1f}s")
+
+    def _transfer_raw_basin_features(self, hw, feats, basinmap0):
+        """Transfer features from file basins of the raw input file
+
+        Depending on the basin strategy, the features are either copied
+        to the output file ("drain") or made available via a basin
+        that refers to the basin file of the raw input file ("tap").
+
+        Parameters
+        ----------
+        hw: HDF5Writer
+            writer for the output file
+        feats: list of str
+            features to transfer
+        basinmap0: np.ndarray | None
+            mapping from output events to raw input events
+        """
+        feats = list(feats)
+        for idx, bn_dict in enumerate(self.draw.basins):
+            if not feats:
+                break
+            if bn_dict["type"] != "file":
+                continue
+            bn_grp, _, _ = self.draw.get_basin_data(idx)
+            if bn_grp is None:
+                # basin not available
+                continue
+            h5bn = bn_grp.file
+            bn_feats = [f for f in feats
+                        if (f in h5bn["events"]
+                            and f in (bn_dict.get("features")
+                                      or h5bn["events"].keys()))]
+            if not bn_feats:
+                continue
+            # Mapping from the output file to the basin file
+            if bn_dict.get("mapping") is None:
+                mapping = basinmap0
+            else:
+                mapping = self.draw.h5["events"][bn_dict["mapping"]][:]
+                if basinmap0 is not None:
+                    mapping = mapping[basinmap0]
+            if self.job["basin_strategy"] == "drain":
+                self.logger.debug(f"Transferring {bn_feats} from input "
+                                  f"basin to output file")
+                copy_features(h5_src=h5bn,
+                              h5_dst=hw.h5,
+                              features=bn_feats,
+                              mapping=mapping,
+                              ds_kwds=self.job.get_hdf5_dataset_kwargs(),
+                              )
+            else:
+                self.logger.debug(f"Creating basin for {bn_feats} from "
+                                  f"input basin")
+                pin = pathlib.Path(h5bn.filename).resolve()
+                paths = [pin]
+                pout = pathlib.Path(hw.h5.filename).resolve().parent
+                try:
+                    paths.append(os.path.relpath(pin, pout))
+                except ValueError:
+                    # different drive letter on Windows
+                    pass
+                hw.store_basin(name="dcnum basin (propagated)",
+                               features=bn_feats,
+                               mapping=mapping,
+                               paths=paths,
+                               description=f"Created with dcnum {version}",
+                               identifier=bn_dict.get("identifier"),
+                               )
+            feats = [f for f in feats if f not in bn_feats]
 
     def task_segment_extract(self):
         """Perform segmentation and feature extraction

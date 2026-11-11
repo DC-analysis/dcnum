@@ -1,4 +1,7 @@
 0.31.3
+ - fix: features that the input file only provided via file basins (e.g.
+   "image" or "frame" in an output file created with the "tap" basin
+   strategy) were missing in the output file
  - fix: the pipeline hung when a universal worker failed (e.g. retrying
    to load a chunk forever or an unexpected error during feature
    extraction); the job now stops with an error
