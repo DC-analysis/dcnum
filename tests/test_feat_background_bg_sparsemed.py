@@ -5,7 +5,7 @@ import numpy as np
 import pytest
 
 from dcnum.feat.feat_background import bg_sparse_median
-from dcnum import read
+from dcnum import read, write
 
 from helper_methods import retrieve_data
 
@@ -178,6 +178,43 @@ def test_median_sparsemend_full_with_file(tmp_path):
         assert "image_bg" not in h5["/events"]
         assert "image_bg" in h5["/basin_events"]
         assert h5["/basin_events/image_bg"].shape == (8, 80, 400)
+
+
+def test_median_sparsemend_full_with_file_mapped_basin(tmp_path):
+    """Offset correction for images from a mapped basin
+
+    In dcnum 0.31.2, this resulted in an IndexError, because the
+    mapped image data did not support tuple indexing.
+    """
+    path_orig = retrieve_data("fmt-hdf5_cytoshot_full-features_2023.zip")
+    path_in = tmp_path / "mapped.rtdc"
+    with h5py.File(path_orig) as src, h5py.File(path_in, "w") as dst:
+        write.copy_metadata(h5_src=src, h5_dst=dst)
+        size = src["events/image"].shape[0]
+        hw = write.HDF5Writer(dst)
+        hw.store_feature_chunk("time", src["events/time"][:])
+        hw.store_basin(name="mapped image basin",
+                       paths=[path_orig],
+                       features=["image"],
+                       mapping=np.arange(size),
+                       )
+
+    bg_images = []
+    for path in [path_orig, path_in]:
+        output_path = tmp_path / f"out_{path.name}"
+        with bg_sparse_median.BackgroundSparseMed(input_data=path,
+                                                  output_path=output_path,
+                                                  kernel_size=7,
+                                                  split_time=0.011,
+                                                  offset_correction=True,
+                                                  ) as bic:
+            assert bic.kernel_size == 7
+            bic.process()
+        with h5py.File(output_path) as h5:
+            assert "bg_off" in h5["events"]
+            bg_images.append(h5["basin_events/image_bg"][:])
+
+    assert np.array_equal(bg_images[0], bg_images[1])
 
 
 def test_median_sparsemend_full_with_file_no_time(tmp_path):
