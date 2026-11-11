@@ -1,4 +1,7 @@
 0.31.3
+ - fix: the pipeline hung when a universal worker failed (e.g. retrying
+   to load a chunk forever or an unexpected error during feature
+   extraction); the job now stops with an error
  - fix: `MappedHDF5Dataset` did not support tuple indexing, breaking the
    sparsemed offset correction for image data from a mapped basin (e.g.
    when recomputing the background of a dcnum output file)

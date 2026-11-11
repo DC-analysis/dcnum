@@ -103,6 +103,8 @@ class UniversalWorker:
 
         self.started = mp_spawn.Value("i", 0)
         self.completed = mp_spawn.Value("i", 0)
+        self.failed = mp_spawn.Value("i", 0)
+        """set to 1 if a task raised an exception"""
 
         # Logging needs to be set up after `start` is called, otherwise
         # it looks like we have the same PID as the parent process. We
@@ -247,6 +249,7 @@ class UniversalWorker:
             return
         except BaseException:
             logger.error(traceback.format_exc())
+            self.failed.value = 1
 
         if wait_time_writer > 10:
             logger.warning(f"Waited a total of {wait_time_writer:.1f}s "

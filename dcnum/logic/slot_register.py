@@ -6,7 +6,6 @@ import logging
 import multiprocessing as mp
 import sys
 import time
-import traceback
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -468,9 +467,6 @@ class SlotRegister:
             except KeyboardInterrupt:
                 self.event_queue.cancel_join_thread()
                 raise
-            except BaseException:
-                if logger is not None:
-                    logger.error(traceback.format_exc())
             finally:
                 lock.release()
         return did_something
@@ -764,16 +760,13 @@ class SlotRegister:
                             except KeyboardInterrupt:
                                 self.event_queue.cancel_join_thread()
                                 raise
-                            except BaseException:
-                                logger.error(traceback.format_exc())
+                            if events:
+                                key0 = next(iter(events.keys()))
+                                nevents = len(events[key0])
+                                self.feat_nevents[index] = nevents
                             else:
-                                if events:
-                                    key0 = next(iter(events.keys()))
-                                    nevents = len(events[key0])
-                                    self.feat_nevents[index] = nevents
-                                else:
-                                    self.feat_nevents[index] = 0
-                                self.event_queue.put((index, events))
+                                self.feat_nevents[index] = 0
+                            self.event_queue.put((index, events))
 
                     did_something = True
                 else:

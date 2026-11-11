@@ -104,6 +104,9 @@ class QueueWriterBase:
         self.written_frames = mp_spawn.Value("Q", 0)
         """Number of frames from `data` written to `writer_dq`"""
 
+        self.abort = mp_spawn.Value("i", 0)
+        """Set to 1 to stop collecting data (e.g. when a worker failed)"""
+
     def get_logger(self):
         """Return a logger for this writer with ``self.log_level`` set"""
         # We do not set the `self.logger` property, because that will cause
@@ -151,7 +154,7 @@ class QueueWriterBase:
         # Indexes the current frame in the input HDF5Data instance.
         last_idx = 0
         logger.debug("Started collector thread")
-        while True:
+        while not self.abort.value:
             # Slice of the shared nevents array. If it contains -1 values,
             # this means that some of the frames have not yet been processed.
             cur_nevents = self.feat_nevents[
@@ -195,7 +198,7 @@ class QueueWriterBase:
                 # Now, get the data from the queue until we have everything
                 # that belongs to our chunk (this might also populate
                 # buffer_dq).
-                while True:
+                while not self.abort.value:
                     try:
                         idx, events = self.event_queue.get(timeout=.3)
                     except queue.Empty:
@@ -211,6 +214,9 @@ class QueueWriterBase:
                         buffer_dq.append((idx, events))
                     if stash.is_complete():
                         break
+                else:
+                    # aborted
+                    break
 
             # Send the data from the stash to the writer. The stash has
             # already put everything into the correct order.
