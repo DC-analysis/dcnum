@@ -845,7 +845,7 @@ class DCNumJobRunner(threading.Thread):
                 except ValueError:
                     # different drive letter on Windows
                     pass
-                hw.store_basin(name="dcnum basin",
+                hw.store_basin(name="dcnum basin (propagated)",
                                features=bn_feats,
                                mapping=mapping,
                                paths=paths,
