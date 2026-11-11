@@ -2,6 +2,12 @@
  - fix: features that the input file only provided via file basins (e.g.
    "image" or "frame" in an output file created with the "tap" basin
    strategy) were missing in the output file
+ - fix: the pipeline hung when a universal worker failed (e.g. retrying
+   to load a chunk forever or an unexpected error during feature
+   extraction); the job now stops with an error
+ - fix: `MappedHDF5Dataset` did not support tuple indexing, breaking the
+   sparsemed offset correction for image data from a mapped basin (e.g.
+   when recomputing the background of a dcnum output file)
 0.31.2
  - fix: online gates for `size_x` and `size_y` were ignored (regression in 0.16.6)
  - fix: "pipeline:dcnum yield" and "experiment:event count" were set to

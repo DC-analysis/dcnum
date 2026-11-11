@@ -8,6 +8,7 @@ import numpy as np
 import pytest
 
 from dcnum import logic, read, segm, write
+from dcnum.feat import QueueEventExtractor
 from dcnum.meta import ppid
 
 from helper_methods import retrieve_data
@@ -1025,6 +1026,56 @@ def test_no_events_found():
         # Check the logs
         logdat = " ".join(get_log(hd, time.strftime("dcnum-log-%Y")))
         assert "No events found" in logdat
+
+
+def test_simple_pipeline_load_error(monkeypatch):
+    """A data loading error must stop the pipeline
+
+    In dcnum 0.31.2, the error was logged and loading was retried
+    indefinitely (the pipeline hung).
+    """
+    path_orig = retrieve_data("fmt-hdf5_cytoshot_full-features_2023.zip")
+
+    def load_error(self, idx):
+        raise OSError(f"Cannot load chunk {idx}")
+
+    monkeypatch.setattr(logic.chunk_slot.ChunkSlot, "load", load_error)
+
+    job = logic.DCNumPipelineJob(path_in=path_orig, debug=True)
+    with logic.DCNumJobRunner(job=job) as runner:
+        runner.start()
+        runner.join(timeout=60)
+        assert not runner.is_alive()
+        assert runner.state == "error"
+        assert "Universal worker failed" in runner.error_tb
+    assert not job["path_out"].exists()
+
+
+def test_simple_pipeline_feature_extraction_error(monkeypatch):
+    """An unexpected feature extraction error must stop the pipeline
+
+    In dcnum 0.31.2, the error was logged and the frame was never sent
+    to the writer (the pipeline hung).
+    """
+    path_orig = retrieve_data("fmt-hdf5_cytoshot_full-features_2023.zip")
+    process_label_orig = QueueEventExtractor.process_label
+
+    def process_label_error(self, index):
+        if index == 5:
+            raise ValueError("Unexpected error in frame 5")
+        return process_label_orig(self, index=index)
+
+    monkeypatch.setattr(QueueEventExtractor, "process_label",
+                        process_label_error)
+
+    job = logic.DCNumPipelineJob(path_in=path_orig, debug=True)
+    with logic.DCNumJobRunner(job=job) as runner:
+        runner.start()
+        runner.join(timeout=60)
+        assert not runner.is_alive()
+        assert runner.state == "error"
+        assert "Universal worker failed" in runner.error_tb
+    assert not job["path_out"].exists()
 
 
 @pytest.mark.parametrize("debug", [True, False])

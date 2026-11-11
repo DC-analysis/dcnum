@@ -1004,14 +1004,19 @@ class DCNumJobRunner(threading.Thread):
             time.sleep(.1)
             if frame_count == data_size:
                 break
-            else:
+            elif any(w.failed.value for w in uni_workers):
+                error = "Universal worker failed (see log for details)"
+                break
+            elif (all(not w.is_alive() for w in uni_workers)
+                    and any(not w.completed.value for w in uni_workers)):
                 # All workers have started, but did something go wrong?
-                if (all(not w.is_alive() for w in uni_workers)
-                        and any(not w.completed.value for w in uni_workers)):
-                    error = "Universal workers exited early"
-                    break
+                error = "Universal workers exited early"
+                break
 
         slot_register.state = "q"
+        if error:
+            # The writer would otherwise wait for the missing frames.
+            worker_write.abort.value = 1
 
         self.logger.info(
             f"Data load time: "
@@ -1073,6 +1078,8 @@ class DCNumJobRunner(threading.Thread):
 
         if error:
             self.logger.error(error)
+            # Do not create an incomplete output file.
+            raise RuntimeError(error)
         else:
             self.event_count = worker_write.written_events.value
             if self.event_count == 0:
