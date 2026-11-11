@@ -1,4 +1,8 @@
 0.31.3
+ - fix: `copy_features` wrote the data in the wrong order for an unsorted
+   `mapping`, so that e.g. "image" did not match the other features
+   for an unsorted "index_mapping" with the "drain" basin strategy
+   (regression in 0.23.3)
  - fix: features that the input file only provided via file basins (e.g.
    "image" or "frame" in an output file created with the "tap" basin
    strategy) were missing in the output file

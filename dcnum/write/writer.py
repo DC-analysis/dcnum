@@ -498,22 +498,33 @@ def copy_features(h5_src: h5py.File,  # type: ignore
             # Since h5py is very slow at indexing with arrays,
             # we instead read the data in chunks from the input file,
             # and perform the mapping afterward using the numpy arrays.
+            mapping = np.asarray(mapping)
             dsi = ei[feat]
             chunk_size = hw.get_best_nd_chunks(dsi[0].shape, dsi.dtype)[0]
             size_in = dsi.shape[0]
+            # The mapping is not necessarily sorted, so we allocate the
+            # output dataset and write the data to the output positions.
+            dso, _ = hw.require_feature(feat=feat,
+                                        item_shape=dsi.shape[1:],
+                                        feat_dtype=dsi.dtype)
+            dso.resize(mapping.size, axis=0)
             start = 0
             while start < size_in:
                 # Get a big chunk of data
                 big_chunk = 10 * chunk_size
                 stop = start + big_chunk
-                data_in = dsi[start:stop]
-                # Determine the indices that we need from that chunk.
-                mapping_idx = (start <= mapping) * (mapping < stop)
-                mapping_chunk = mapping[mapping_idx] - start
-                data = data_in[mapping_chunk]
-                # Note that HDF5 does its own caching, properly handling
-                # partial chunk writes.
-                hw.store_feature_chunk(feat, data)
+                # Determine the output positions that we need from that
+                # chunk (in increasing order, as required by h5py).
+                pos = np.flatnonzero((start <= mapping) & (mapping < stop))
+                if pos.size:
+                    data = dsi[start:stop][mapping[pos] - start]
+                    # Note that HDF5 does its own caching, properly
+                    # handling partial chunk writes.
+                    if pos[-1] - pos[0] + 1 == pos.size:
+                        # contiguous output positions (sorted mapping)
+                        dso[pos[0]:pos[-1] + 1] = data
+                    else:
+                        dso[pos] = data
                 # increment start
                 start = stop
 
