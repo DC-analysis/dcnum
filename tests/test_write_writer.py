@@ -123,6 +123,42 @@ def test_copy_features(mapping, mslice):
                       == h5_dst["events/aspect"][:])
 
 
+@pytest.mark.parametrize("mapping", [
+    # unsorted, spanning several of the chunks read from the input
+    [20000, 5, 15000, 5, 24999, 0],
+    # sorted with duplicates
+    [0, 0, 7, 12000, 12000, 24999],
+])
+def test_copy_features_mapping_chunks(tmp_path, mapping):
+    """The output must follow the order of the mapping"""
+    path = tmp_path / "source.hdf5"
+    path_wrt = tmp_path / "written.hdf5"
+    size = 25000
+    deform = np.arange(size, dtype=np.float64)
+    # large items, so that only few events are read at once
+    image = np.zeros((size // 100, 200, 200), dtype=np.float64)
+    image[:, 0, 0] = np.arange(size // 100)
+    with h5py.File(path, "w") as h5:
+        h5["events/deform"] = deform
+        h5["events/image"] = image
+
+    mapping = np.array(mapping)
+    mapping_image = mapping // 100
+    with h5py.File(path, "r") as h5_src, h5py.File(path_wrt, "w") as h5_dst:
+        write.copy_features(h5_src=h5_src,
+                            h5_dst=h5_dst,
+                            features=["deform"],
+                            mapping=mapping,
+                            )
+        write.copy_features(h5_src=h5_src,
+                            h5_dst=h5_dst,
+                            features=["image"],
+                            mapping=mapping_image,
+                            )
+        assert np.all(h5_dst["events/deform"][:] == deform[mapping])
+        assert np.all(h5_dst["events/image"][:] == image[mapping_image])
+
+
 def test_copy_features_error_exists():
     path = retrieve_data(
         "fmt-hdf5_cytoshot_full-features_legacy_allev_2023.zip")
