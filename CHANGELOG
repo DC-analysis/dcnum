@@ -1,4 +1,8 @@
 0.31.3
+ - fix: "basinmap1" of the internal sparsemed background basin had the
+   shape (1, N) when the output events matched the input frames (e.g. one
+   event per frame), so that "image_bg" returned all background images
+   for a single event (regression in 0.24.0)
  - fix: `copy_features` wrote the data in the wrong order for an unsorted
    `mapping`, so that e.g. "image" did not match the other features
    for an unsorted "index_mapping" with the "drain" basin strategy

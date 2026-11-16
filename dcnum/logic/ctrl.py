@@ -711,7 +711,12 @@ class DCNumJobRunner(threading.Thread):
                     basinmap_in = hd.h5["events"][bn_dict["mapping"]][:]
                     # Now we have to convert the indices in `basinmap_in`
                     # to indices in the output file.
-                    basinmap1 = basinmap_in[basinmap0]
+                    if basinmap0 is None:
+                        # The output events are identical to the input
+                        # events (e.g. one event per frame).
+                        basinmap1 = basinmap_in
+                    else:
+                        basinmap1 = basinmap_in[basinmap0]
                     # Store the internal mapping in the output file
                     hw.store_basin(name=bn_dict["name"],
                                    description=bn_dict["description"],

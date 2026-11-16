@@ -1326,6 +1326,50 @@ def test_pipeline_duplicate_images(debug):
             assert np.all(np.sort(area_um) == np.unique(area_um))
 
 
+@pytest.mark.parametrize("basin_strategy", ["drain", "tap"])
+def test_pipeline_one_event_per_frame_sparsemed(basin_strategy):
+    """Internal sparsemed basin when output events match input frames
+
+    When there is exactly one event per frame, "basinmap0" is not
+    stored in the output file and "basinmap1" must be one-dimensional.
+    """
+    h5path = retrieve_data("fmt-hdf5_cytoshot_full-features_2023.zip")
+    path = h5path.with_name("one_event_per_frame.rtdc")
+    size = 60
+    yy, xx = np.mgrid[0:80, 0:250]
+    images = np.full((size, 80, 250), 100, dtype=np.uint8)
+    for ii in range(size):
+        cx = 40 + (ii * 3) % 170
+        images[ii][((xx - cx) / 12) ** 2 + ((yy - 40) / 8) ** 2 < 1] = 50
+    with h5py.File(h5path) as h5_src, h5py.File(path, "w") as h5:
+        h5.attrs.update(h5_src.attrs)
+        h5.attrs["experiment:event count"] = size
+        h5["events/image"] = images
+        h5["events/frame"] = np.arange(size) + 1
+        h5["events/time"] = np.arange(size) * 0.01
+
+    job = logic.DCNumPipelineJob(
+        path_in=path,
+        background_code="sparsemed",
+        background_kwargs={"kernel_size": 20, "split_time": 0.1},
+        segmenter_code="thresh",
+        segmenter_kwargs={"thresh": -6},
+        basin_strategy=basin_strategy,
+        debug=True,
+    )
+    with logic.DCNumJobRunner(job=job) as runner:
+        runner.run()
+
+    with h5py.File(job["path_out"]) as h5:
+        assert h5["events/deform"].shape == (size,)
+        assert h5["events/basinmap1"].shape == (size,)
+
+    with read.HDF5Data(job["path_out"]) as hd:
+        assert len(hd) == size
+        assert hd["image_bg"][0].shape == (80, 250)
+        assert hd["image_bg"][:].shape == (size, 80, 250)
+
+
 @pytest.mark.parametrize("debug", [True, False])
 def test_simple_pipeline_no_offset_correction(debug):
     path_orig = retrieve_data("fmt-hdf5_cytoshot_full-features_2023.zip")
