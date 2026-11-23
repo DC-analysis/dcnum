@@ -971,6 +971,7 @@ class DCNumJobRunner(threading.Thread):
         worker_write.start()
 
         data_size = len(self.dtin)
+        error = None
 
         if not all(w.started.value for w in uni_workers):
             self.logger.info("Waiting for universal workers to start")
@@ -984,16 +985,15 @@ class DCNumJobRunner(threading.Thread):
             else:
                 time.sleep(0.1)
         else:
-            self.logger.error("Universal workers failed to spawn")
-            raise DCNUMHaltInterrupt("Universal workers failed to spawn")
+            # Stop the other workers and the writer below.
+            error = "Universal workers failed to spawn"
 
         # We can lean back now. We do not have to do anything
         # besides monitoring the progress.
-        error = None
         frame_count_prev = 0
         time_prev = time.perf_counter()
         segm_rate_array = np.zeros(20, dtype=float)
-        while True:
+        while not error:
             frame_count = worker_write.written_frames.value
             time_now = time.perf_counter()
             self.event_count = worker_write.written_events.value
@@ -1080,6 +1080,9 @@ class DCNumJobRunner(threading.Thread):
         # a problem with joining the universal workers when the queues are
         # not empty.
         for worker_uni in uni_workers:
+            if worker_uni.ident is None:
+                # This worker was never started (failed to spawn).
+                continue
             join_worker(worker=worker_uni,
                         logger=self.logger,
                         name="universal worker")
