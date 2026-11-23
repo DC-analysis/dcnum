@@ -170,6 +170,35 @@ def test_gate_mask():
         assert gt.gate_mask(mask2, mask_sum=np.sum(mask2))
 
 
+def test_gate_mask_size_thresh_zero():
+    """An explicit `size_thresh_mask=0` keeps all non-empty masks
+
+    In dcnum 0.31.2, 0 was replaced by the default value 10.
+    """
+    path = retrieve_data(
+        "fmt-hdf5_cytoshot_full-features_legacy_allev_2023.zip")
+    with h5py.File(path, "a") as h5:
+        h5.attrs["online_contour:bin area min"] = 0
+
+    with HDF5Data(path) as hd:
+        gt = Gate(data=hd, online_gates=False, size_thresh_mask=0)
+        assert gt.kwargs["size_thresh_mask"] == 0
+        assert gt.get_ppid() == "norm:o=0^s=0"
+        mask = np.zeros((20, 20), dtype=bool)
+        mask[2, 2] = True
+        assert gt.gate_mask(mask)
+        assert not gt.gate_mask(np.zeros((20, 20), dtype=bool))
+
+        # value from the metadata
+        gt2 = Gate(data=hd, online_gates=True)
+        assert gt2.kwargs["size_thresh_mask"] == 0
+        assert gt2.get_ppid() == "norm:o=1^s=0"
+
+        # round trip with the pipeline identifier
+        kw = Gate.get_ppkw_from_ppid(gt.get_ppid())
+        assert Gate(data=hd, **kw).kwargs["size_thresh_mask"] == 0
+
+
 def test_get_ppkw_from_ppid():
     kw = Gate.get_ppkw_from_ppid("norm:o=true^s=23")
     assert len(kw) == 2

@@ -64,6 +64,9 @@
  - fix: the cached arrays returned by `get_mapping_indices` could be
    modified by callers, changing the result of later calls; they are
    read-only now
+ - fix: an explicit `size_thresh_mask=0` for `Gate` (also via the
+   "bin area min" metadata with online gates) was replaced by the
+   default value 10
  - docs: comment on intended behavior of `fill_holes` (mask
    post-processing), Haralick texture features, and the sparsemed
    background assignment after cleansing
