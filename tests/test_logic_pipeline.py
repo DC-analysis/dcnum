@@ -862,6 +862,51 @@ def test_error_pipeline_log_file_remains():
     assert runner.path_log.exists(), "log file expected"
 
 
+@pytest.mark.parametrize("delete_temporary_files,log_exists", [
+    (None, True),
+    (True, False),
+    (False, True),
+])
+def test_error_pipeline_log_file_remains_in_thread(
+        monkeypatch, delete_temporary_files, log_exists):
+    """`join` must not delete the log file when the job failed
+
+    In dcnum 0.31.2, the log file was deleted by `join`.
+    """
+    path = retrieve_data("fmt-hdf5_cytoshot_full-features_2023.zip")
+
+    def basin_strategy_error(self):
+        raise ValueError("My Test Error In The Basin Strategy")
+
+    monkeypatch.setattr(logic.DCNumJobRunner, "task_enforce_basin_strategy",
+                        basin_strategy_error)
+
+    job = logic.DCNumPipelineJob(path_in=path,
+                                 path_out=path.with_name("test_out.rtdc"),
+                                 debug=True)
+    runner = logic.DCNumJobRunner(job=job)
+    runner.start()
+    if delete_temporary_files is None:
+        runner.join()
+    else:
+        runner.join(delete_temporary_files=delete_temporary_files)
+    assert runner.state == "error"
+    assert "My Test Error In The Basin Strategy" in runner.error_tb
+    assert runner.path_log.exists() == log_exists
+
+
+def test_pipeline_log_file_deleted_in_thread():
+    path = retrieve_data("fmt-hdf5_cytoshot_full-features_2023.zip")
+    job = logic.DCNumPipelineJob(path_in=path,
+                                 path_out=path.with_name("test_out.rtdc"),
+                                 debug=True)
+    runner = logic.DCNumJobRunner(job=job)
+    runner.start()
+    runner.join()
+    assert runner.state == "done"
+    assert not runner.path_log.exists(), "no log file expected"
+
+
 def test_simple_pipeline_bg_off_padded_batch():
     """In dcnum 0.31.0, bg_off was ignored for padded batches
 

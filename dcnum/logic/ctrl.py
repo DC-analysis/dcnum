@@ -171,7 +171,7 @@ class DCNumJobRunner(threading.Thread):
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         # If an error occurred, don't delete the log and basin files.
-        delete_temporary_files = exc_type is None
+        delete_temporary_files = exc_type is None and self.state != "error"
         self.close(delete_temporary_files=delete_temporary_files)
 
     @property
@@ -263,19 +263,24 @@ class DCNumJobRunner(threading.Thread):
             # We don't have to delete self.path_temp_out, since this one
             # is `rename`d to `self.job["path_out"]`.
 
-    def join(self, delete_temporary_files=True, *args, **kwargs):
+    def join(self, delete_temporary_files=None, *args, **kwargs):
         """Join the thread and then call :meth:`close`
 
         Parameters
         ----------
         delete_temporary_files: bool
-            passed to :meth:`close`
+            passed to :meth:`close`; If set to None (default), the
+            temporary files (including the log file) are only deleted
+            if the job did not end in the "error" state.
         *args:
             passed to :meth:`threading.Thread.join`
         **kwargs:
             passed to :meth:`threading.Thread.join`
         """
         super().join(*args, **kwargs)
+        if delete_temporary_files is None:
+            # Keep the log file for debugging if an error occurred.
+            delete_temporary_files = self.state != "error"
         # Close only after join
         self.close(delete_temporary_files=delete_temporary_files)
 
