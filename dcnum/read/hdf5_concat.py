@@ -28,7 +28,7 @@ def concatenated_hdf5_data(paths: list[pathlib.Path],
         If `None`, then the dataset is created in memory. If `True`
         (default), create a file on disk. If a pathlib.Path is specified,
         the dataset is written to that file. Note that datasets in memory
-        are likely not picklable (so don't use them for multiprocessing).
+        are likely not ``pickle``able (so don't use them for multiprocessing).
     compute_frame:
         Whether to compute the "events/frame" feature, taking the frame
         data from the input files and properly incrementing them along
