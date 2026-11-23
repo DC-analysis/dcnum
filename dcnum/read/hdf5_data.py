@@ -17,7 +17,9 @@ from ..common import h5py
 
 from .cache import HDF5ImageCache, ImageCorrCache, md5sum
 from .const import PROTECTED_FEATURES
-from .mapped import get_mapped_object, get_mapping_indices
+from .mapped import (
+    check_index_mapping, get_mapped_object, get_mapping_indices
+)
 
 
 class BasinIdentifierMismatchError(BaseException):
@@ -113,7 +115,9 @@ class HDF5Data:
             - slice: use the events defined by a slice
             - list: list of integers specifying the event indices to use
             Numpy indexing rules apply. E.g. to only process the first
-            100 events, set this to `100` or `slice(0, 100)`.
+            100 events, set this to `100` or `slice(0, 100)`. Negative
+            values are not allowed. Integers and slices are limited to
+            the size of the dataset (e.g. `slice(30, None)`).
         """
         # Init is in __setstate__ so we can pickle this class
         # and use it for multiprocessing.
@@ -125,6 +129,7 @@ class HDF5Data:
 
         # Optimize image chunk size
         with h5py.File(path, "r") as h5:
+            size = h5.attrs.get("experiment:event count")
             if "events/image" in h5:
                 h5ds = h5["events/image"]
                 if isinstance(h5ds, h5py.Dataset) and h5ds.chunks is not None:
@@ -159,6 +164,14 @@ class HDF5Data:
                            "index_mapping": index_mapping,
                            })
 
+        if index_mapping is not None:
+            # Make sure the index mapping is valid
+            self._index_mapping_indices = get_mapping_indices(
+                index_mapping, size=size)
+            if self._index_mapping_indices.size == 0:
+                raise ValueError(f"The `index_mapping` {index_mapping} does "
+                                 f"not select any events in {path}")
+
     def __contains__(self, item):
         return item in self.keys()
 
@@ -183,8 +196,9 @@ class HDF5Data:
                 # no mapping indices, just slice
                 dat_sc = self.h5["events"][feat][:]
             else:
-                dat_sc = get_mapped_object(self.h5["events"][feat],
-                                           index_mapping=self.index_mapping)[:]
+                dat_sc = get_mapped_object(
+                    self.h5["events"][feat],
+                    index_mapping=self.index_mapping_indices)[:]
             self._cache_scalar[feat] = dat_sc
             return self._cache_scalar[feat]
         else:
@@ -193,7 +207,7 @@ class HDF5Data:
                 warnings.warn(f"Feature {feat} not cached (possibly slow)")
                 return get_mapped_object(
                     obj=self.h5["events"][feat],
-                    index_mapping=self.index_mapping)
+                    index_mapping=self.index_mapping_indices)
             else:
                 # Check the basins
                 for idx in range(len(self.basins)):
@@ -322,14 +336,31 @@ class HDF5Data:
         self.image_chunk_size = state["image_chunk_size"]
 
         self.index_mapping = state["index_mapping"]
+        self._index_mapping_indices = None
 
     def __len__(self):
         if self._len is None:
             if self.index_mapping is not None:
-                self._len = get_mapping_indices(self.index_mapping).size
+                self._len = self.index_mapping_indices.size
             else:
                 self._len = self.h5.attrs["experiment:event count"]
         return self._len
+
+    @property
+    def index_mapping_indices(self) -> np.ndarray | None:
+        """Event indices selected by :attr:`index_mapping`
+
+        In contrast to :attr:`index_mapping` (which is used in the
+        pipeline identifier), integers and slices are limited to the
+        size of the dataset.
+        """
+        if self.index_mapping is None:
+            return None
+        if self._index_mapping_indices is None:
+            self._index_mapping_indices = get_mapping_indices(
+                self.index_mapping,
+                size=self.h5.attrs.get("experiment:event count"))
+        return self._index_mapping_indices
 
     @property
     def h5(self) -> h5py.File:
@@ -504,6 +535,7 @@ class HDF5Data:
     def get_ppid_index_mapping(index_mapping):
         """Return the pipeline identifier part for index mapping"""
         im = index_mapping
+        check_index_mapping(im)
         if im is None:
             dim = "0"
         elif isinstance(im, numbers.Integral):
@@ -611,7 +643,7 @@ class HDF5Data:
             feat_basinmap = bn_dict.get("mapping", None)
             if feat_basinmap is None:
                 # This is NOT a mapped basin.
-                index_mapping = self.index_mapping
+                index_mapping = self.index_mapping_indices
             else:
                 # This is a mapped basin. Create an indexing list.
                 if self.index_mapping is None:
@@ -619,7 +651,7 @@ class HDF5Data:
                     basinmap_idx = slice(None)
                 else:
                     # The current dataset is also mapped.
-                    basinmap_idx = get_mapping_indices(self.index_mapping)
+                    basinmap_idx = self.index_mapping_indices
                 basinmap = self.h5[f"events/{feat_basinmap}"]
                 index_mapping = basinmap[basinmap_idx]
 
@@ -719,7 +751,7 @@ class HDF5Data:
         if feat not in self._image_cache:
             if f"events/{feat}" in self.h5:
                 ds = self.h5[f"events/{feat}"]
-                idx_map = self.index_mapping
+                idx_map = self.index_mapping_indices
             else:
                 idx_map = None
                 # search all basins (internal basins are always first)

@@ -41,6 +41,13 @@
    size equaled the number of images
  - fix: sparse median background computation failed for input data
    with a duration of zero (e.g. a single image)
+ - fix: "index_mapping" values beyond the dataset size (e.g. `1000`
+   or `slice(30, 1000)`) resulted in a wrong dataset size and an
+   `IndexError`, and open-ended slices (e.g. `slice(30, None)`) were
+   not supported; they are now limited to the dataset size (the
+   pipeline identifier still contains the user-specified value)
+ - fix: negative "index_mapping" values and mappings that do not
+   select any events now raise a `ValueError`
  - docs: comment on intended behavior of `fill_holes` (mask
    post-processing), Haralick texture features, and the sparsemed
    background assignment after cleansing
