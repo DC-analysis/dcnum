@@ -91,7 +91,8 @@ class HDF5Data:
         pixel_size:
             pixel size in µm
         md5_5m:
-            MD5 sum of the first 5 MiB; computed if not provided
+            MD5 sum of the first 5 MiB; computed if not provided (for
+            file-like objects, a random identifier is used instead)
         meta:
             metadata dictionary; extracted from HDF5 attributes
             if not provided
@@ -610,9 +611,9 @@ class HDF5Data:
         return kwargs
 
     def get_basin_data(self, index: int) -> tuple[
-            h5py.Group,  # type: ignore
+            h5py.Group | None,  # type: ignore
             list,
-            int | slice | list | np.ndarray,
+            np.ndarray | None,
             ]:
         """Return HDF5Data info for a basin index in `self.basins`
 
@@ -628,9 +629,15 @@ class HDF5Data:
             listed in `features`
         features: list of str
             list of features made available by this basin
-        index_mapping:
-            a mapping (see `__init__`) that defines mapping from
-            the basin dataset to the referring dataset
+        index_mapping: np.ndarray or None
+            integer array that maps the events of the basin dataset to
+            the events of the referring dataset (None if neither the
+            basin nor the referring dataset are mapped)
+
+        Notes
+        -----
+        If a file basin cannot be found, ``group`` is None and
+        ``features`` is an empty list.
         """
         if index not in self._basin_data:
             bn_dict = self.basins[index]
@@ -697,7 +704,8 @@ class HDF5Data:
                 # should have been copied over to the parent file. This
                 # makes things a little cleaner, because basins are not
                 # nested, but all basins are available in the top file.
-                # See :func:`write.store_metadata` for copying metadata
+                # See :func:`dcnum.write.copy_metadata` and
+                # :func:`dcnum.write.copy_basins` for copying metadata
                 # between files.
                 # The writer can still specify "features" in the basin
                 # metadata, then these basins are indeed nested, and
@@ -815,7 +823,7 @@ def get_measurement_identifier(h5: h5py.Group  # type: ignore
                                ) -> str | None:
     """Return the measurement identifier for the given H5File object
 
-    The basin identifier is taken from the HDF5 attributes. If the
+    The measurement identifier is taken from the HDF5 attributes. If the
     "experiment:run identifier" attribute is not set, it is
     computed from the HDF5 attributes "experiment:time",
     "experiment:date", and "setup:identifier".

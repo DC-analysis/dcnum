@@ -230,9 +230,20 @@ def md5sum(path, blocksize=65536, count=0):
         path to the file
     blocksize: int
         block size in bytes read from the file
-        (set to `0` to hash the entire file)
     count: int
         number of blocks read from the file
+        (set to ``0`` to hash the entire file)
+
+    Returns
+    -------
+    md5: str
+        hexadecimal MD5 sum
+
+    Notes
+    -----
+    The result is cached (keyed by ``path``, ``blocksize``, and
+    ``count``), so changes to the file after the first call are
+    not reflected.
     """
     path = pathlib.Path(path)
 

@@ -88,9 +88,22 @@ class HDF5Writer:
         """Return best chunks for HDF5 datasets
 
         Chunking has performance implications. It’s recommended to keep the
-        total size of dataset chunks between 10 KiB and 1 MiB. This number
-        defines the maximum chunk size as well as half the maximum cache
-        size for each dataset.
+        total size of dataset chunks between 10 KiB and 1 MiB. The number
+        of events in a chunk is chosen such that the chunk size is
+        approximately 1 MiB, but it is limited to the range 10 to 1000
+        events.
+
+        Parameters
+        ----------
+        item_shape: tuple[int]
+            shape of one event (e.g. ``()`` for scalar features)
+        feat_dtype: np.dtype
+            dtype of the feature
+
+        Returns
+        -------
+        chunks: tuple[int]
+            chunk shape (number of events followed by ``item_shape``)
         """
         # set image feature chunk size to approximately 1MiB
         num_bytes = 1024 ** 2
@@ -118,8 +131,8 @@ class HDF5Writer:
             name of the feature
         item_shape: tuple[int]
             shape for one event of this feature, e.g. for a scalar
-            event, the shape would be `(1,)` and for an image, the
-            shape could be `(80, 300)`.
+            event, the shape would be ``()`` and for an image, the
+            shape could be ``(80, 300)``.
         feat_dtype: np.dtype
             dtype of the feature
         ds_kwds: dict
@@ -128,6 +141,13 @@ class HDF5Writer:
             name of the HDF5 group where the feature should be written to;
             defaults to the "events" group, but a different group can be
             specified for storing e.g. internal basin features.
+
+        Returns
+        -------
+        dset: h5py.Dataset
+            the (possibly existing) dataset of the feature
+        offset: int
+            number of events already stored in ``dset``
         """
         if group_name == "events":
             egroup = self.events
@@ -167,7 +187,7 @@ class HDF5Writer:
                     internal_data: dict | None = None,
                     identifier: str | None = None,
                     ):
-        """Write an HDF5-based file basin
+        """Write an HDF5-based file basin or an internal basin
 
         Parameters
         ----------
@@ -452,7 +472,9 @@ def copy_features(h5_src: h5py.File,  # type: ignore
                   ):
     """Copy feature data from one HDF5 file to another
 
-    The feature must not exist in the destination file.
+    The features must not exist in the destination file. Only scalar
+    features that already exist in the destination file with identical
+    values are skipped; otherwise, a :class:`ValueError` is raised.
 
     Parameters
     ----------
@@ -464,7 +486,9 @@ def copy_features(h5_src: h5py.File,  # type: ignore
         List of features to copy from source to destination
     mapping: 1D array
         If given, contains indices in the input file that should be
-        written to the output file. If set to None, all features are written.
+        written to the output file (event ``i`` in the output file is
+        event ``mapping[i]`` in the input file). If set to None, all
+        events are written.
     ds_kwds:
         keyword arguments with which to initialize new Datasets
         (e.g. compression); only relevant when `mapping is not None`

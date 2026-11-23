@@ -54,8 +54,9 @@ class QueueWriterBase:
             writing data from `write_threshold` frames, and (2) it
             allows us to keep track how many frames have actually been
             processed (and thus we can expect entries in `event_queue`
-            for). If an entry in this array is -1, this means that there
-            is no event in `event_queue`. See `write_threshold` below.
+            for). If an entry in this array is -1, this means that the
+            frame has not been processed yet. See ``write_threshold``
+            below.
         path_out:
             Output path for writer
         hdf5_dataset_kwargs:
