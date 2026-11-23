@@ -34,6 +34,9 @@
  - fix: `DCNumJobRunner.join` deleted the log file of a failed job; by
    default, temporary files are now kept when the job ended in the
    "error" state
+ - fix: slicing the image chunk caches (e.g. `HDF5Data.image[-5:]`)
+   returned wrong data for negative or empty slices and negative
+   steps, and out-of-bounds negative indices were not detected
  - docs: comment on intended behavior of `fill_holes` (mask
    post-processing), Haralick texture features, and the sparsemed
    background assignment after cleansing

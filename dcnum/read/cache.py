@@ -63,10 +63,9 @@ class BaseImageChunkCache(abc.ABC):
     def __getitem__(self, index):
         if isinstance(index, (slice, list, np.ndarray)):
             if isinstance(index, slice):
-                indices = np.arange(
-                    index.start or 0,
-                    min(index.stop, len(self)) if index.stop else len(self),
-                    index.step)
+                # same behavior as for numpy arrays (negative indices,
+                # negative steps, empty slices)
+                indices = range(*index.indices(len(self)))
             else:
                 indices = index
             array_out = np.empty((len(indices),) + self.image_shape,
@@ -93,12 +92,12 @@ class BaseImageChunkCache(abc.ABC):
         """Implemented in subclass to obtain actual data"""
 
     def _get_chunk_index_for_index(self, index):
-        if index < 0:
-            index = self._len + index
-        elif index >= self._len:
+        if not -self._len <= index < self._len:
             raise IndexError(
                 f"Index {index} out of bounds for HDF5ImageCache "
                 f"of size {self._len}")
+        if index < 0:
+            index = self._len + index
         index = int(index)  # convert np.uint64 to int, so we get ints below
         chunk_index = index // self.chunk_size
         sub_index = index % self.chunk_size

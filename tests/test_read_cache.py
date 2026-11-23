@@ -1,6 +1,8 @@
 from dcnum.write import HDF5Writer
-from dcnum.read import HDF5Data, concatenated_hdf5_data
+from dcnum.read import HDF5Data, HDF5ImageCache, concatenated_hdf5_data
 
+import h5py
+import numpy as np
 import pytest
 
 from helper_methods import retrieve_data
@@ -80,3 +82,34 @@ def test_image_read_cache_contiguous():
     with HDF5Data(path, image_chunk_size=81) as hd:
         assert hd.h5["events/image"].chunks is None
         assert hd.image.chunk_size == 81, "chunking to 81, contiguous arrays"
+
+
+@pytest.mark.parametrize("index", [
+    slice(None),
+    slice(-5, None),
+    slice(None, -1),
+    slice(0, 0),
+    slice(5, 2),
+    slice(None, None, -1),
+    slice(3, 30, 4),
+    slice(-30, -3, 2),
+    slice(10, 1000),
+])
+def test_image_read_cache_slicing(index):
+    """Slicing must behave like slicing a numpy array"""
+    h5path = retrieve_data("fmt-hdf5_cytoshot_full-features_2023.zip")
+    with h5py.File(h5path) as h5:
+        ds = h5["events/image"]
+        ref = ds[:]
+        cache = HDF5ImageCache(ds, chunk_size=7)
+        assert np.array_equal(cache[index], ref[index])
+
+
+@pytest.mark.parametrize("index", [-41, -45, 40, 45])
+def test_image_read_cache_index_out_of_bounds(index):
+    h5path = retrieve_data("fmt-hdf5_cytoshot_full-features_2023.zip")
+    with h5py.File(h5path) as h5:
+        cache = HDF5ImageCache(h5["events/image"], chunk_size=7)
+        assert len(cache) == 40
+        with pytest.raises(IndexError, match=f"Index {index} out of bounds"):
+            cache[index]
