@@ -1,5 +1,6 @@
 from dcnum.meta import ppid
 from dcnum import segm
+from dcnum.segm.segm_thresh import SegmentThresh
 
 import pytest
 
@@ -25,6 +26,24 @@ def test_ppid_decoding_thresh_check_kwargs():
     assert kwargs["kwargs_mask"]["clear_border"] is False
     assert kwargs["kwargs_mask"]["fill_holes"] is True
     assert kwargs["kwargs_mask"]["closing_disk"] == 3
+
+
+def test_ppid_decoding_subclass_of_segmenter_subclass():
+    """Subclasses of concrete segmenters must be found (dcnum 0.31.2)"""
+    class SegmentThreshCustom(SegmentThresh):
+        pass
+
+    segm.get_segmenters.cache_clear()
+    segm_dict = segm.get_segmenters()
+    assert segm_dict["threshcustom"] is SegmentThreshCustom
+    assert segm_dict["thresh"] is SegmentThresh
+    # abstract base classes are not segmenters
+    assert segm.UNISegmenter not in segm_dict.values()
+
+    segm_ppid = SegmentThreshCustom(thresh=-4).get_ppid()
+    assert segm_ppid == "threshcustom:t=-4:cle=1^f=1^clo=2"
+    kwargs = segm.Segmenter.get_ppkw_from_ppid(segm_ppid)
+    assert kwargs["thresh"] == -4
 
 
 def test_ppid_kwargs_to_ppid():
