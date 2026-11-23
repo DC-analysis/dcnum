@@ -61,6 +61,9 @@
    of the "dcnum-job" and "dcnum-log" logs if necessary
  - fix: brightness features failed with a `ZeroDivisionError` for
    empty masks; they are NaN now
+ - fix: the cached arrays returned by `get_mapping_indices` could be
+   modified by callers, changing the result of later calls; they are
+   read-only now
  - docs: comment on intended behavior of `fill_holes` (mask
    post-processing), Haralick texture features, and the sparsemed
    background assignment after cleansing

@@ -2,7 +2,9 @@ import h5py
 import numpy as np
 import pytest
 
-from dcnum.read.mapped import MappedHDF5Dataset, get_mapped_object
+from dcnum.read.mapped import (
+    MappedHDF5Dataset, get_mapped_object, get_mapping_indices
+)
 
 
 @pytest.mark.parametrize("idx", [
@@ -23,3 +25,17 @@ def test_mapped_dataset_getitem(tmp_path, idx):
         assert isinstance(mds, MappedHDF5Dataset)
         assert mds.shape == (4, 3, 4)
         assert np.array_equal(mds[idx], data[mapping][idx])
+
+
+@pytest.mark.parametrize("index_mapping", [10, slice(2, 8), slice(1, 9, 2)])
+def test_mapping_indices_cache_not_modifiable(index_mapping):
+    """Cached mapping indices are shared and must not be modified
+
+    In dcnum 0.31.2, modifying the returned array changed the result
+    of all later calls with the same mapping.
+    """
+    indices = get_mapping_indices(index_mapping)
+    reference = indices.copy()
+    with pytest.raises(ValueError, match="read-only"):
+        indices[0] = 99
+    assert np.all(get_mapping_indices(index_mapping) == reference)
