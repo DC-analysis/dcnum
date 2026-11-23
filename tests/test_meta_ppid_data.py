@@ -43,3 +43,10 @@ def test_ppid_required_method_definitions():
     assert hasattr(dat_class, "get_ppid_from_ppkw")
     assert hasattr(dat_class, "get_ppkw_from_ppid")
     assert dat_class.get_ppid_code() == dat_code
+
+
+@pytest.mark.parametrize("index_mapping", [-5, slice(-5, None), [3, -1]])
+def test_ppid_encoding_dat_negative_index_mapping(index_mapping):
+    with pytest.raises(ValueError, match="Negative values"):
+        HDF5Data.get_ppid_from_ppkw({"pixel_size": 0.34,
+                                     "index_mapping": index_mapping})

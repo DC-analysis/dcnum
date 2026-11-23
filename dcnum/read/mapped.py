@@ -52,8 +52,32 @@ class MappedHDF5Dataset:
         return self.shape[0]
 
 
+def check_index_mapping(
+        index_mapping: numbers.Integral | slice | list | np.ndarray | None
+        ):
+    """Raise a ValueError if `index_mapping` contains negative values"""
+    if index_mapping is None:
+        return
+    elif isinstance(index_mapping, numbers.Integral):
+        values = [index_mapping]
+    elif isinstance(index_mapping, slice):
+        values = [index_mapping.start, index_mapping.stop,
+                  index_mapping.step]
+    elif isinstance(index_mapping, (np.ndarray, list)):
+        indices = np.asarray(index_mapping)
+        values = [np.min(indices)] if indices.size else []
+    else:
+        # Type is checked elsewhere
+        values = []
+    for val in values:
+        if val is not None and val < 0:
+            raise ValueError(f"Negative values in `index_mapping` are not "
+                             f"allowed: {index_mapping}")
+
+
 def get_mapping_indices(
-        index_mapping: numbers.Integral | slice | list | np.ndarray
+        index_mapping: numbers.Integral | slice | list | np.ndarray,
+        size: int | None = None,
         ):
     """Return integer numpy array with mapping indices for a range
 
@@ -64,14 +88,38 @@ def get_mapping_indices(
         - integer: results in np.arange(integer)
         - slice: results in np.arange(slice.start, slice.stop, slice.step)
         - list or np.ndarray: returns the input as uint32 array
+        Negative values are not allowed.
+    size: int
+        Size of the dataset to which the mapping is applied. If given,
+        integers and slices are limited to the dataset size (e.g.
+        `slice(30, None)` or `slice(30, 1000)` for a dataset of size
+        40 results in `np.arange(30, 40)`), and a `ValueError` is
+        raised if a list or array contains indices beyond the dataset.
+        Slices without start or stop require `size`.
+
+    Raises
+    ------
+    ValueError
+        If `index_mapping` contains negative values or if it contains
+        indices beyond `size`
     """
+    check_index_mapping(index_mapping)
     if isinstance(index_mapping, numbers.Integral):
-        return _get_mapping_indices_cached(index_mapping)
+        if size is not None:
+            index_mapping = min(index_mapping, size)
+        return _get_mapping_indices_cached(int(index_mapping))
     elif isinstance(index_mapping, slice):
+        if size is not None:
+            # Limit slice to the dataset size
+            return _get_mapping_indices_cached(index_mapping.indices(size))
         return _get_mapping_indices_cached(
             (index_mapping.start, index_mapping.stop, index_mapping.step))
     elif isinstance(index_mapping, (np.ndarray, list)):
-        return np.asarray(index_mapping, dtype=np.uint32)
+        indices = np.asarray(index_mapping)
+        if indices.size and size is not None and np.max(indices) >= size:
+            raise ValueError(f"`index_mapping` contains indices beyond "
+                             f"the dataset size {size}")
+        return np.asarray(indices, dtype=np.uint32)
     else:
         raise ValueError(f"Invalid type for `index_mapping`: "
                          f"{type(index_mapping)} ({index_mapping})")

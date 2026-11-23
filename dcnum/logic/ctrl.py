@@ -25,7 +25,7 @@ from ..segm import SegmenterManagerThread, UNISegmenter, get_segmenters
 from ..segm.segmenter_mpo import MPOSegmenter
 from ..segm.segmenter_sto import STOSegmenter
 from ..meta import ppid
-from ..read import HDF5Data, get_measurement_identifier, get_mapping_indices
+from ..read import HDF5Data, get_measurement_identifier
 from .._version import version, version_tuple
 from ..write import (
     HDF5Writer, QueueWriterProcess, QueueWriterThread, copy_features,
@@ -652,7 +652,7 @@ class DCNumJobRunner(threading.Thread):
                     basinmap0 = idx_um
                 else:
                     self.logger.info("Converting input mapping")
-                    basinmap0 = get_mapping_indices(raw_im)[idx_um]
+                    basinmap0 = self.draw.index_mapping_indices[idx_um]
                     # Store the mapped basin data in the output file.
                     hw.store_feature_chunk("basinmap0", basinmap0)
                 self.logger.info("Input mapped to output with basinmap0")

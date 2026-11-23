@@ -773,6 +773,51 @@ def test_index_mapping_pipeline(index_mapping, size, mapping_out):
         assert h5.attrs["pipeline:dcnum mapping"] == mapping_out
 
 
+@pytest.mark.parametrize("index_mapping,mapping_out", [
+    (slice(190, None), "190-n-n"),
+    (slice(190, 1000), "190-1000-n"),
+])
+def test_index_mapping_pipeline_beyond_dataset(index_mapping, mapping_out):
+    """Open-ended slices are limited to the dataset size internally
+
+    The pipeline identifier contains the mapping specified by the user.
+    """
+    path_orig = retrieve_data("fmt-hdf5_cytoshot_full-features_2023.zip")
+    path = path_orig.with_name("input.rtdc")
+    with read.concatenated_hdf5_data(5 * [path_orig], path_out=path):
+        pass
+
+    results = []
+    for im in [index_mapping, slice(190, 200)]:
+        job = logic.DCNumPipelineJob(
+            path_in=path,
+            path_out=path.with_name(f"out_{len(results)}.rtdc"),
+            data_kwargs={"index_mapping": im},
+            background_code="copy",
+            segmenter_code="thresh",
+            segmenter_kwargs={"thresh": -6,
+                              "kwargs_mask": {"closing_disk": 0}},
+            debug=True)
+        with logic.DCNumJobRunner(job=job) as runner:
+            runner.run()
+        with h5py.File(job["path_out"]) as h5:
+            results.append({
+                "mapping": h5.attrs["pipeline:dcnum mapping"],
+                "data": h5.attrs["pipeline:dcnum data"],
+                "basinmap0": h5["events/basinmap0"][:],
+                "deform": h5["events/deform"][:],
+            })
+
+    res, ref = results
+    assert res["mapping"] == mapping_out
+    assert res["data"].endswith(f"i={mapping_out}")
+    assert ref["mapping"] == "190-200-n"
+    assert len(ref["deform"])
+    assert np.all(res["basinmap0"] == ref["basinmap0"])
+    assert np.all(res["basinmap0"] >= 190)
+    assert np.all(res["deform"] == ref["deform"])
+
+
 def test_duplicate_transfer_basin_data():
     """task_transfer_basin_data should not copy basin data from input"""
     path_orig = retrieve_data("fmt-hdf5_cytoshot_full-features_2023.zip")

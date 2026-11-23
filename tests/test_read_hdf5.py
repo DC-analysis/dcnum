@@ -260,6 +260,12 @@ def test_image_cache_iter_chunks(size, chunks, tmp_path):
     [slice(1, 11, 3), [1, 4, 7, 10]],
     [slice(10, 11), [10]],
     [slice(1, 3, None), [1, 2]],
+    # open-ended slices and bounds beyond the dataset (dcnum 0.31.3)
+    [slice(8, None), [8, 9, 10]],
+    [slice(None, 3), [0, 1, 2]],
+    [slice(None, None, 4), [0, 4, 8]],
+    [slice(8, 1000), [8, 9, 10]],
+    [1000, list(range(11))],
 ])
 def test_index_mapping(index_mapping, result_data):
     path = retrieve_data(
@@ -270,7 +276,33 @@ def test_index_mapping(index_mapping, result_data):
         h5["events/temp"] = np.arange(size, dtype=np.float64)
 
     with read.HDF5Data(path, index_mapping=index_mapping) as hd:
+        assert len(hd) == len(result_data)
         assert np.allclose(hd["temp"], result_data)
+        assert len(hd.image) == len(result_data)
+        assert np.all(hd.image[-1] == hd.h5["events/image"][result_data[-1]])
+        # The pipeline identifier contains the value specified by the user
+        assert hd.get_ppid().endswith(
+            "i=" + read.HDF5Data.get_ppid_index_mapping(index_mapping))
+
+
+@pytest.mark.parametrize("index_mapping,error", [
+    [-1, "Negative values"],
+    [slice(-3, None), "Negative values"],
+    [slice(0, -1), "Negative values"],
+    [slice(None, None, -1), "Negative values"],
+    [[1, -2], "Negative values"],
+    [np.array([1, -2]), "Negative values"],
+    [[1, 11], "beyond the dataset size 11"],
+    [0, "does not select any events"],
+    [slice(5, 5), "does not select any events"],
+    [slice(20, 30), "does not select any events"],
+    [[], "does not select any events"],
+])
+def test_index_mapping_invalid(index_mapping, error):
+    path = retrieve_data(
+        "fmt-hdf5_cytoshot_full-features_legacy_allev_2023.zip")
+    with pytest.raises(ValueError, match=error):
+        read.HDF5Data(path, index_mapping=index_mapping)
 
 
 def test_keyerror_when_image_is_none(tmp_path):
