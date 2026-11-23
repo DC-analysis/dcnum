@@ -28,6 +28,9 @@
  - fix: when the universal workers failed to spawn, the job runner
    returned silently in the "segmentation" state and the writer kept
    running; the job now stops with an error
+ - fix: the pipeline failed at the very end when "index_mapping" was
+   a numpy array, because the job log could not be written (support
+   numpy arrays in `ExtendedJSONEncoder`)
 0.31.2
  - fix: online gates for `size_x` and `size_y` were ignored (regression in 0.16.6)
  - fix: "pipeline:dcnum yield" and "experiment:event count" were set to

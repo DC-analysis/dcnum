@@ -727,6 +727,7 @@ def test_duplicate_pipeline_redo_yield():
     (5, 11, "5"),
     (slice(3, 5, None), 6, "3-5-n"),
     ([3, 5, 6, 7], 7, "h-6e582938"),
+    (np.array([3, 5, 6, 7]), 7, "h-6e582938"),
 ])
 def test_index_mapping_pipeline(index_mapping, size, mapping_out):
     """Test running the same pipeline twice
@@ -748,7 +749,7 @@ def test_index_mapping_pipeline(index_mapping, size, mapping_out):
         segmenter_kwargs={"thresh": -6,
                           "kwargs_mask": {"closing_disk": 0}},
         debug=True)
-    assert job.kwargs["data_kwargs"]["index_mapping"] == index_mapping
+    assert np.all(job.kwargs["data_kwargs"]["index_mapping"] == index_mapping)
 
     # perform the initial pipeline
     with logic.DCNumJobRunner(job=job) as runner:

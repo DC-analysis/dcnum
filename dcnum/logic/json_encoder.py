@@ -11,7 +11,8 @@ class ExtendedJSONEncoder(json.JSONEncoder):
 
     In addition to the types supported by :class:`json.JSONEncoder`,
     this encoder handles ``pathlib.Path``, integer numbers (e.g. numpy
-    integers), ``numpy`` booleans, and slices (see :meth:`default`).
+    integers), ``numpy`` booleans, ``numpy`` arrays, and slices (see
+    :meth:`default`).
     """
     def default(self, o):
         """Extended JSON encoder for the **dcnum** logic
@@ -21,6 +22,7 @@ class ExtendedJSONEncoder(json.JSONEncoder):
         - ``pathlib.Path``
         - integer numbers
         - ``numpy`` boolean
+        - ``numpy`` arrays (as lists, e.g. for "index_mapping")
         - slices (via "PYTHON-SLICE" identifier)
         """
         if isinstance(o, pathlib.Path):
@@ -29,6 +31,8 @@ class ExtendedJSONEncoder(json.JSONEncoder):
             return int(o)
         elif isinstance(o, np.bool_):
             return bool(o)
+        elif isinstance(o, np.ndarray):
+            return o.tolist()
         elif isinstance(o, slice):
             return "PYTHON-SLICE", (o.start, o.stop, o.step)
         # Let the base class default method raise the TypeError
