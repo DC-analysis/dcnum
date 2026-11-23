@@ -45,6 +45,9 @@ def test_ppid_decoding_subclass_of_segmenter_subclass():
     kwargs = segm.Segmenter.get_ppkw_from_ppid(segm_ppid)
     assert kwargs["thresh"] == -4
 
+    # cleanup
+    segm.get_segmenters.cache_clear()
+
 
 def test_ppid_kwargs_to_ppid():
     """Make sure that subclasses correctly implement __init__ (if they do)"""
