@@ -139,10 +139,13 @@ file to make sure that the model is applicable to the dataset
 
 .. note::
 
-   The background data are computed for every pipeline run, regardless of
+   Background data are required for every pipeline run, regardless of
    the segmenter, because they are needed for some of the features
-   (see below) and are stored in the output file. If the input file
-   already contains background data, you can save time by setting
+   (see below) and are stored in the output file. As described above, the
+   background computation is skipped if the input file already contains
+   background data that were computed with the same settings. If the
+   input file contains background data that were computed with different
+   settings and you would like to use them anyway, set
    ``background_code="copy"``.
 
 4. Labeling and mask post-processing
@@ -182,10 +185,12 @@ also used in pipelines with U-Net segmentation.
 ~~~~~~~~~
 Not every labeled object is a valid event. The gating step
 (:class:`.feat.gate.Gate`, ``gate_kwargs``) discards masks that consist of
-too few pixels (``size_thresh_mask``, 10 pixels by default) and, if
-``online_gates=True``, events outside the feature ranges that were
-applied during the measurement (as stored in the metadata of the input
-file).
+``size_thresh_mask`` pixels or fewer (10 by default, ``0`` keeps all
+masks) and, if ``online_gates=True``, events outside the feature ranges
+that were applied during the measurement (as stored in the metadata of the
+input file). With ``online_gates=True``, ``size_thresh_mask`` defaults to
+the minimum area that was used during the measurement ("bin area min" in
+the metadata), if available.
 
 7. Writing the output file
 ~~~~~~~~~~~~~~~~~~~~~~~~~~

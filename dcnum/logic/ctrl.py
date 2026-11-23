@@ -815,7 +815,7 @@ class DCNumJobRunner(threading.Thread):
 
         Parameters
         ----------
-        hw: HDF5Writer
+        hw: dcnum.write.HDF5Writer
             writer for the output file
         feats: list of str
             features to transfer
