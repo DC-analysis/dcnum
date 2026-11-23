@@ -42,6 +42,11 @@ def concatenated_hdf5_data(paths: list[pathlib.Path],
       input `paths`, then a `ValueError` is raised. Use the `features`
       argument to specify which features you need instead.
     - Basins are not considered.
+    - The "time" feature is not included, because the time stamps of
+      the individual input files cannot be concatenated (also, "frame"
+      is only included if `compute_frame` is set). This is intended;
+      algorithms that need a time axis (e.g. sparse median background
+      computation) fall back to "frame" and "imaging:frame rate".
     """
     h5kwargs = {"mode": "w", "libver": "latest"}
     if isinstance(path_out, (pathlib.Path, str)):
@@ -97,6 +102,8 @@ def concatenated_hdf5_data(paths: list[pathlib.Path],
                             f"Ignoring {feat}; not implemented yet!")
                         continue
                     if feat in ["frame", "time"]:
+                        # "frame" is computed below, "time" is not
+                        # included (see docstring)
                         continue
                     shapes.setdefault(feat, []).append(
                         h5["events"][feat].shape)
