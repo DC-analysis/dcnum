@@ -47,6 +47,9 @@ def test_detect_flicker_hdf5data_instance():
         assert len(hd) == 1000
         assert not detect_flickering(hd.image)
         assert detect_flickering(hd.image, brightness_threshold=1)
+        # HDF5Data instance (dcnum 0.31.2 raised a TypeError)
+        assert not detect_flickering(hd)
+        assert detect_flickering(hd, brightness_threshold=1)
 
 
 def test_detect_flicker_none():

@@ -24,8 +24,8 @@ def detect_flickering(image_data: np.ndarray | HDF5Data,
     Parameters
     ----------
     image_data:
-        sliceable object (e.g. numpy array or HDF5Data) containing
-        image data.
+        sliceable object (e.g. numpy array or image cache) containing
+        image data or HDF5Data instance (the "image" feature is used)
     roi_height: int
         height of the ROI in pixels for which to search for flickering;
         the entire width of the image is used
@@ -38,7 +38,9 @@ def detect_flickering(image_data: np.ndarray | HDF5Data,
     max_frames: int
         maximum number of frames to include in the flickering analysis
     """
-    # slice event axis first in case we have and HDF5Data instance
+    if isinstance(image_data, HDF5Data):
+        image_data = image_data.image
+    # slice event axis first in case we have an image cache
     roi_data = image_data[:max_frames][:, :roi_height, :]
     roi_median = np.median(roi_data, axis=(1, 2))
     roi_offset = roi_median - np.median(roi_median)
