@@ -65,8 +65,8 @@ class BackgroundRollMed(Background):
 
         if kernel_size > len(self.input_data):
             raise ValueError(f"Cannot compute background when the input data "
-                             f"size {len(self.input_data)} is larger than the "
-                             f"kernel size {kernel_size}!")
+                             f"size {len(self.input_data)} is smaller than "
+                             f"the kernel size {kernel_size}!")
 
         self.kernel_size = kernel_size
         """kernel size used for median filtering"""
@@ -190,10 +190,18 @@ class BackgroundRollMed(Background):
             self.process_next_batch()
 
         # Set the remaining median bg images to the last one.
-        num_remaining = (self.input_data.shape[0]
-                         - self.h5out["events/image_bg"].shape[0])
-        if num_remaining:
+        if "image_bg" in self.h5out["events"]:
+            num_remaining = (self.input_data.shape[0]
+                             - self.h5out["events/image_bg"].shape[0])
             last_image = self.h5out["events/image_bg"][-1]
+        else:
+            # The kernel size equals the number of images, so no rolling
+            # median was computed. Use the median of all images (same
+            # definition as in `compute_median_for_slice`).
+            num_remaining = self.input_data.shape[0]
+            last_image = np.sort(self.input_data[:], axis=0)[
+                self.kernel_size // 2]
+        if num_remaining:
             last_chunk = np.repeat(
                 last_image[np.newaxis],
                 num_remaining,
