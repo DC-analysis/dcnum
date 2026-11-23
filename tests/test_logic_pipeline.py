@@ -554,6 +554,35 @@ def test_duplicate_pipeline():
         assert np.all(h5["events/image"][0] == im0)
 
 
+def test_duplicate_pipeline_same_second(monkeypatch):
+    """Running dcnum on its own output within the same second
+
+    In dcnum 0.31.2, this failed, because the logs of the input file
+    (copied to the output file) had the same names as the new logs.
+    """
+    gmtime = time.gmtime()
+    monkeypatch.setattr(time, "gmtime", lambda *args: gmtime)
+    time_string = time.strftime("%Y-%m-%d-%H.%M.%S", time.gmtime())
+
+    path_orig = retrieve_data("fmt-hdf5_cytoshot_full-features_2023.zip")
+    path_out1 = path_orig.with_name("out1.rtdc")
+    path_out2 = path_orig.with_name("out2.rtdc")
+    for path_in, path_out in [(path_orig, path_out1),
+                              (path_out1, path_out2)]:
+        job = logic.DCNumPipelineJob(path_in=path_in,
+                                     path_out=path_out,
+                                     debug=True)
+        with logic.DCNumJobRunner(job=job) as runner:
+            runner.run()
+        assert runner.state == "done"
+
+    with read.HDF5Data(path_out2) as hd:
+        logs = sorted(hd.logs)
+        for prefix in ["dcnum-job", "dcnum-log"]:
+            assert f"{prefix}-{time_string}" in logs
+            assert f"{prefix}-{time_string}-1" in logs
+
+
 def test_duplicate_pipeline_redo_index_mapping():
     """Test running the same pipeline twice
 

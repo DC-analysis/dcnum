@@ -56,6 +56,9 @@
  - fix: files with more than one basin without a name could not be
    opened (regression in 0.28.3), and basins without a name or
    description could not be copied
+ - fix: running dcnum on its own output within the same second failed
+   because of duplicate log names; a counter is appended to the names
+   of the "dcnum-job" and "dcnum-log" logs if necessary
  - docs: comment on intended behavior of `fill_holes` (mask
    post-processing), Haralick texture features, and the sparsemed
    background assignment after cleansing
