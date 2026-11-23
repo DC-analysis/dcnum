@@ -33,7 +33,8 @@ class Gate:
             considered to be a valid event; Originally, the
             ``bin area min / trig_thresh`` value defaulted to 200 which is
             too large; defaults to 10 or the original value in case
-            ``online_gates`` is set.
+            ``online_gates`` is set. Set this to 0 to keep all
+            non-empty masks.
         """
         self.box_gates = {}
         """box gating (value range for each feature)"""
@@ -48,11 +49,13 @@ class Gate:
                 size_thresh_mask = data.meta_nest.get(
                     "online_contour", {}).get("bin area min")
 
+        if size_thresh_mask is None:
+            size_thresh_mask = self._default_size_thresh_mask
+
         self.kwargs = {
             "online_gates": online_gates,
-            # Set the size threshold, defaulting to `_default_size_thresh_mask`
-            "size_thresh_mask":
-                size_thresh_mask or self._default_size_thresh_mask
+            # Set the size threshold (an explicit 0 keeps all masks)
+            "size_thresh_mask": size_thresh_mask,
         }
         """gating keyword arguments"""
 
