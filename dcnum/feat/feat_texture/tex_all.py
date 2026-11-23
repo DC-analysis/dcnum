@@ -23,17 +23,17 @@ def haralick_texture_features(
     avg and ptp):
     https://earlglynn.github.io/RNotes/package/EBImage/Haralick-Textural-Features.html
 
-    - 1. ``tex_asm``: (1) Angular Second Moment
-    - 2. ``tex_con``: (2) Contrast
-    - 3. ``tex_cor``: (3) Correlation
-    - 4. ``tex_var``: (4) Variance
-    - 5. ``tex_idm``: (5) Inverse Difference Moment
-    - 6. ``tex_sva``: (7) Sum Variance
-    - 7. ``tex_sen``: (8) Sum Entropy
-    - 8. ``tex_ent``: (9) Entropy
-    - 9. ``tex_den``: (11) Difference Entropy
-    - 10. ``tex_f12``: (12) Information Measure of Correlation 1
-    - 11. ``tex_f13``: (13) Information Measure of Correlation 2
+    1. ``tex_asm``: (1) Angular Second Moment
+    2. ``tex_con``: (2) Contrast
+    3. ``tex_cor``: (3) Correlation
+    4. ``tex_var``: (4) Variance
+    5. ``tex_idm``: (5) Inverse Difference Moment
+    6. ``tex_sva``: (7) Sum Variance
+    7. ``tex_sen``: (8) Sum Entropy
+    8. ``tex_ent``: (9) Entropy
+    9. ``tex_den``: (11) Difference Entropy
+    10. ``tex_f12``: (12) Information Measure of Correlation 1
+    11. ``tex_f13``: (13) Information Measure of Correlation 2
     """
     # make sure we have a boolean array
     mask = np.asarray(mask, dtype=bool)
@@ -45,7 +45,7 @@ def haralick_texture_features(
             # Background-corrected brightness values
             image_corr = np.asarray(image, dtype=np.int16) - image_bg
         else:
-            raise ValueError("Please specify either `image_cor` or both "
+            raise ValueError("Please specify either `image_corr` or both "
                              "`image` and `image_bg`")
 
     tex_dict = {}

@@ -19,7 +19,8 @@ def postprocess_masks(masks,
       :func:`.preprocess_images` by padding with zeros and cropping.
     - If the original image shape is larger than the mask image shape,
       also clear borders in an intermediate step
-      (maks postprocessing using :func:`Segmenter.process_labels`).
+      (mask postprocessing using
+      :meth:`~dcnum.segm.segmenter.Segmenter.process_labels`).
 
     Parameters
     ----------
@@ -27,7 +28,7 @@ def postprocess_masks(masks,
         Mask data in shape (batch_size, 1, imagex_size, imagey_size)
         or (batch_size, imagex_size, imagey_size).
     original_image_shape: tuple of (int, int)
-        The required output mask shape for one event. This required for
+        The required output mask shape for one event. This is required for
         doing the inverse of what is done in :func:`.preprocess_images`.
 
     Returns

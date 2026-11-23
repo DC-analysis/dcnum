@@ -25,7 +25,8 @@ class ChunkWriter(threading.Thread):
                  *args, **kwargs):
         """Convenience class for writing to data outside the main loop
 
-        Data are numpy arrays collected from a `dequeue` object
+        Data are ``(feature, numpy array)`` tuples collected from a
+        ``collections.deque`` object
 
         Parameters
         ----------

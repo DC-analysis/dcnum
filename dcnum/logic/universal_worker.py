@@ -291,7 +291,7 @@ class UniversalWorkerProcess(UniversalWorker, mp_spawn.Process):
 
     def start(self):
         """Start the process with single-threaded library settings"""
-        # Set all relevant os environment variables such libraries in the
+        # Set all relevant os environment variables such that libraries in the
         # new process only use single-threaded computation.
         with RequestSingleThreaded():
             mp_spawn.Process.start(self)

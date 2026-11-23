@@ -137,7 +137,7 @@ class Segmenter(abc.ABC):
     @staticmethod
     @functools.cache
     def get_disk(radius):
-        """Cached `skimage.morphology.disk(radius)`"""
+        """Cached ``skimage.morphology.disk(radius)``"""
         return skimage_morphology.disk(radius)
 
     def get_ppid(self):

@@ -11,7 +11,7 @@ class EventStash:
         Parameters
         ----------
         index_offset:
-            This is the index offset at which we are working on.
+            This is the index offset at which we are working.
             Normally, `feat_nevents` is just a slice of a larger
             array and `index_offset` defines at which position
             it is taken.

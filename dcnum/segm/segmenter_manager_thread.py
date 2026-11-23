@@ -35,7 +35,7 @@ class SegmenterManagerThread(threading.Thread):
         -----
         The working principle of this ``SegmenterManagerThread`` allows
         the user to define a fixed number of slots on which the segmenter
-        can work on. For instance, if the segmenter is a CPU-based segmenter,
+        can work. For instance, if the segmenter is a CPU-based segmenter,
         it does not make sense to have more than one slot (because feature
         extraction should not take place at the same time). But if the
         segmenter is a GPU-based segmenter, then it makes sense to have

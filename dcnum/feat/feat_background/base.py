@@ -27,7 +27,7 @@ class Background(abc.ABC):
         ----------
         input_data: array-like or pathlib.Path
             The input data can be either a path to an HDF5 file with
-            the "evtens/image" dataset or an array-like object that
+            the "events/image" dataset or an array-like object that
             behaves like an image stack (first axis enumerates events)
         output_path: pathlib.Path
             Path to the output file. If ``input_data`` is a path, you can

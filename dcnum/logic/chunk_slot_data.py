@@ -175,7 +175,7 @@ class ChunkSlotData:
         """Acquire the lock for performing a task
 
         Return the start and stop indices for which the lock was acquired.
-        If no lock could be acquired, return `(0, 0)`. The returned
+        If no lock could be acquired, return ``(0, 0)``. The returned
         indices might not match the input batch size: Locks for
         contiguous indices are returned based on availability.
         """
@@ -184,7 +184,7 @@ class ChunkSlotData:
         # array that monitors the progress of the current state
         progress_array = np.ctypeslib.as_array(self._task_progress_array)
         with self._task_reserve_lock:
-            # combined array with frames are completed or are in use
+            # combined array with frames that are completed or in use
             used_array = np.logical_or(reserve_array, progress_array)
             if self._state.value != req_state:
                 # wrong state
@@ -223,7 +223,7 @@ class ChunkSlotData:
 
         Releasing the task lock is done after completing the
         task for which a lock was required. This method also updates the
-        progress (see `get_progress`) for the current task. Only release
+        progress (see ``get_progress``) for the current task. Only release
         the task lock if you acquired it before.
         """
         if task_done:
@@ -238,9 +238,9 @@ class ChunkSlotData:
         """Return the progress of the current task
 
         Return a value between 0 and 1. If processing is done in batches
-        (`batch_size` set in `acquire_task_lock`), this returns the
-        fraction of frames for which `release_task_lock` was called
-        with `task_done=True`.
+        (``batch_size`` set in ``acquire_task_lock``), this returns the
+        fraction of frames for which ``release_task_lock`` was called
+        with ``task_done=True``.
         """
         progress_array = np.ctypeslib.as_array(self._task_progress_array)
         return float(np.sum(progress_array)) / self.length

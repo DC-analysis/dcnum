@@ -30,7 +30,7 @@ def detect_flickering(image_data: np.ndarray | HDF5Data,
         height of the ROI in pixels for which to search for flickering;
         the entire width of the image is used
     brightness_threshold: float
-        brightness difference between individual ROIs median and median
+        brightness difference between an individual ROI's median and median
         of all ROI medians leading to a positive flickering event
     count_threshold: int
         minimum number of flickering events that would lead to a positive
