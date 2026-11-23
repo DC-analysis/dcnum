@@ -196,11 +196,11 @@ class BackgroundRollMed(Background):
             last_image = self.h5out["events/image_bg"][-1]
         else:
             # The kernel size equals the number of images, so no rolling
-            # median was computed. Use the median of all images (same
-            # definition as in `compute_median_for_slice`).
+            # median was computed. Use the median of all images.
             num_remaining = self.input_data.shape[0]
-            last_image = np.sort(self.input_data[:], axis=0)[
-                self.kernel_size // 2]
+            last_image = np.asarray(
+                np.round(np.median(self.input_data[:], axis=0)),
+                dtype=np.uint8)
         if num_remaining:
             last_chunk = np.repeat(
                 last_image[np.newaxis],

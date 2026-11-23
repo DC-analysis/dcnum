@@ -195,8 +195,9 @@ def test_median_rollmed_kernel_size_equals_data_size(tmp_path):
     with h5py.File(output_path) as h5:
         image_bg = h5["events/image_bg"][:]
     assert image_bg.shape == (event_count, 5, 7)
-    # upper median of all images (same as `compute_median_for_slice`)
-    ref = np.sort(input_data, axis=0)[kernel_size // 2]
+    assert image_bg.dtype == np.uint8
+    # median of all images
+    ref = np.round(np.median(input_data, axis=0))
     assert np.all(image_bg == ref[np.newaxis])
 
 
