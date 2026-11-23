@@ -15,6 +15,8 @@ import numpy as np
     [True, True],
     [np.bool_(True), True],
     ["hans", "hans"],
+    [np.arange(3, dtype=np.uint32), [0, 1, 2]],
+    [np.array([True, False]), [True, False]],
 ])
 def test_json_encoder(input, output):
     dumped = json.dumps(input, cls=logic.ExtendedJSONEncoder)
