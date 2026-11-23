@@ -59,6 +59,8 @@
  - fix: running dcnum on its own output within the same second failed
    because of duplicate log names; a counter is appended to the names
    of the "dcnum-job" and "dcnum-log" logs if necessary
+ - fix: brightness features failed with a `ZeroDivisionError` for
+   empty masks; they are NaN now
  - docs: comment on intended behavior of `fill_holes` (mask
    post-processing), Haralick texture features, and the sparsemed
    background assignment after cleansing

@@ -48,3 +48,21 @@ def test_basic_brightness_single_image():
         # control test
         assert not np.allclose(h5["events"]["bright_perc_10"][1],
                                data["bright_perc_90"][0])
+
+
+def test_brightness_empty_mask():
+    """Brightness features of an empty mask are NaN (dcnum 0.31.2 crashed)"""
+    image = np.full((1, 10, 10), 100, dtype=np.uint8)
+    image_bg = np.full((1, 10, 10), 110, dtype=np.uint8)
+    mask = np.zeros((2, 10, 10), dtype=bool)
+    mask[1, 2:6, 2:6] = True
+    data = feat_brightness.brightness_features(image=image,
+                                               mask=mask,
+                                               image_bg=image_bg)
+    for key in ["bright_avg", "bright_sd", "bright_bc_avg", "bright_bc_sd",
+                "bright_perc_10", "bright_perc_90"]:
+        assert np.isnan(data[key][0]), key
+        assert not np.isnan(data[key][1]), key
+    assert data["bright_avg"][1] == 100
+    assert data["bright_bc_avg"][1] == -10
+    assert np.all(data["bg_med"] == 110)

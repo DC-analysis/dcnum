@@ -104,7 +104,7 @@ def compute_avg_sd_masked_uint8(image, mask):
     avg_sd: np.ndarray
         float array of shape (N, 2) with the mean (first column)
         and the standard deviation (second column) of the pixels
-        within each mask
+        within each mask (NaN for empty masks)
     """
     size = mask.shape[0]
     avg_sd = np.zeros((size, 2), dtype=np.float64)
@@ -114,6 +114,10 @@ def compute_avg_sd_masked_uint8(image, mask):
             image_idx = 0
         else:
             image_idx = ii
+        if maski.size == 0:
+            # empty mask
+            avg_sd[ii, :] = np.nan
+            continue
         masked = image[image_idx].ravel()[maski]
         avg_sd[ii, 0] = np.mean(masked)
         avg_sd[ii, 1] = np.std(masked)
@@ -135,6 +139,10 @@ def compute_avg_sd_masked_int16(image, mask):
         else:
             image_idx = ii
         maski = np.where(mask[ii].ravel())[0]
+        if maski.size == 0:
+            # empty mask
+            avg_sd[ii, :] = np.nan
+            continue
         masked = image[image_idx].ravel()[maski]
         avg_sd[ii, 0] = np.mean(masked)
         avg_sd[ii, 1] = np.std(masked)
@@ -178,6 +186,7 @@ def compute_percentiles_10_90(image, mask):
     percentiles: np.ndarray
         float array of shape (N, 2) with the 10th (first column) and
         90th (second column) percentile of the pixels within each mask
+        (NaN for empty masks)
     """
     size = mask.shape[0]
     percentiles = np.zeros((size, 2), dtype=np.float64)
@@ -187,6 +196,10 @@ def compute_percentiles_10_90(image, mask):
             image_idx = 0
         else:
             image_idx = ii
+        if maski.size == 0:
+            # empty mask
+            percentiles[ii, :] = np.nan
+            continue
         masked = image[image_idx].ravel()[maski]
         peri = np.percentile(masked, q=(10, 90))
         percentiles[ii, 0] = peri[0]
