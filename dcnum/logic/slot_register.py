@@ -38,7 +38,8 @@ mp_spawn = mp.get_context("spawn")
 def is_locked(lock):
     """Check whether a multiprocessing.Lock is locked
 
-    Compatibility wrapper for Python 3.12 and Python 3.13
+    Compatibility wrapper (``Lock.locked()`` is only available since
+    Python 3.14)
     """
     if sys.version_info[:2] >= (3, 14):
         return lock.locked()
@@ -255,8 +256,7 @@ class SlotRegister:
 
         We sort the slots according to the slot chunks so that we
         always process the slot with the smallest slot chunk number
-        first. Initially, the slot_chunks array is filled with
-        zeros, but we populate it here.
+        first.
 
         Parameters
         ----------
@@ -346,7 +346,7 @@ class SlotRegister:
                               chunk_slot: ChunkSlot | None = None,
                               batch_size: int | None = None,
                               ) -> StateWarden | None:
-        """Return slot with the specified state and lowest chunk index
+        """Reserve frames of a chunk slot with the specified state for a task
 
         Parameters
         ----------
@@ -356,8 +356,10 @@ class SlotRegister:
             State that will be set after the task is done
         chunk_slot:
             Optional :class:`~dcnum.logic.chunk_slot.ChunkSlot` to operate
-            on; if set to None, search for a matching one, and if none
-            can be found, return None
+            on; if set to None, return a state warden for the first
+            chunk slot with the state ``current_state`` (in the order of
+            the slot register), or None if there is no such slot or if
+            no frames could be reserved in it
         batch_size:
             Number of frames to reserve for performing the task. Defaults
             to the entire chunk.
@@ -377,11 +379,14 @@ class SlotRegister:
                                      )
 
             The ``batch_range`` indices are defined by the ``batch_size``
-            parameter.
+            parameter. If ``chunk_slot`` is given, the state warden is
+            always returned, but its ``batch_size`` may be zero if no
+            frames could be reserved.
 
-            This context manager will automatically set the slot
-            state to `next_state` when the context exits
-            without exceptions.
+            When the context exits, the reserved frames are marked as
+            done (only if there was no exception). The slot state is
+            set to ``next_state`` once all frames of the chunk slot
+            are done.
         """
         if chunk_slot is None:
             for sc in self:
@@ -586,7 +591,7 @@ class SlotRegister:
 
         See Also
         --------
-        task_segment_images: for processing batches of chunks
+        task_segment_images: for processing batches of frames
         """
         did_something = False
 

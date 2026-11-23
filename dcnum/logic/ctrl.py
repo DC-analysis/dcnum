@@ -237,7 +237,10 @@ class DCNumJobRunner(threading.Thread):
         Parameters
         ----------
         delete_temporary_files: bool
-            whether to delete the log file and the temporary input file
+            whether to delete the log file and the temporary input file;
+            Note that the temporary input and output files are always
+            deleted when the Python interpreter exits (only the log file
+            is kept permanently if this is set to False).
         """
         if self._data_raw is not None:
             self._data_raw.close()
@@ -271,7 +274,9 @@ class DCNumJobRunner(threading.Thread):
         delete_temporary_files: bool
             passed to :meth:`close`; If set to None (default), the
             temporary files (including the log file) are only deleted
-            if the job did not end in the "error" state.
+            if the job did not end in the "error" state (see
+            :meth:`close` for when the temporary files are deleted
+            otherwise).
         *args:
             passed to :meth:`threading.Thread.join`
         **kwargs:
@@ -447,7 +452,7 @@ class DCNumJobRunner(threading.Thread):
         #    different segmenters); Here, we simply populate `path_temp_out`
         #    with the data from the segmenter.
         if redo_seg:
-            # scenario B (Note this implies `redo_bg`)
+            # scenario B (Note that `redo_bg` implies this scenario)
             self.task_segment_extract()
         else:
             # scenario A
@@ -617,10 +622,19 @@ class DCNumJobRunner(threading.Thread):
     def task_enforce_basin_strategy(self):
         """Transfer basin data from input files to output if requested
 
-        The user specified the "basin_strategy" keyword argument in
-        `self.job`. If this is set to "drain", then copy all basin
-        information from the input file to the output file. If it
-        is set to "tap", then only create basins in the output file.
+        First, the "basinmap0" feature (mapping from output events to
+        input events) is created from the "index_unmapped" feature
+        written by the writer. Then, the features of the input file
+        that are not in the output file are transferred according to
+        the "basin_strategy" keyword argument in ``self.job``: For
+        "drain", the feature data are copied to the output file. For
+        "tap", basins referring to the input file are created in the
+        output file, except for "critical" features (e.g. "bg_off" or
+        "image_bg" if it is not stored in an internal basin), which are
+        always copied. Background images from an internal basin are
+        stored in an internal basin of the output file. Features that
+        the input file only provides via file basins are transferred
+        as well.
         """
         self._progress_bn = 0
         t0 = time.perf_counter()
@@ -640,8 +654,8 @@ class DCNumJobRunner(threading.Thread):
                         ) as hw:
             hout = hw.h5
             # First, we have to determine the basin mapping from input to
-            # output. This information is stored by the QueueWriter
-            # in the "basinmap0" feature, ready to be used by us.
+            # output. This information is stored by the QueueWriter in the
+            # "index_unmapped" feature, which we convert to "basinmap0".
             if "index_unmapped" in hout["events"]:
                 # The unmapped indices enumerate the events in the output file
                 # with indices from the mapped input file. E.g. if for the
