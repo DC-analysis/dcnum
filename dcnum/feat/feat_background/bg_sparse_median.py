@@ -153,6 +153,9 @@ class BackgroundSparseMed(Background):
         """duration of the measurement"""
 
         self.step_times = np.arange(0, self.duration, self.split_time)
+        if self.step_times.size == 0:
+            # The duration is zero (e.g. only one image).
+            self.step_times = np.array([0.])
 
         self.bg_images = np.zeros((self.step_times.size,
                                    self.image_shape[0],

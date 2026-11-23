@@ -174,6 +174,33 @@ def test_median_rollmed_full_with_file_no_time_no_frame(tmp_path):
 
 @pytest.mark.filterwarnings(
     "ignore::dcnum.write.writer.CreatingFileWithoutBasinWarning")
+@pytest.mark.filterwarnings(
+    "ignore::dcnum.write.writer.CreatingFileWithoutBasinWarning")
+def test_median_rollmed_kernel_size_equals_data_size(tmp_path):
+    """No rolling window is computed when the kernel spans all images"""
+    event_count = 20
+    kernel_size = 20
+    output_path = tmp_path / "test.h5"
+    rng = np.random.default_rng(42)
+    input_data = rng.integers(0, 255, size=(event_count, 5, 7),
+                              dtype=np.uint8)
+    with bg_roll_median.BackgroundRollMed(input_data=input_data,
+                                          output_path=output_path,
+                                          kernel_size=kernel_size,
+                                          batch_size=50,
+                                          num_cpus=1,
+                                          ) as bic:
+        bic.process()
+
+    with h5py.File(output_path) as h5:
+        image_bg = h5["events/image_bg"][:]
+    assert image_bg.shape == (event_count, 5, 7)
+    assert image_bg.dtype == np.uint8
+    # median of all images
+    ref = np.round(np.median(input_data, axis=0))
+    assert np.all(image_bg == ref[np.newaxis])
+
+
 def test_median_rollmed_small_file(tmp_path):
     event_count = 34
     kernel_size = 200

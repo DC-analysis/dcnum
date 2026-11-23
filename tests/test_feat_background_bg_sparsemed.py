@@ -362,6 +362,27 @@ def test_median_sparsemed_internal_basin(tmp_path):
 
 @pytest.mark.filterwarnings(
     "ignore::dcnum.write.writer.CreatingFileWithoutBasinWarning")
+def test_median_sparsemend_single_image(tmp_path):
+    """A single image has a duration of zero (no step times)"""
+    output_path = tmp_path / "test.h5"
+    input_data = np.full((1, 5, 7), 100, dtype=np.uint8)
+    with bg_sparse_median.BackgroundSparseMed(input_data=input_data,
+                                              output_path=output_path,
+                                              kernel_size=200,
+                                              num_cpus=1,
+                                              ) as bic:
+        assert bic.duration == 0
+        assert np.all(bic.step_times == [0])
+        bic.process()
+
+    with h5py.File(output_path) as h5:
+        assert np.all(h5["events/basinmap0"][:] == [0])
+        assert h5["basin_events/image_bg"].shape == (1, 5, 7)
+        assert np.all(h5["basin_events/image_bg"][0] == 100)
+
+
+@pytest.mark.filterwarnings(
+    "ignore::dcnum.write.writer.CreatingFileWithoutBasinWarning")
 def test_median_sparsemend_small_file(tmp_path):
     event_count = 34
     kernel_size = 200

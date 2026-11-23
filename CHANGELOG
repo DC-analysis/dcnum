@@ -37,6 +37,10 @@
  - fix: slicing the image chunk caches (e.g. `HDF5Data.image[-5:]`)
    returned wrong data for negative or empty slices and negative
    steps, and out-of-bounds negative indices were not detected
+ - fix: rolling median background computation failed when the kernel
+   size equaled the number of images
+ - fix: sparse median background computation failed for input data
+   with a duration of zero (e.g. a single image)
  - docs: comment on intended behavior of `fill_holes` (mask
    post-processing), Haralick texture features, and the sparsemed
    background assignment after cleansing
