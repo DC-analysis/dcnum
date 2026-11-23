@@ -103,8 +103,9 @@ class DCNumPipelineJob:
             if arg == "self":
                 continue
             value = locs[arg]
-            if value is None and spec.annotations[arg] == dict | None:
-                value = {}
+            if spec.annotations[arg] == dict | None:
+                # Do not modify the dictionaries passed by the caller.
+                value = {} if value is None else copy.deepcopy(value)
             self.kwargs[arg] = value
         # Set default pixel size for this job
         if "pixel_size" not in self.kwargs["data_kwargs"]:

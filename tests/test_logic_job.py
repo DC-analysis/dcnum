@@ -1,3 +1,5 @@
+import shutil
+
 from dcnum import common, logic
 from dcnum.segm.segm_torch import segm_torch_base  # noqa: E402
 import h5py
@@ -58,6 +60,29 @@ def test_copied_data():
     seg_kwargs["closing_disk"] = 10
     # changing dictionary does not change keys
     assert pdict["seg_id"] == "thresh:t=-6:cle=1^f=1^clo=2"
+
+
+def test_kwargs_not_modified(tmp_path):
+    """The job must not modify the dictionaries passed by the caller"""
+    path1 = retrieve_data("fmt-hdf5_cytoshot_full-features_2023.zip")
+    path2 = tmp_path / "other_pixel_size.rtdc"
+    shutil.copy(path1, path2)
+    with h5py.File(path2, "a") as h5:
+        h5.attrs["imaging:pixel size"] = 0.34
+
+    data_kwargs = {}
+    segmenter_kwargs = {"thresh": -6}
+    job1 = logic.DCNumPipelineJob(path_in=path1,
+                                  data_kwargs=data_kwargs,
+                                  segmenter_kwargs=segmenter_kwargs)
+    job2 = logic.DCNumPipelineJob(path_in=path2,
+                                  data_kwargs=data_kwargs,
+                                  segmenter_kwargs=segmenter_kwargs)
+    assert data_kwargs == {}
+    assert segmenter_kwargs == {"thresh": -6}
+    assert job1["data_kwargs"]["pixel_size"] == 0.2645
+    # pixel size of the second input file, not of the first one
+    assert job2["data_kwargs"]["pixel_size"] == 0.34
 
 
 def test_segmenter_mask():
