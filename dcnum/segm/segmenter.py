@@ -511,13 +511,17 @@ def assert_labels(arr):
 def get_segmenters():
     """Return dictionary of all segmenters, keyed by their PPID code
 
-    Segmenters are the subclasses of the direct subclasses of
-    :class:`Segmenter`, regardless of whether they are available
-    (see ``get_available_segmenters``).
+    Segmenters are all non-abstract subclasses of :class:`Segmenter`
+    at any depth (e.g. also subclasses of
+    :class:`~dcnum.segm.segm_thresh.SegmentThresh`), regardless of
+    whether they are available (see ``get_available_segmenters``).
     """
     segmenters = {}
-    for scls in Segmenter.__subclasses__():
-        for cls in scls.__subclasses__():
+    subclasses = list(Segmenter.__subclasses__())
+    while subclasses:
+        cls = subclasses.pop(0)
+        subclasses += cls.__subclasses__()
+        if not inspect.isabstract(cls):
             segmenters[cls.get_ppid_code()] = cls
     return segmenters
 
