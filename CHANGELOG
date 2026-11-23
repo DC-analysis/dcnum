@@ -19,6 +19,9 @@
  - fix: `DCNumPipelineJob` modified the keyword argument dictionaries
    passed to it, so that reusing e.g. `data_kwargs` for another input
    file resulted in a wrong pixel size
+ - fix: `concatenated_hdf5_data` stored relative input paths in the
+   virtual datasets, so that the concatenated data could only be read
+   from the original working directory (filled with zeros otherwise)
 0.31.2
  - fix: online gates for `size_x` and `size_y` were ignored (regression in 0.16.6)
  - fix: "pipeline:dcnum yield" and "experiment:event count" were set to
