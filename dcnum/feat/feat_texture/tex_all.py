@@ -70,6 +70,10 @@ def haralick_texture_features(
         else:
             imcoi = image_corr[ii]
         minval = imcoi[maski].min()
+        # Note that values wrap around in the uint8 cast if the range
+        # of `imcoi` within the mask is larger than 254. This is
+        # intended: The camera is not saturated in practice, and
+        # a different dtype would increase the computation time.
         imi = np.asarray((imcoi - minval + 1) * maski, dtype=np.uint8)
         try:
             ret = mh_haralick(imi,

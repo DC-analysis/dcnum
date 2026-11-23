@@ -299,10 +299,18 @@ class Segmenter(abc.ABC):
             # Since floodfill will use the upper left corner of the image as
             # a seed, we have to make sure it is set to background. We set
             # a line of pixels in the upper channel wall to zero to be sure.
+            # Do not change this: The flood fill requires a background seed
+            # and these pixels never contain information of interest.
             labels[0, :] = 0
             # ...and a 4x4 pixel region in the top left corner.
             labels[1, :2] = 0
             cv2.floodFill(labels, None, (0, 0), 255)
+            # Note that, in contrast to `ndimage.binary_fill_holes`,
+            # background that is enclosed by an object and the image border
+            # is filled as well (only relevant for `clear_border=False`).
+            # This is intended: We are detecting cells and not objects that
+            # span the entire region of interest, so this case does not
+            # occur in practice.
             labels = labels != 255
 
         if closing_disk:
