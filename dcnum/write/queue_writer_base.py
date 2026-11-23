@@ -107,6 +107,9 @@ class QueueWriterBase:
         self.abort = mp_spawn.Value("i", 0)
         """Set to 1 to stop collecting data (e.g. when a worker failed)"""
 
+        self.failed = mp_spawn.Value("i", 0)
+        """Set to 1 if writing to the output file failed"""
+
     def get_logger(self):
         """Return a logger for this writer with ``self.log_level`` set"""
         # We do not set the `self.logger` property, because that will cause
@@ -155,6 +158,10 @@ class QueueWriterBase:
         last_idx = 0
         logger.debug("Started collector thread")
         while not self.abort.value:
+            if thr_write.failed:
+                # Writing to the output file failed (e.g. disk full).
+                self.failed.value = 1
+                break
             # Slice of the shared nevents array. If it contains -1 values,
             # this means that some of the frames have not yet been processed.
             cur_nevents = self.feat_nevents[
@@ -260,6 +267,8 @@ class QueueWriterBase:
                     retries=10,
                     logger=logger,
                     name="writer")
+        if thr_write.failed:
+            self.failed.value = 1
 
         logger.info(f"Counted {self.written_events.value} events")
         logger.debug(f"Counted {self.written_frames.value} frames")

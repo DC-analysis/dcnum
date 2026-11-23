@@ -70,6 +70,7 @@ class QueueWriterProcess(QueueWriterBase, mp_spawn.Process):
             self.log_queue.cancel_join_thread()
             self.event_queue.cancel_join_thread()
         except BaseException:
+            self.failed.value = 1
             logger.error(traceback.format_exc())
 
         # Make sure everything gets written to the queue.

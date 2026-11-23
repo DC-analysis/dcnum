@@ -1012,6 +1012,9 @@ class DCNumJobRunner(threading.Thread):
             elif any(w.failed.value for w in uni_workers):
                 error = "Universal worker failed (see log for details)"
                 break
+            elif worker_write.failed.value:
+                error = "Writer failed (see log for details)"
+                break
             elif (all(not w.is_alive() for w in uni_workers)
                     and any(not w.completed.value for w in uni_workers)):
                 # All workers have started, but did something go wrong?
@@ -1080,6 +1083,10 @@ class DCNumJobRunner(threading.Thread):
             join_worker(worker=worker_uni,
                         logger=self.logger,
                         name="universal worker")
+
+        if not error and worker_write.failed.value:
+            # Writing the last chunks to the output file failed.
+            error = "Writer failed (see log for details)"
 
         if error:
             self.logger.error(error)

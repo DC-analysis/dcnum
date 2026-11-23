@@ -64,6 +64,8 @@ class ChunkWriter(threading.Thread):
         self.may_stop_loop = False
         self.must_stop_loop = False
         self.write_queue_size = write_queue_size
+        self.failed = False
+        """Set to True if writing to the output file failed"""
 
     def abort_loop(self):
         """Force aborting the loop as soon as possible"""
@@ -81,7 +83,8 @@ class ChunkWriter(threading.Thread):
         :meth:`~dcnum.write.writer.HDF5Writer.store_feature_chunk`.
         The loop ends when :meth:`abort_loop` was called, or when
         :meth:`finished_when_queue_empty` was called and the deque
-        is empty. The output file is closed afterward.
+        is empty. The output file is closed afterward. If writing
+        fails, the error is logged and :attr:`failed` is set.
         """
         time_tot = 0
         try:
@@ -105,6 +108,7 @@ class ChunkWriter(threading.Thread):
         except KeyboardInterrupt:
             raise
         except BaseException:
+            self.failed = True
             self.logger.error(traceback.format_exc())
         self.logger.info(f"Disk time: {time_tot:.1f}s")
         self.writer.close()

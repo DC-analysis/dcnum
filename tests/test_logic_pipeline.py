@@ -1,5 +1,7 @@
 import atexit
+import errno
 import pathlib
+import threading
 import time
 
 import h5py
@@ -1075,6 +1077,33 @@ def test_simple_pipeline_feature_extraction_error(monkeypatch):
         assert not runner.is_alive()
         assert runner.state == "error"
         assert "Universal worker failed" in runner.error_tb
+    assert not job["path_out"].exists()
+
+
+def test_simple_pipeline_write_error(monkeypatch):
+    """An error when writing to the output file must stop the pipeline
+
+    In dcnum 0.31.2, the error was logged and the pipeline finished
+    with an incomplete output file.
+    """
+    path_orig = retrieve_data("fmt-hdf5_cytoshot_full-features_2023.zip")
+    store_feature_chunk_orig = write.HDF5Writer.store_feature_chunk
+
+    def store_error(self, feat, data, group_name="events"):
+        if isinstance(threading.current_thread(), write.ChunkWriter):
+            raise OSError(errno.ENOSPC, "No space left on device")
+        return store_feature_chunk_orig(self, feat, data, group_name)
+
+    monkeypatch.setattr(write.HDF5Writer, "store_feature_chunk",
+                        store_error)
+
+    job = logic.DCNumPipelineJob(path_in=path_orig, debug=True)
+    with logic.DCNumJobRunner(job=job) as runner:
+        runner.start()
+        runner.join(timeout=60)
+        assert not runner.is_alive()
+        assert runner.state == "error"
+        assert "Writer failed" in runner.error_tb
     assert not job["path_out"].exists()
 
 
