@@ -34,5 +34,5 @@ For more options, please check out the `documentation
    :target: https://github.com/DC-analysis/dcnum/actions?query=workflow%3AChecks
 .. |Coverage Status| image:: https://img.shields.io/codecov/c/github/DC-analysis/dcnum
    :target: https://codecov.io/gh/DC-analysis/dcnum
-.. |Docs Status| image:: https://readthedocs.org/projects/dcnum/badge/?version=latest
+.. |Docs Status| image:: https://img.shields.io/readthedocs/dcnum
    :target: https://readthedocs.org/projects/dcnum/builds/
