@@ -46,3 +46,27 @@ def test_writer_thread_basic():
         assert events["deform"].shape[0] == 2*size + 10
         assert events["image"].shape[0] == 2 * size + 10
         assert events["image"].shape[1:] == image.shape[1:]
+
+
+def test_writer_thread_error(monkeypatch):
+    path = retrieve_data("fmt-hdf5_cytoshot_full-features_2023.zip")
+    path_wrt = path.with_name("written.hdf5")
+    write_queue_size = mp_spawn.Value("L", 0)
+
+    def store_error(self, feat, data, group_name="events"):
+        raise OSError("No space left on device")
+
+    monkeypatch.setattr(write.HDF5Writer, "store_feature_chunk",
+                        store_error)
+
+    dq = collections.deque()
+    wrthr = write.ChunkWriter(path_out=path_wrt,
+                              dq=dq,
+                              write_queue_size=write_queue_size)
+    assert not wrthr.failed
+    wrthr.start()
+    with h5py.File(path) as h5:
+        dq.append(("deform", h5["events"]["deform"][:]))
+    wrthr.finished_when_queue_empty()
+    wrthr.join()
+    assert wrthr.failed
