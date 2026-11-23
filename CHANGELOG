@@ -51,6 +51,8 @@
  - fix: segmenters more than two levels below `Segmenter` (e.g. a
    subclass of `SegmentThresh`) were not found by `get_segmenters`,
    so their pipeline identifier could not be resolved
+ - fix: `detect_flickering` raised a `TypeError` for `HDF5Data`
+   instances, although the docstring allowed them
  - docs: comment on intended behavior of `fill_holes` (mask
    post-processing), Haralick texture features, and the sparsemed
    background assignment after cleansing
