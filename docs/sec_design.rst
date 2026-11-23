@@ -67,7 +67,7 @@ What the individual steps do is explained in :ref:`sec_pipeline`.
 
 The following happens when you run the above code snippet:
 
-1. The file `input.rtdc` is opened using the module :mod:`.read`.
+1. The file ``input.rtdc`` is opened using the module :mod:`.read`.
 2. If necessary, the background image data are computed with the
    background method selected in the job (a subclass of
    :class:`.feat.feat_background.base.Background`) and written to a
@@ -101,9 +101,10 @@ The following happens when you run the above code snippet:
    :class:`.segm.segmenter_sto.STOSegmenter`, e.g. ``"torchmpo"`` and
    ``"torchsto"``), a :class:`.segm.segmenter_manager_thread.SegmenterManagerThread`
    performs the segmentation of the chunk slots.
-5. A :class:`.write.queue_writer_process.QueueWriterProcess` takes the
-   events from the event queue, puts them in the right order, and writes
-   them in chunks to the output file.
+5. A :class:`.write.queue_writer_process.QueueWriterProcess` (or a
+   :class:`.write.queue_writer_thread.QueueWriterThread` with
+   ``debug=True``) takes the events from the event queue, puts them in
+   the right order, and writes them in chunks to the output file.
 6. Finally, the basin strategy is applied, metadata, logs and pipeline
    identifiers are written, and the temporary output file is renamed to
    the output path.

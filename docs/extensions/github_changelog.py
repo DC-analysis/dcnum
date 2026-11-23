@@ -7,12 +7,14 @@ The directive
    .. include_changelog:: ../CHANGELOG
 
 adds the content of the changelog file into the current document.
+The path is relative to the document that contains the directive.
 References to GitHub issues are identified as "(#XY)" (with parentheses
 and hash) and a link is inserted
 
- https://github.com/RI-imaging/{PROJECT}/issues/{XY}
+ https://github.com/{GITHUB_PROJECT}/issues/{XY}
 
-where PROJECT ist the `project` variable defined in conf.py.
+where GITHUB_PROJECT is the `github_project` variable defined in conf.py
+(e.g. "DC-analysis/dcnum").
 """
 import io
 import re
@@ -28,8 +30,11 @@ class IncludeDirective(Directive):
     optional_arguments = 0
 
     def run(self):
-        full_path = self.arguments[0]
-        project = self.state.document.settings.env.config.github_project
+        env = self.state.document.settings.env
+        # resolve the path relative to the current document (not to the
+        # current working directory)
+        _, full_path = env.relfn2path(self.arguments[0])
+        project = env.config.github_project
 
         def insert_github_link(reobj):
             line = reobj.string

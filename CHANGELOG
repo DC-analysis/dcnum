@@ -71,6 +71,9 @@
    post-processing), Haralick texture features, and the sparsemed
    background assignment after cleansing
  - docs: `concatenated_hdf5_data` does not include the "time" feature
+ - docs: fix broken logo in README, inconsistent background note and
+   incomplete gating description, building the docs from the
+   repository root, and typos in the changelog
 0.31.2
  - fix: online gates for `size_x` and `size_y` were ignored (regression in 0.16.6)
  - fix: "pipeline:dcnum yield" and "experiment:event count" were set to
@@ -465,7 +468,7 @@
  - ref: several changes and deprecations in the PPID helper functions
  - build: change flat-layout to src-layout (issues with editable installs)
 0.14.0
- - fix: protected features (e.g. time, frame) were not included in ouptut
+ - fix: protected features (e.g. time, frame) were not included in output
    files when the input file was basin-based
  - ref: increment DCNUM_PPID_GENERATION to 6
 0.13.3
@@ -546,7 +549,7 @@
  - feat: introduce GPUSegmenter base class
  - fix: handle bytes-values in HDF5 attributes
  - ref: correctly introduce `requires_background_correction` for segmenters
- - setup: don't requrie cibuildwheel
+ - setup: don't require cibuildwheel
 0.10.0
  - enh: some minor improvements in efficiency
  - ref: increment DCNUM_PPID_GENERATION for the sake of clarity
@@ -560,7 +563,7 @@
 0.0.8
  - feat: introduce QueueCollectorThread
  - feat: introduce SegmenterManagerThread
- - feat: instroduce EventExtractorManagerThread and corresponding workers
+ - feat: introduce EventExtractorManagerThread and corresponding workers
  - enh: minor improvements for HDF5ImageCache and ImageCorrCache
  - enh: use data size as cache size if smaller than requested chunk size
  - enh: return dictionary for brightness feature computation
