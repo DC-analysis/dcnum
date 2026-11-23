@@ -347,8 +347,9 @@ class BackgroundSparseMed(Background):
         # were removed during cleansing, some frames are therefore not
         # assigned the background image closest in time (they may be
         # assigned an image up to a few seconds away). This is intended
-        # and should not be changed: The background is stable over a
-        # range of about three seconds.
+        # and should not be changed: The background is generally
+        # consiered stable. Minimal changes in focus don't affect the
+        # center of the ROI significantly.
         bg_idx = np.zeros(self.image_count, dtype=int)
         idx0 = 0
         idx1 = None
