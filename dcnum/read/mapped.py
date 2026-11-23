@@ -97,6 +97,13 @@ def get_mapping_indices(
         raised if a list or array contains indices beyond the dataset.
         Slices without start or stop require `size`.
 
+    Returns
+    -------
+    indices: np.ndarray
+        Integer array with the mapping indices. For integers and slices,
+        this array is cached and shared with other callers, so it is
+        read-only (make a copy if you need to modify it).
+
     Raises
     ------
     ValueError
@@ -130,18 +137,22 @@ def _get_mapping_indices_cached(
         index_mapping: numbers.Integral | tuple
         ):
     if isinstance(index_mapping, numbers.Integral):
-        return np.arange(index_mapping)
+        indices = np.arange(index_mapping)
     elif isinstance(index_mapping, tuple):
         im_slice = slice(*index_mapping)
         if im_slice.stop is None or im_slice.start is None:
             raise NotImplementedError(
                 "Slices must have start and stop defined")
-        return np.arange(im_slice.start, im_slice.stop, im_slice.step)
+        indices = np.arange(im_slice.start, im_slice.stop, im_slice.step)
     elif isinstance(index_mapping, list):
-        return np.asarray(index_mapping, dtype=np.uint32)
+        indices = np.asarray(index_mapping, dtype=np.uint32)
     else:
         raise ValueError(f"Invalid type for cached `index_mapping`: "
                          f"{type(index_mapping)} ({index_mapping})")
+    # The returned array is shared by all callers (cache), so it must
+    # not be modified.
+    indices.setflags(write=False)
+    return indices
 
 
 def get_mapped_object(obj, index_mapping=None):
