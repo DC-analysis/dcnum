@@ -483,6 +483,17 @@ class DCNumJobRunner(threading.Thread):
         self.state = "cleanup"
 
         with HDF5Writer(self.path_temp_out) as hw:
+            # Make sure that the log names are unique. The logs of the
+            # input file are copied to the output file, and when dcnum is
+            # run on its own output within the same second, the names of
+            # the logs would be identical.
+            logs_out = hw.h5.get("logs", {})
+            log_suffix = time_string
+            ii = 1
+            while (f"dcnum-job-{log_suffix}" in logs_out
+                   or f"dcnum-log-{log_suffix}" in logs_out):
+                log_suffix = f"{time_string}-{ii}"
+                ii += 1
             # pipeline metadata
             hw.h5.attrs["pipeline:dcnum generation"] = self.ppdict["gen_id"]
             hw.h5.attrs["pipeline:dcnum data"] = self.ppdict["dat_id"]
@@ -500,7 +511,7 @@ class DCNumJobRunner(threading.Thread):
             hw.h5.attrs["experiment:event count"] = self.event_count
             hw.h5.attrs["imaging:pixel size"] = self.draw.pixel_size
             # Add job information to resulting .rtdc file
-            hw.store_log(f"dcnum-job-{time_string}",
+            hw.store_log(f"dcnum-job-{log_suffix}",
                          json.dumps({
                              "dcnum version": version_tuple,
                              "job": self.job.__getstate__(),
@@ -570,7 +581,7 @@ class DCNumJobRunner(threading.Thread):
         if self.path_log.exists():
             with HDF5Writer(self.path_temp_out) as hw:
                 hw.store_log(
-                    f"dcnum-log-{time_string}",
+                    f"dcnum-log-{log_suffix}",
                     self.path_log.read_text().strip().split("\n"))
 
         # Rename the output file
