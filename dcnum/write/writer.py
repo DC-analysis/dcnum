@@ -418,8 +418,8 @@ def copy_basins(h5_src: "h5py.File",
             internal_data = {}
             for feat in bn_dict["features"]:
                 internal_data[feat] = h5_src["basin_events"][feat]
-            hw.store_basin(name=bn_dict["name"],
-                           description=bn_dict["description"],
+            hw.store_basin(name=bn_dict.get("name"),
+                           description=bn_dict.get("description"),
                            mapping=h5_src["events"][bn_dict["mapping"]][:],
                            internal_data=internal_data,
                            )
@@ -428,8 +428,8 @@ def copy_basins(h5_src: "h5py.File",
                 mapping = h5_src["events"][bn_dict["mapping"]][:]
             else:
                 mapping = None
-            hw.store_basin(name=bn_dict["name"],
-                           description=bn_dict["description"],
+            hw.store_basin(name=bn_dict.get("name"),
+                           description=bn_dict.get("description"),
                            paths=bn_dict["paths"],
                            features=bn_dict["features"],
                            mapping=mapping,

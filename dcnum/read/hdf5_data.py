@@ -311,8 +311,9 @@ class HDF5Data:
                 def basin_sort_cmp(a, b):
                     """Sort internal basins before any other basins"""
                     if a["type"] == b["type"]:
-                        an = a["name"]
-                        bn = b["name"]
+                        # The basin name is optional
+                        an = a.get("name") or ""
+                        bn = b.get("name") or ""
                         if an == bn:
                             return 0
                         if an < bn:

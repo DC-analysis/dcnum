@@ -1,3 +1,4 @@
+import json
 import pathlib
 
 import h5py
@@ -255,6 +256,49 @@ def test_basin_multiple(mapping, numevents):
         # in dcnum, so they should not be accessible.
         assert "image" not in hd
         assert "area_um" not in hd
+
+
+@pytest.mark.parametrize("names", [
+    [None, None],
+    ["peter", None],
+    ["omitted", "omitted"],
+    ["peter", "omitted"],
+])
+def test_basin_without_name(tmp_path, names):
+    """The basin name is optional (dcnum 0.31.2 could not open the file)"""
+    path_src = retrieve_data(
+        "fmt-hdf5_cytoshot_full-features_legacy_allev_2023.zip")
+    path = tmp_path / "unnamed.rtdc"
+    path_copy = tmp_path / "copy.rtdc"
+
+    with h5py.File(path_src) as src, h5py.File(path, "w") as dst:
+        write.copy_metadata(h5_src=src, h5_dst=dst)
+        dst["events/deform"] = src["events/deform"][:]
+        image = src["events/image"][:]
+        for ii, (name, bpath) in enumerate(zip(
+                names, [str(path_src), str(tmp_path / "missing.rtdc")])):
+            bn_dict = {"type": "file",
+                       "format": "hdf5",
+                       "paths": [bpath],
+                       "features": ["image"],
+                       }
+            if name != "omitted":
+                bn_dict["name"] = name
+            dst.require_group("basins").create_dataset(
+                f"basin_{ii}",
+                data=[ln.encode() for ln in
+                      json.dumps(bn_dict, indent=2).split("\n")])
+
+    with read.HDF5Data(path) as hd:
+        assert len(hd.basins) == 2
+        assert np.all(hd["image"][:] == image)
+
+    with h5py.File(path) as src, h5py.File(path_copy, "w") as dst:
+        write.copy_metadata(h5_src=src, h5_dst=dst)
+        write.copy_basins(h5_src=src, h5_dst=dst)
+
+    with read.HDF5Data(path_copy) as hd:
+        assert len(hd.basins) == 2
 
 
 def test_basin_no_inception():

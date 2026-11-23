@@ -723,8 +723,8 @@ class DCNumJobRunner(threading.Thread):
                     else:
                         basinmap1 = basinmap_in[basinmap0]
                     # Store the internal mapping in the output file
-                    hw.store_basin(name=bn_dict["name"],
-                                   description=bn_dict["description"],
+                    hw.store_basin(name=bn_dict.get("name"),
+                                   description=bn_dict.get("description"),
                                    mapping=basinmap1,
                                    internal_data={"image_bg": bg_images1}
                                    )
