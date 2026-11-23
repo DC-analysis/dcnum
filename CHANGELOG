@@ -74,6 +74,7 @@
  - docs: fix broken logo in README, inconsistent background note and
    incomplete gating description, building the docs from the
    repository root, and typos in the changelog
+ - docs: fix typos and broken markup in docstrings and comments
 0.31.2
  - fix: online gates for `size_x` and `size_y` were ignored (regression in 0.16.6)
  - fix: "pipeline:dcnum yield" and "experiment:event count" were set to

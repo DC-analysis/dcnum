@@ -11,7 +11,7 @@ def register_search_path(topic: str,
 
     Search paths are a global solution for organizing the locations
     of resources that are part of an analysis pipeline. For instance,
-    if the location of such a file that depends on where your pipeline is
+    if the location of such a file depends on where your pipeline is
     running, you can register multiple search paths and the file will
     be found using :func:`find_file`.
     """

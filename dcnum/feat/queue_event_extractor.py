@@ -49,7 +49,7 @@ class QueueEventExtractor:
         extract_kwargs:
             Keyword arguments for the extraction process. See the
             keyword-only arguments in
-            :func:`QueueEventExtractor.get_events_from_masks`.
+            :meth:`QueueEventExtractor.get_events_from_masks`.
         logger:
             Logger to use
         """

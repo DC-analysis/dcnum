@@ -140,7 +140,7 @@ class DCNumPipelineJob:
         self.kwargs.update(copy.deepcopy(state))
 
     def assert_pp_codes(self):
-        """Sanity check of `self.kwargs`"""
+        """Sanity check of ``self.kwargs``"""
         # PPID classes with only one option
         for cls, key in [
             (HDF5Data, "data_code"),
@@ -253,15 +253,15 @@ class DCNumPipelineJob:
 
         Returns
         -------
-        True:
-            for testing convenience
+        bool
+            Always True (for testing convenience)
 
         Raises
         ------
-        dcnum.segm.SegmenterNotApplicableError:
+        dcnum.segm.SegmenterNotApplicableError
             the segmenter is incompatible with the input path
         """
-        # Check segmenter applicability applicability
+        # Check segmenter applicability
         seg_cls = self.get_segmenter_class()
         with HDF5Data(self.kwargs["path_in"]) as hd:
             seg_cls.validate_applicability(

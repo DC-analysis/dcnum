@@ -218,7 +218,7 @@ class SlotRegister:
 
         A large number indicates a slow writer which can be
         a result of a slow hard disk or a slow CPU (since
-        is used compression). Used for preventing
+        compression is used). Used for preventing
         OOM events by stalling data processing when the writer is slow.
         """
         return self.get_counter_value("write_queue_size")
@@ -306,7 +306,7 @@ class SlotRegister:
         increment:
             By how much the counter should be incremented
         timeout:
-            Timeout for acquiring a lock (if `lock` is not set)
+            Timeout for acquiring a lock (if ``lock`` is not set)
         lock:
             A locked lock for the given counter. The lock will not be
             released after incrementing the value.
@@ -367,7 +367,7 @@ class SlotRegister:
         state_warden
             Context manager that enforces setting the next state or
             None if no chunk slot could be reserved.
-            Usage:
+            Usage::
 
                 if state_warden is not None:
                     with state_warden as (chunk_slot, batch_range):
@@ -376,7 +376,7 @@ class SlotRegister:
                                      stop_index=batch_range[1]
                                      )
 
-            The `batch_range` indices are defined by the `batch_size`
+            The ``batch_range`` indices are defined by the ``batch_size``
             parameter.
 
             This context manager will automatically set the slot
@@ -641,7 +641,7 @@ class SlotRegister:
         Returns
         -------
         did_something : bool
-            Whether masks where converted to labels
+            Whether masks were converted to labels
         """
         did_something = False
         cs = self.find_slot(state="m")
@@ -688,7 +688,7 @@ class SlotRegister:
 
         logger = logger or logging.getLogger(__name__)
 
-        # Comput labels from this ChunkSlot
+        # Process labels from this ChunkSlot
         batch_size = 100
         if cs is not None and cs.state == "l":
             while True:

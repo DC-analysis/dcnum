@@ -69,7 +69,7 @@ class QueueWriterBase:
             that do not match are kept in a buffer until the
             corresponding :class:`~dcnum.write.event_stash.EventStash`
             is created). Then, for each frame, we may have multiple or
-            None events, so the
+            no events, so the
             output size could be 513 which is computed via
             `np.sum(feat_nevents[idx:idx+write_threshold])`.
         """
@@ -138,8 +138,8 @@ class QueueWriterBase:
         thr_write = ChunkWriter(
             path_out=self.path_out,
             # We need the daemon mode, because otherwise dcnum hangs
-            # when sending a KeyboardInterupt. But this is safe, because
-            # wer are always joining the writer thread.
+            # when sending a KeyboardInterrupt. But this is safe, because
+            # we are always joining the writer thread.
             daemon=True,
             dq=writer_dq,
             mode="w",

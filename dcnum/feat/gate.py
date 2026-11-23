@@ -180,7 +180,7 @@ class Gate:
         ``data`` may be a number or an array. If no box filter is defined
         for ``feat``, True is always returned. Otherwise, either a boolean
         or a boolean array is returned, depending on the type of ``data``.
-        Not that ``np.logical_and`` can deal with mixed argument types
+        Note that ``np.logical_and`` can deal with mixed argument types
         (scalar and array).
         """
         bound_lo, bound_up = self.box_gates[feat]

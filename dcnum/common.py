@@ -33,12 +33,13 @@ class LazyLoader:
             structure:
 
             - ``module``
+
               - ``submod_1``
               - ``submod_2``
 
             If ``submod_1`` would like to lazily import ``submod_2``::
 
-                submod_2 = LazyLoader("submod_2", sibling==__name__)
+                submod_2 = LazyLoader("submod_2", sibling=__name__)
         action_before_import: Callable
             Called before the import.
         action_after_import: Callable

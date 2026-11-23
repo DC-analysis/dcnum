@@ -591,7 +591,7 @@ class DCNumJobRunner(threading.Thread):
     def task_background(self):
         """Perform background computation task
 
-        This populates the file `self.path_temp_in` with the 'image_bg'
+        This populates the file ``self.path_temp_in`` with the 'image_bg'
         feature.
         """
         self.logger.info("Starting background computation")
@@ -695,7 +695,7 @@ class DCNumJobRunner(threading.Thread):
             # We achieve this by keeping a specific order and only copying
             # those features that we don't already have in the output file.
             feats_raw = [
-                # background data from the temporary input image
+                # background data from the temporary input file
                 [self.dtin.h5, ["bg_off"], "critical"],
                 [self.draw.h5, self.draw.features_scalar_frame, "optional"],
                 [self.draw.h5, ["image", "bg_off"], "optional"],
@@ -919,10 +919,10 @@ class DCNumJobRunner(threading.Thread):
         w_dcs = UniversalWorker.get_worker_dedications(self.job, num_universal)
 
         # The number of ChunkSlots defines how well workers can operate in
-        # parallel. This should be higher than the number states a ChunkSlot
-        # can have to prevent workers from waiting on each other. Seven slots
-        # results in a shared memory usage of roughly 1GB for a standard
-        # blood measurement (image chunks of (1000, 80, 32).
+        # parallel. This should be higher than the number of states a
+        # ChunkSlot can have to prevent workers from waiting on each other.
+        # Seven slots result in a shared memory usage of roughly 1GB for a
+        # standard blood measurement (image chunks of (1000, 80, 32)).
         if self.job["debug"]:
             num_slots = 1
         else:

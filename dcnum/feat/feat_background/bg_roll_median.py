@@ -20,20 +20,20 @@ class BackgroundRollMed(Background):
 
         1. There is one big shared array ``shared_input`` that contains
            the image data for each batch.
-        2. User specifies batch size (10000) and kernel size (default
-           is 100)
+        2. User specifies batch size (default is 10000) and kernel size
+           (default is 100)
         3. There is a second shared array ``shared_output`` that contains
            the median values corresponding to the data in ``shared_input``.
         4. Background computation is done by copying the input images
            from a file into the shared array.
-        5. The input array is split into and workers compute the
+        5. The input array is split into pixel slices and workers compute the
            rolling median for each point in ``shared_input``.
 
         Parameters
         ----------
         input_data: array-like or pathlib.Path
             The input data can be either a path to an HDF5 file with
-            the "evtens/image" dataset or an array-like object that
+            the "events/image" dataset or an array-like object that
             behaves like an image stack (first axis enumerates events)
         output_path: pathlib.Path
             Path to the output file. If ``input_data`` is a path, you can
@@ -332,7 +332,7 @@ def compute_median_for_slice(shared_input, shared_output, kernel_size,
     """
     input_size = output_size + kernel_size
     # perform median filter on input data
-    # write median data into output array. Nnote that the values at
+    # write median data into output array. Note that the values at
     # filtered[-kernel_size:] are just junk data, but we keep it to
     # make the code simpler.
     shared_output[:output_size, job_slice] = ndi.median_filter(

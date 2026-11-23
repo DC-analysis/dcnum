@@ -8,7 +8,7 @@ cv2 = LazyLoader("cv2")
 
 
 def contour_single_opencv(mask):
-    """Return the contour for a boolean mask image containg *one* blob"""
+    """Return the contour for a boolean mask image containing *one* blob"""
 
     cv_im = np.asarray(mask * 255, dtype=np.uint8)
     # determine the contour information using opencv

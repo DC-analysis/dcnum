@@ -126,7 +126,7 @@ def get_model_meta(path_or_name: str | pathlib.Path,
             assert False
 
         # The available backend/device wiring are baked into the model file.
-        # Each entries consist of a dictionary with keys "device" and
+        # Each entry consists of a dictionary with keys "device" and
         # "backend", ordered according to efficiency/suggestion decreasing.
         wiring_options: list[dict[str, str]] = model_meta["wiring_options"]
         # Determine the correct wiring based on the input.
@@ -147,7 +147,7 @@ def get_model_meta(path_or_name: str | pathlib.Path,
             if backend is None and device is None:
                 raise ValueError(
                     f"The model {model_path.name} does not have wiring "
-                    f"options specified. Please provice 'device' and "
+                    f"options specified. Please provide 'device' and "
                     f"'backend' manually.")
             else:
                 raise ValueError(
@@ -273,7 +273,7 @@ def load_model_v2_pt2(model_meta: dict[str, Any]):
 
     Notes
     -----
-    The `model_meta` dict should contain the "backend" key. If "openvino"
+    The ``model_meta`` dict should contain the "backend" key. If "openvino"
     is installed, then the backend "openvino" is available.
     Torch's eager mode is available via the "torch.eager" backend (strictly
     speaking, this is not a backend at all, it's just the torch default

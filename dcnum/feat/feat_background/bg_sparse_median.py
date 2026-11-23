@@ -39,7 +39,7 @@ class BackgroundSparseMed(Background):
         ----------
         input_data: array-like or pathlib.Path
             The input data can be either a path to an HDF5 file with
-            the "evtens/image" dataset or an array-like object that
+            the "events/image" dataset or an array-like object that
             behaves like an image stack (first axis enumerates events).
         output_path: pathlib.Path
             Path to the output file. If ``input_data`` is a path, you can
@@ -180,13 +180,13 @@ class BackgroundSparseMed(Background):
         self.shared_input = np.ctypeslib.as_array(
             self.shared_input_raw).reshape(kernel_size, -1)
         """numpy array reshaped view on ``self.shared_input_raw``.
-        The First axis enumerating the events
+        The first axis enumerating the events
         """
 
         self.shared_output = np.ctypeslib.as_array(
             self.shared_output_raw).reshape(self.image_shape)
         """numpy array reshaped view on ``self.shared_output_raw``.
-        The First axis enumerating the events
+        The first axis enumerating the events
         """
 
         self.worker_counter = mp_spawn.Value("q", 0)
@@ -351,7 +351,7 @@ class BackgroundSparseMed(Background):
         # assigned the background image closest in time (they may be
         # assigned an image up to a few seconds away). This is intended
         # and should not be changed: The background is generally
-        # consiered stable. Minimal changes in focus don't affect the
+        # considered stable. Minimal changes in focus don't affect the
         # center of the ROI significantly.
         bg_idx = np.zeros(self.image_count, dtype=int)
         idx0 = 0

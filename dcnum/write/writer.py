@@ -127,7 +127,7 @@ class HDF5Writer:
         group_name: str
             name of the HDF5 group where the feature should be written to;
             defaults to the "events" group, but a different group can be
-            specified for storing e.g. internal  basin features.
+            specified for storing e.g. internal basin features.
         """
         if group_name == "events":
             egroup = self.events
@@ -336,7 +336,7 @@ def create_with_basins(
     basin_paths:
         The paths to the basins written to `path_out`. This can be
         either a list of paths (to different basins) or a list of
-        lists for paths (for basins containing the same information,
+        lists of paths (for basins containing the same information,
         commonly used for relative and absolute paths).
     """
     path_out = pathlib.Path(path_out)

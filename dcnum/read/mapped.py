@@ -85,17 +85,20 @@ def get_mapping_indices(
     ----------
     index_mapping: numbers.Integral | slice | list | np.ndarray
         Several options you have here:
-        - integer: results in np.arange(integer)
-        - slice: results in np.arange(slice.start, slice.stop, slice.step)
+
+        - integer: results in ``np.arange(integer)``
+        - slice: results in
+          ``np.arange(slice.start, slice.stop, slice.step)``
         - list or np.ndarray: returns the input as uint32 array
+
         Negative values are not allowed.
     size: int
         Size of the dataset to which the mapping is applied. If given,
         integers and slices are limited to the dataset size (e.g.
-        `slice(30, None)` or `slice(30, 1000)` for a dataset of size
-        40 results in `np.arange(30, 40)`), and a `ValueError` is
+        ``slice(30, None)`` or ``slice(30, 1000)`` for a dataset of size
+        40 results in ``np.arange(30, 40)``), and a ``ValueError`` is
         raised if a list or array contains indices beyond the dataset.
-        Slices without start or stop require `size`.
+        Slices without start or stop require ``size``.
 
     Returns
     -------

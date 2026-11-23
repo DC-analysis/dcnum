@@ -111,13 +111,16 @@ class HDF5Data:
         index_mapping:
             select only a subset of input events, transparently reducing the
             size of the dataset, possible data types are
-            - int `N`: use the first `N` events
+
+            - int ``N``: use the first ``N`` events
             - slice: use the events defined by a slice
-            - list: list of integers specifying the event indices to use
+            - list or np.ndarray: integers specifying the event indices
+              to use
+
             Numpy indexing rules apply. E.g. to only process the first
-            100 events, set this to `100` or `slice(0, 100)`. Negative
+            100 events, set this to ``100`` or ``slice(0, 100)``. Negative
             values are not allowed. Integers and slices are limited to
-            the size of the dataset (e.g. `slice(30, None)`).
+            the size of the dataset (e.g. ``slice(30, None)``).
         """
         # Init is in __setstate__ so we can pickle this class
         # and use it for multiprocessing.
@@ -235,7 +238,7 @@ class HDF5Data:
 
     def __setstate__(self, state):
         # Make sure these properties exist (we rely on __init__, because
-        # we want this class to be pickable and __init__ is not called by
+        # we want this class to be picklable and __init__ is not called by
         # `pickle.load`).
         # Cached properties
         self._feats = None
@@ -406,7 +409,7 @@ class HDF5Data:
 
     @property
     def meta_nest(self):
-        """Return `self.meta` as nested dicitonary
+        """Return `self.meta` as nested dictionary
 
         This gets very close to the dclab `config` property of datasets.
         """
