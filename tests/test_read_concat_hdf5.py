@@ -47,6 +47,23 @@ def test_concat_basic_to_file(tmp_path):
     assert path_out.exists()
 
 
+def test_concat_relative_paths(tmp_path, monkeypatch):
+    """Relative input paths must work from any working directory"""
+    path = retrieve_data("fmt-hdf5_cytoshot_full-features_2023.zip")
+    with h5py.File(path) as h5:
+        deform = h5["events/deform"][:]
+    (tmp_path / "sub").mkdir()
+    path_out = tmp_path / "sub" / "concat.rtdc"
+    monkeypatch.chdir(path.parent)
+    with read.concatenated_hdf5_data([path.name, path.name],
+                                     path_out=path_out) as data:
+        assert np.allclose(data["deform"][:], np.tile(deform, 2))
+    # read the concatenated file from a different working directory
+    monkeypatch.chdir(tmp_path)
+    with read.HDF5Data(path_out) as data:
+        assert np.allclose(data["deform"][:], np.tile(deform, 2))
+
+
 def test_concat_ignore_contour(tmp_path):
     # get file wtih contour information
     path = retrieve_data("fmt-hdf5_cytoshot_full-features_2023.zip")

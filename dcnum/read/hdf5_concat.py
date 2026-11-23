@@ -65,6 +65,11 @@ def concatenated_hdf5_data(paths: list[pathlib.Path],
         warnings.warn("Only one file passed to `concatenated_hdf5_data`; this "
                       "is equivalent to using `HDF5Data`, but slower.")
 
+    # Use absolute paths, because relative paths in the virtual datasets
+    # would be resolved relative to the current working directory when
+    # the data are read.
+    paths = [pathlib.Path(pp).resolve() for pp in paths]
+
     frames = []
 
     with h5py.File(**h5kwargs) as hv:
@@ -73,7 +78,6 @@ def concatenated_hdf5_data(paths: list[pathlib.Path],
         dtypes = {}
         size = 0
         for ii, pp in enumerate(paths):
-            pp = pathlib.Path(pp).resolve()
             with h5py.File(pp, libver="latest") as h5:
                 # get all feature keys
                 featsi = sorted(h5["events"].keys())
