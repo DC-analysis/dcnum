@@ -53,6 +53,9 @@
    so their pipeline identifier could not be resolved
  - fix: `detect_flickering` raised a `TypeError` for `HDF5Data`
    instances, although the docstring allowed them
+ - fix: files with more than one basin without a name could not be
+   opened (regression in 0.28.3), and basins without a name or
+   description could not be copied
  - docs: comment on intended behavior of `fill_holes` (mask
    post-processing), Haralick texture features, and the sparsemed
    background assignment after cleansing
