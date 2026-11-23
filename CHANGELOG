@@ -34,6 +34,9 @@
  - fix: `DCNumJobRunner.join` deleted the log file of a failed job; by
    default, temporary files are now kept when the job ended in the
    "error" state
+ - docs: comment on intended behavior of `fill_holes` (mask
+   post-processing), Haralick texture features, and the sparsemed
+   background assignment after cleansing
 0.31.2
  - fix: online gates for `size_x` and `size_y` were ignored (regression in 0.16.6)
  - fix: "pipeline:dcnum yield" and "experiment:event count" were set to

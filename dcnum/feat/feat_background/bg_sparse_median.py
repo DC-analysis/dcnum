@@ -342,6 +342,13 @@ class BackgroundSparseMed(Background):
             bg_images = self.bg_images
 
         # Assign each frame to a certain background index
+        # Note that the boundaries between background images are always
+        # placed at `step_time + split_time / 2`. If background images
+        # were removed during cleansing, some frames are therefore not
+        # assigned the background image closest in time (they may be
+        # assigned an image up to a few seconds away). This is intended
+        # and should not be changed: The background is stable over a
+        # range of about three seconds.
         bg_idx = np.zeros(self.image_count, dtype=int)
         idx0 = 0
         idx1 = None
