@@ -87,6 +87,8 @@
    return values in `read`, `write`, `meta`, and `common`
  - docs: document job defaults, runner states, raised exceptions, side
    effects, and missing parameters in `logic`
+ - docs: document parameters, return values, raised exceptions, and
+   edge cases in `feat` and `segm`
 0.31.2
  - fix: online gates for `size_x` and `size_y` were ignored (regression in 0.16.6)
  - fix: "pipeline:dcnum yield" and "experiment:event count" were set to

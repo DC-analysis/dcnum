@@ -88,6 +88,8 @@ class TorchSegmenterBase(Segmenter):
         ------
         dcnum.segm.segmenter.SegmenterNotApplicableError
             If the segmenter is not applicable to the dataset
+        ValueError
+            If ``segmenter_kwargs`` does not contain "model_file"
         """
         if "model_file" not in segmenter_kwargs:
             raise ValueError("A `model_file` must be provided in the "

@@ -85,7 +85,32 @@ class QueueEventExtractor:
                               haralick: bool = True,
                               volume: bool = True,
                               ):
-        """Get events dictionary, performing event-based gating"""
+        """Get events dictionary, performing event-based gating
+
+        Parameters
+        ----------
+        masks: np.ndarray
+            3D boolean array of the masks (one per event) found in
+            one image
+        chunk_slot: dcnum.logic.chunk_slot.ChunkSlot
+            chunk slot containing the image data
+        sub_index: int
+            index of the image in the chunk slot
+        brightness: bool
+            whether to compute brightness features
+        haralick: bool
+            whether to compute Haralick texture features
+        volume: bool
+            whether to compute the volume
+
+        Returns
+        -------
+        events: dict
+            dictionary of feature arrays (including "mask"); Events
+            outside the box gates and events with invalid contours are
+            removed (the latter are counted in the "masks_dropped"
+            counter of the slot register).
+        """
         events = {"mask": masks}
         image = chunk_slot.image[sub_index][np.newaxis]
         image_bg = chunk_slot.image_bg[sub_index][np.newaxis]
@@ -223,7 +248,12 @@ class QueueEventExtractor:
         return kwargs
 
     def process_label(self, index):
-        """Process one label image, extracting masks and features"""
+        """Process one label image, extracting masks and features
+
+        Returns the events dictionary (see :meth:`get_events_from_masks`)
+        or None if the image is a duplicate of the previous image or if
+        it does not contain any valid masks.
+        """
         chunk = index // self.slot_register.chunk_size
         sub_index = index % self.slot_register.chunk_size
 
