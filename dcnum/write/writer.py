@@ -44,8 +44,9 @@ class HDF5Writer:
             opening mode when using :class:`h5py.File`
         ds_kwds: dict
             keyword arguments with which to initialize new Datasets
-            (e.g. compression); Note that default filter keyword
-            arguments are added to this dictionary in-place.
+            (e.g. compression); Default filter keyword arguments are
+            added to a copy of this dictionary (see
+            :func:`set_default_filter_kwargs`).
         """
         if isinstance(obj, h5py.File):
             self.h5 = obj
@@ -137,7 +138,9 @@ class HDF5Writer:
         feat_dtype: np.dtype
             dtype of the feature
         ds_kwds: dict
-            HDF5 Dataset keyword arguments (e.g. compression, fletcher32)
+            HDF5 Dataset keyword arguments (e.g. compression, fletcher32);
+            Missing keys are taken from ``self.ds_kwds`` (the dictionary
+            is not modified).
         group_name: str
             name of the HDF5 group where the feature should be written to;
             defaults to the "events" group, but a different group can be
@@ -156,10 +159,8 @@ class HDF5Writer:
             egroup = self.h5.require_group(group_name)
 
         if feat not in egroup:
-            if ds_kwds is None:
-                ds_kwds = {}
-            for key in self.ds_kwds:
-                ds_kwds.setdefault(key, self.ds_kwds[key])
+            # Do not modify the dictionary passed by the caller.
+            ds_kwds = self.ds_kwds | (ds_kwds or {})
             dset = egroup.create_dataset(
                 feat,
                 shape=tuple([0] + list(item_shape)),
@@ -638,8 +639,8 @@ def set_default_filter_kwargs(ds_kwds: dict | None = None,
     ----------
     ds_kwds: dict | None
         keyword arguments for :meth:`h5py.Group.create_dataset`;
-        This dictionary is modified in-place (a new one is created
-        if None).
+        This dictionary is not modified (the defaults are added to
+        a copy).
     compression: bool
         whether to use Zstandard compression (via ``hdf5plugin``,
         compression level 5) if ``ds_kwds`` does not already define
@@ -649,11 +650,11 @@ def set_default_filter_kwargs(ds_kwds: dict | None = None,
     Returns
     -------
     ds_kwds: dict
-        the updated keyword arguments, which also enable fletcher32
-        checksums by default
+        a new dictionary with the updated keyword arguments, which also
+        enable fletcher32 checksums by default
     """
-    if ds_kwds is None:
-        ds_kwds = {}
+    # Do not modify the dictionary passed by the caller.
+    ds_kwds = {} if ds_kwds is None else dict(ds_kwds)
     if compression and "compression" not in ds_kwds:
         # Zstandard compression
         for key, val in dict(hdf5plugin.Zstd(clevel=5)).items():

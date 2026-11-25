@@ -435,6 +435,15 @@ def test_open_from_h5py_object(tmp_path):
         assert np.all(h5["events"]["userdef1"] == np.arange(20))
 
 
+def test_set_default_filter_kwargs_not_modified():
+    ds_kwds = {"fletcher32": False}
+    ds_kwds_new = write.set_default_filter_kwargs(ds_kwds)
+    assert ds_kwds == {"fletcher32": False}, "input not modified"
+    assert ds_kwds_new is not ds_kwds
+    assert ds_kwds_new["fletcher32"] is False
+    assert "compression" in ds_kwds_new
+
+
 def test_writer_basic():
     path = retrieve_data("fmt-hdf5_cytoshot_full-features_2023.zip")
     path_wrt = path.with_name("written.hdf5")
@@ -513,6 +522,27 @@ def test_writer_basin_file_relative():
         assert data_dict["type"] == "file"
         assert data_dict["format"] == "hdf5"
         assert data_dict["features"] == ["deform", "area_um"]
+
+
+def test_writer_ds_kwds_not_modified(tmp_path):
+    path = tmp_path / "test.rtdc"
+    ds_kwds = {"fletcher32": False}
+    feat_kwds = {"fletcher32": True}
+    with write.HDF5Writer(path, ds_kwds=ds_kwds) as hw:
+        assert ds_kwds == {"fletcher32": False}, "input not modified"
+        assert "compression" in hw.ds_kwds
+        hw.require_feature("userdef1",
+                           item_shape=(),
+                           feat_dtype=float,
+                           ds_kwds=feat_kwds)
+        assert feat_kwds == {"fletcher32": True}, "input not modified"
+        hw.require_feature("userdef2",
+                           item_shape=(),
+                           feat_dtype=float)
+
+    with h5py.File(path) as h5:
+        assert h5["events/userdef1"].fletcher32
+        assert not h5["events/userdef2"].fletcher32
 
 
 def test_writer_logs(tmp_path):

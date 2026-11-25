@@ -67,6 +67,8 @@
  - fix: an explicit `size_thresh_mask=0` for `Gate` (also via the
    "bin area min" metadata with online gates) was replaced by the
    default value 10
+ - fix: `HDF5Writer` and `set_default_filter_kwargs` modified the
+   `ds_kwds` dictionary passed by the caller in-place
  - docs: comment on intended behavior of `fill_holes` (mask
    post-processing), Haralick texture features, and the sparsemed
    background assignment after cleansing
