@@ -25,8 +25,8 @@ def postprocess_masks(masks,
     Parameters
     ----------
     masks: 3d or 4d ndarray
-        Mask data in shape (batch_size, 1, imagex_size, imagey_size)
-        or (batch_size, imagex_size, imagey_size).
+        Mask data in shape (batch_size, 1, height, width)
+        or (batch_size, height, width).
     original_image_shape: tuple of (int, int)
         The required output mask shape for one event. This is required for
         doing the inverse of what is done in :func:`.preprocess_images`.
@@ -79,7 +79,8 @@ def postprocess_masks(masks,
                                                   fill_holes=False,
                                                   closing_disk=0)
 
-    # Crop first, only then pad.
+    # Revert the padding (by cropping) or the cropping (by padding with
+    # zeros), first along the width, then along the height.
     if s1diff > 0:
         labels_pad = np.zeros((batch_size,
                               labels.shape[1],

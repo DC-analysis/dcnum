@@ -56,7 +56,7 @@ class SegmentTorchMPO(TorchSegmenterBase, MPOSegmenter):
         # Model inference
         pred_tensor = model(image_ten_on_device)
 
-        # Convert cuda-tensor into numpy mask array. The `pred_tensor`
+        # Convert the tensor into a numpy mask array. The `pred_tensor`
         # array is still of the shape (1, 1, H, W). The `masks`
         # array is of shape (1, H, W).
         mask = pred_tensor.detach().cpu().numpy()[0] >= 0.5

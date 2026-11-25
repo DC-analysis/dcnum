@@ -41,7 +41,7 @@ class MPOSegmenter(Segmenter, abc.ABC):
             Keyword arguments for mask post-processing (see
             ``process_labels``)
         debug: bool
-            Debugging parameters
+            Enable debugging mode (e.g. no multiprocessing)
         kwargs:
             Additional, optional keyword arguments for ``segment_algorithm``
             defined in the subclass.
@@ -64,7 +64,7 @@ class MPOSegmenter(Segmenter, abc.ABC):
         """Number of workers that are done processing the slot"""
 
         self.mp_shutdown = mp_spawn.Event()
-        """Shutdown event tells workers to stop when set to != 0"""
+        """Shutdown event tells workers to stop when set"""
 
         # workers
         self._worker_starter = None
@@ -158,8 +158,9 @@ class MPOSegmenter(Segmenter, abc.ABC):
         """Perform batch segmentation of ``images``
 
         Before segmentation, an optional background offset correction with
-        ``bg_off`` is performed. After segmentation, mask postprocessing is
-        performed according to the segmenter class definition.
+        ``bg_off`` is performed. The returned masks are not post-processed
+        (mask post-processing is done after labeling, see
+        :meth:`~dcnum.segm.segmenter.Segmenter.process_labels`).
 
         Parameters
         ----------
@@ -262,8 +263,9 @@ class MPOSegmenter(Segmenter, abc.ABC):
         """Return the boolean mask image for an input image
 
         Before segmentation, an optional background offset correction with
-        ``bg_off`` is performed. After segmentation, mask postprocessing is
-        performed according to the class definition.
+        ``bg_off`` is performed. The returned masks are not post-processed
+        (mask post-processing is done after labeling, see
+        :meth:`~dcnum.segm.segmenter.Segmenter.process_labels`).
         """
         segm_wrap = self.segment_algorithm_wrapper()
 
@@ -315,7 +317,7 @@ class MPOSegmenterWorker:
         """Number of workers that are done processing the slot"""
 
         self.mp_shutdown = segmenter.mp_shutdown
-        """Shutdown bit tells workers to stop when set to != 0"""
+        """Shutdown event tells workers to stop when set"""
 
         self.sl_start = sl_start
         self.sl_stop = sl_stop

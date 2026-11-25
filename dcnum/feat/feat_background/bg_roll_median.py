@@ -294,7 +294,7 @@ class WorkerRollMed(mp_spawn.Process):
 
         See :class:`dcnum.os_env_st.RequestSingleThreaded`.
         """
-        # Set all relevant os environment variables such libraries in the
+        # Set all relevant os environment variables such that libraries in the
         # new process only use single-threaded computation.
         with RequestSingleThreaded():
             mp_spawn.Process.start(self)
@@ -306,16 +306,15 @@ def compute_median_for_slice(shared_input, shared_output, kernel_size,
 
     Parameters
     ----------
-    shared_input: multiprocessing.RawArray
-        Input data for which to compute the median. For each pixel
-        in the original image, batch_size + kernel_size events are
-        stored in this array one after another in a row.
-        The total size of this array is
-        ``batch_size * kernel_size * number_of_pixels_in_the_image``.
-    shared_output: multiprocessing.RawArray
-        Used for storing the result. Note that the last ``kernel_size``
-        elements for each pixel in this output array are junk data
-        (because it is a rolling median).
+    shared_input: np.ndarray
+        2D view on the shared input data for which to compute the
+        median; the first axis enumerates the events (up to
+        ``batch_size + kernel_size``), the second axis enumerates the
+        pixels of the image.
+    shared_output: np.ndarray
+        2D view on the shared output array (``batch_size`` events times
+        number of pixels) used for storing the result; only the first
+        ``output_size`` events are written.
     kernel_size: int
         Kernel size for median computation. This is the number of
         events that are used to compute the median for each pixel.

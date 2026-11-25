@@ -39,7 +39,7 @@ class UNISegmenter(Segmenter, abc.ABC):
             Keyword arguments for mask post-processing (see
             ``process_labels``)
         debug: bool
-            Debugging parameters
+            Enable debugging mode (e.g. no multiprocessing)
         kwargs:
             Additional, optional keyword arguments for ``segment_algorithm``
             defined in the subclass.
@@ -62,8 +62,9 @@ class UNISegmenter(Segmenter, abc.ABC):
         """Perform batch segmentation of ``images``
 
         Before segmentation, an optional background offset correction with
-        ``bg_off`` is performed. After segmentation, mask postprocessing is
-        performed according to the class definition.
+        ``bg_off`` is performed. The returned masks are not post-processed
+        (mask post-processing is done after labeling, see
+        :meth:`~dcnum.segm.segmenter.Segmenter.process_labels`).
 
         Parameters
         ----------
@@ -95,7 +96,12 @@ class UNISegmenter(Segmenter, abc.ABC):
         return mask_out
 
     def segment_single(self, image, bg_off: float | None = None):
-        """This is a convenience-wrapper around ``segment_batch``"""
+        """Return the boolean mask for one image
+
+        Note that this does not call :meth:`segment_batch`, but the
+        segmentation algorithm directly. A :class:`ValueError` is raised
+        if the segmenter requires a batch size larger than one.
+        """
         if self.required_batch_size > 1:
             raise ValueError(f"Segmenter {self} only supports segmenting "
                              f"batches of size {self.required_batch_size}")

@@ -102,7 +102,7 @@ def moments_based_features(
         feat_size_y[ii] = h * pixel_size
 
         # inert_ratio_cvx
-        if mu_cvx['mu02'] > 0:  # defaults to zero
+        if mu_cvx['mu02'] > 0:  # defaults to NaN
             feat_inert_ratio_cvx[ii] = np.sqrt(mu_cvx['mu20'] / mu_cvx['mu02'])
 
         # moments of inertia of raw contour
@@ -114,7 +114,7 @@ def moments_based_features(
         feat_tilt[ii] = np.abs(0.5 * np.arctan2(-2 * i_xy, i_yy - i_xx))
 
         # inert_ratio_raw
-        if i_xx > 0:  # defaults to zero
+        if i_xx > 0:  # defaults to NaN
             feat_inert_ratio_raw[ii] = np.sqrt(i_yy / i_xx)
 
         # central moments in principal axes

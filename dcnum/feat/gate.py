@@ -106,10 +106,14 @@ class Gate:
 
             KEY:KW_GATE
 
-        Where KEY is e.g. "online_gates", and KW_GATE is
-        the corresponding value, e.g.::
+        Where KEY is the gating method code ("norm"), and KW_GATE is
+        a list of the gating keyword arguments, e.g.::
 
             online_gates=True^size_thresh_mask=5
+
+        which is abbreviated to::
+
+            o=1^s=5
         """
         return self.get_ppid_from_ppkw(self.kwargs)
 
@@ -177,9 +181,10 @@ class Gate:
                      data: numbers.Number | np.ndarray):
         """Return boolean indicating whether ``data`` value is in box gate
 
-        ``data`` may be a number or an array. If no box filter is defined
-        for ``feat``, True is always returned. Otherwise, either a boolean
-        or a boolean array is returned, depending on the type of ``data``.
+        ``data`` may be a number or an array. Either a boolean or a
+        boolean array is returned, depending on the type of ``data``.
+        A :class:`KeyError` is raised if no box gate is defined for
+        ``feat`` (see :attr:`box_gates`).
         Note that ``np.logical_and`` can deal with mixed argument types
         (scalar and array).
         """

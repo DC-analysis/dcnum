@@ -149,7 +149,7 @@ class Background(abc.ABC):
         be backwards-compatible (future versions of dcnum will
         correctly acknowledge the ID).
 
-        The segmenter pipeline ID is defined as::
+        The background pipeline ID is defined as::
 
             KEY:KW_BACKGROUND
 
