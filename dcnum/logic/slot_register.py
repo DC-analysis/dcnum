@@ -419,6 +419,12 @@ class SlotRegister:
                       ) -> bool:
         """Load chunk data into memory for as many slots as possible
 
+        Parameters
+        ----------
+        logger: logging.Logger
+            logger for status messages (defaults to the module
+            logger)
+
         Returns
         -------
         did_something : bool
@@ -643,6 +649,12 @@ class SlotRegister:
         This method is process-safe. Multiple processes may call it
         concurrently, working on the same chunk slot.
 
+        Parameters
+        ----------
+        logger: logging.Logger
+            logger for status messages (defaults to the module
+            logger)
+
         Returns
         -------
         did_something : bool
@@ -678,10 +690,16 @@ class SlotRegister:
     def task_process_labels(self,
                             logger: logging.Logger | None = None
                             ) -> bool:
-        """Perform label processing (e.g. binary closing) for a chunk slot
+        """Perform label processing (mask post-processing) for a chunk slot
 
         This method is process-safe. Multiple processes may call it
         concurrently, working on the same chunk slot.
+
+        Parameters
+        ----------
+        logger: logging.Logger
+            logger for status messages (defaults to the module
+            logger)
 
         Returns
         -------
@@ -727,6 +745,12 @@ class SlotRegister:
 
         This method is process-safe. Multiple processes may call it
         concurrently, working on the same chunk slot.
+
+        Parameters
+        ----------
+        logger: logging.Logger
+            logger for status messages (defaults to the module
+            logger)
 
         Returns
         -------
@@ -788,6 +812,25 @@ class StateWarden:
                  next_state: str,
                  batch_size: int | None = None,
                  ):
+        """Reserve frames of a chunk slot for a task
+
+        The task lock for up to ``batch_size`` frames is acquired
+        when the state warden is created (see
+        :meth:`~dcnum.logic.chunk_slot_data.ChunkSlotData.acquire_task_lock`).
+        Entering the context raises a :class:`ValueError` if the state
+        of the chunk slot changed in the meantime.
+
+        Parameters
+        ----------
+        chunk_slot:
+            chunk slot to reserve frames of
+        current_state: str
+            state required for the task
+        next_state: str
+            state set after all frames of the chunk slot were processed
+        batch_size: int
+            number of frames to reserve (defaults to the entire chunk)
+        """
         # Make sure the task lock is acquired.
         self.batch_range = chunk_slot.acquire_task_lock(
             req_state=current_state,

@@ -82,6 +82,14 @@ class DCNumJobRunner(threading.Thread):
         from all workers are collected via a logging queue and written
         to a log file next to the output file.
 
+        The state of the runner (:attr:`state`) changes from "init" to
+        "setup", "background", "segmentation", "plumbing", "cleanup",
+        and "done", or to "error" if an error occurred.
+
+        Note that creating a job runner creates the output directory
+        and deletes an existing log file (``<path_out>.log``) of a
+        previous run.
+
         Parameters
         ----------
         job: dcnum.logic.job.DCNumPipelineJob
@@ -170,6 +178,11 @@ class DCNumJobRunner(threading.Thread):
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
+        """Close the job runner (see :meth:`close`)
+
+        The temporary files and the log file are kept if an exception
+        occurred or if the job ended in the "error" state.
+        """
         # If an error occurred, don't delete the log and basin files.
         delete_temporary_files = exc_type is None and self.state != "error"
         self.close(delete_temporary_files=delete_temporary_files)
@@ -350,9 +363,11 @@ class DCNumJobRunner(threading.Thread):
         """Run the pipeline (see :meth:`run_pipeline`)
 
         On ``KeyboardInterrupt`` or ``DCNUMHaltInterrupt``, the runner
-        is closed. For any other exception, the state is set to "error"
-        and the traceback is stored in ``self.error_tb``; The exception
-        is only re-raised if this method is not run in a started thread.
+        is closed (including deleting the temporary files and the log
+        file) and the state is not changed. For any other exception, the
+        state is set to "error" and the traceback is stored in
+        ``self.error_tb``; The exception is only re-raised if this method
+        is not run in a started thread.
         """
         try:
             self.run_pipeline()
@@ -369,7 +384,21 @@ class DCNumJobRunner(threading.Thread):
                 raise
 
     def run_pipeline(self):
-        """Execute the pipeline job"""
+        """Execute the pipeline job
+
+        The output is written to a temporary file (:attr:`path_temp_out`)
+        which is renamed to ``job["path_out"]`` at the end. The job
+        information and the log of the pipeline run are stored in the
+        output file as the logs "dcnum-job-<time>" and
+        "dcnum-log-<time>" (a counter is appended to the time string if
+        these logs already exist, e.g. when they were copied from the
+        input file).
+
+        Raises
+        ------
+        FileExistsError
+            If the output file already exists
+        """
         time_start = time.perf_counter()
         time_string = time.strftime("%Y-%m-%d-%H.%M.%S", time.gmtime())
         self.logger.info(f"Run start: {time_string}")
@@ -901,6 +930,14 @@ class DCNumJobRunner(threading.Thread):
         performs the segmentation. Extracted events are written to
         :attr:`path_temp_out` by a queue writer. This method blocks
         until all frames have been written.
+
+        Raises
+        ------
+        RuntimeError
+            If the universal workers failed to spawn, if a worker failed
+            or exited early, or if writing to the output file failed (in
+            these cases, the writer is aborted and the incomplete output
+            is not used)
         """
         self.logger.info("Starting segmentation and feature extraction")
 

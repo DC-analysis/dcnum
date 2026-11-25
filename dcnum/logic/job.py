@@ -46,11 +46,13 @@ class DCNumPipelineJob:
         path_in: pathlib.Path | str
             input data path
         path_out: pathlib.Path | str
-            output data path
+            output data path; defaults to ``<input stem>_dcn.rtdc``
+            in the directory of ``path_in``
         data_code: str
             identification code of input data reader to use
         data_kwargs: dict
-            keyword arguments for data reader
+            keyword arguments for data reader; If "pixel_size" is not
+            specified, it is read from the input file.
         background_code: str
             identification code of background data computation method
         background_kwargs: dict
@@ -58,7 +60,8 @@ class DCNumPipelineJob:
         segmenter_code: str
             identification code of segmenter to use
         segmenter_kwargs: dict
-            keyword arguments for segmenter
+            keyword arguments for segmenter; mask post-processing
+            keyword arguments are passed via the "kwargs_mask" key
         feature_code: str
             identification code of feature extractor
         feature_kwargs: dict
@@ -87,12 +90,19 @@ class DCNumPipelineJob:
             accepted minimum compression setting for long-term data
             storage in the DC universe (enforced e.g. by DCOR-Aid).
         num_procs: int
-            Number of processes to use
+            Number of processes to use; defaults to
+            :func:`dcnum.common.cpu_count`
         log_level: int
             Logging level to use.
         debug: bool
-            Whether to set logging level to "DEBUG" and
-            use threads instead of processes
+            Whether to set logging level to "DEBUG" (overrides
+            ``log_level``) and use threads instead of processes
+
+        Notes
+        -----
+        The keyword argument dictionaries (e.g. ``data_kwargs``) are
+        copied, so the dictionaries passed by the caller are not
+        modified.
         """
         self.kwargs = {}
         """keyword arguments of this job (with defaults filled in)"""
@@ -127,6 +137,12 @@ class DCNumPipelineJob:
             self.kwargs["num_procs"] = cpu_count()
 
     def __getitem__(self, item):
+        """Return a copy of the keyword argument ``item``
+
+        Since a copy is returned, modifying the returned value (e.g.
+        ``job["data_kwargs"]["pixel_size"] = 0.3``) does not modify the
+        job. Use :attr:`kwargs` for that.
+        """
         return copy.deepcopy(self.kwargs[item])
 
     def __getstate__(self):
