@@ -266,11 +266,20 @@ class MPOSegmenter(Segmenter, abc.ABC):
         ``bg_off`` is performed. The returned masks are not post-processed
         (mask post-processing is done after labeling, see
         :meth:`~dcnum.segm.segmenter.Segmenter.process_labels`).
+        As in :meth:`segment_batch`, a :class:`ValueError` is raised if
+        ``bg_off`` is given for a segmenter that does not employ
+        background correction.
         """
         segm_wrap = self.segment_algorithm_wrapper()
 
         # optional subtraction of background offset
         if bg_off is not None:
+            if not self.requires_background_correction:
+                raise ValueError(f"The segmenter {self.__class__.__name__} "
+                                 f"does not employ background correction, "
+                                 f"but the `bg_off` keyword argument was "
+                                 f"passed to `segment_single`. Please check "
+                                 f"your analysis pipeline.")
             image = image - bg_off
 
         # obtain mask
