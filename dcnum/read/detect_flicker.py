@@ -37,6 +37,11 @@ def detect_flickering(image_data: np.ndarray | HDF5Data,
         flickering decision
     max_frames: int
         maximum number of frames to include in the flickering analysis
+
+    Returns
+    -------
+    flickering: bool
+        whether flickering was detected
     """
     if isinstance(image_data, HDF5Data):
         image_data = image_data.image

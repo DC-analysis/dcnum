@@ -136,7 +136,28 @@ def join_worker(worker,
                 retries=10,
                 logger=None,
                 name=None):
-    """Patiently join a worker (Thread or Process)"""
+    """Patiently join a worker (Thread or Process)
+
+    Parameters
+    ----------
+    worker: threading.Thread or multiprocessing.Process
+        The worker to join; If it has a ``close`` method (processes),
+        it is called after joining.
+    timeout: float
+        Timeout in seconds for each join attempt
+    retries: int
+        Number of join attempts
+    logger: logging.Logger
+        Logger for status messages
+    name: str
+        Name of the worker used in log messages
+
+    Raises
+    ------
+    ValueError
+        If the worker could not be joined within ``timeout * retries``
+        seconds
+    """
     logger = logger or logging.getLogger(__name__)
     for _ in range(retries):
         worker.join(timeout=timeout)

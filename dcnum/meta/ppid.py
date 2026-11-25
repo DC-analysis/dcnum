@@ -86,7 +86,9 @@ def convert_to_dtype(value, dtype):
     """Convert an object to the correct dtype
 
     If ``dtype`` is a Union of types, or a list of types, the first
-    non-NoneType type is used for conversion.
+    non-NoneType type is used for conversion. Boolean values may be
+    given as strings ("true", "yes", "false", "no") or as numbers.
+    ``pathlib.Path`` values are converted to strings.
     """
     if dtype is bool:
         if isinstance(value, str):
@@ -244,6 +246,31 @@ def kwargs_to_ppid(cls: ClassWithPPIDCapabilities,
 
 def ppid_to_kwargs(cls, method, ppid):
     """Convert pipeline method id to method keyword arguments
+
+    This is the inverse of :func:`kwargs_to_ppid`.
+
+    Parameters
+    ----------
+    cls:
+        Class that implements ``method``
+    method: str
+        Name of the method whose keyword-only arguments define the
+        identifier
+    ppid: str
+        Pipeline method identifier (without the method code), e.g.
+        ``"t=-6"``
+
+    Returns
+    -------
+    kwargs: dict
+        Keyword arguments, including the default values of arguments
+        that are not in ``ppid``
+
+    Raises
+    ------
+    ValueError
+        If an abbreviated key in ``ppid`` does not match any keyword
+        argument
 
     Notes
     -----

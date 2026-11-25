@@ -53,13 +53,16 @@ class BasinFileGroup:
 
     @property
     def file(self):
+        """The HDF5 file of the basin"""
         return self.h5group.file
 
     @property
     def id(self):
+        """The HDF5 identifier of the "events" group of the basin"""
         return self.h5group.id
 
     def keys(self):
+        """Return the sorted features, including the nested features"""
         return sorted(set(self.h5group.keys()) | set(self.nested_data))
 
 
@@ -122,6 +125,13 @@ class HDF5Data:
             100 events, set this to ``100`` or ``slice(0, 100)``. Negative
             values are not allowed. Integers and slices are limited to
             the size of the dataset (e.g. ``slice(30, None)``).
+
+        Raises
+        ------
+        ValueError
+            If ``index_mapping`` contains negative values, indices
+            beyond the size of the dataset, or does not select any
+            events.
         """
         # Init is in __setstate__ so we can pickle this class
         # and use it for multiprocessing.
@@ -438,7 +448,17 @@ class HDF5Data:
 
     @staticmethod
     def extract_basin_dicts(h5, check=True):
-        """Return list of basin dictionaries"""
+        """Return list of basin dictionaries
+
+        Parameters
+        ----------
+        h5: h5py.File
+            HDF5 file from which to extract the basin definitions
+        check: bool
+            If True, ignore basins that are neither file-based nor
+            internal basins and basins whose mapping feature
+            (e.g. "basinmap0") is missing in the "events" group.
+        """
         # TODO: support iterative mapped basins and catch
         #  circular basin definitions.
         basins = []
@@ -476,7 +496,11 @@ class HDF5Data:
         return self._feats
 
     def close(self):
-        """Close the underlying HDF5 file"""
+        """Close the underlying HDF5 file (and basin files)
+
+        This also clears the metadata, logs, tables, basins, and all
+        caches, so the instance cannot be used anymore afterward.
+        """
         # TODO: There is a memory leak (#50).
         for bn_group, _, _ in self._basin_data.values():
             if bn_group is not None:
@@ -758,7 +782,8 @@ class HDF5Data:
     def get_image_cache(self, feat):
         """Create an HDF5ImageCache object for the current dataset
 
-        This method also tries to find image data in `self.basins`.
+        This method also tries to find image data in ``self.basins``.
+        Returns None if the feature ``feat`` is not available.
         """
         if feat not in self._image_cache:
             if f"events/{feat}" in self.h5:
