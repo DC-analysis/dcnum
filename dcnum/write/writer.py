@@ -528,6 +528,16 @@ def copy_features(h5_src: h5py.File,  # type: ignore
     ds_kwds:
         keyword arguments with which to initialize new Datasets
         (e.g. compression); only relevant when `mapping is not None`
+
+    Raises
+    ------
+    ValueError
+        If a feature already exists in ``h5_dst`` (and is not an
+        identical scalar feature) or if ``mapping`` contains indices
+        that are negative or not smaller than the number of events
+        of a feature in ``h5_src``
+    NotImplementedError
+        If a feature in ``h5_src`` is not an HDF5 dataset
     """
     ei = h5_src["events"]
     eo = h5_dst.require_group("events")
@@ -562,6 +572,14 @@ def copy_features(h5_src: h5py.File,  # type: ignore
             dsi = ei[feat]
             chunk_size = hw.get_best_nd_chunks(dsi[0].shape, dsi.dtype)[0]
             size_in = dsi.shape[0]
+            # Out-of-range indices would silently result in zero-valued
+            # events in the output file.
+            if mapping.size and (mapping.min() < 0
+                                 or mapping.max() >= size_in):
+                raise ValueError(
+                    f"The mapping for the feature '{feat}' must only "
+                    f"contain indices in [0, {size_in}), got values "
+                    f"between {mapping.min()} and {mapping.max()}.")
             # The mapping is not necessarily sorted, so we allocate the
             # output dataset and write the data to the output positions.
             dso, _ = hw.require_feature(feat=feat,

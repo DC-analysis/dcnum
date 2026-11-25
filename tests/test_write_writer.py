@@ -178,6 +178,26 @@ def test_copy_features_error_exists():
                                 )
 
 
+@pytest.mark.parametrize("mapping", [
+    [0, 1, 1000000],  # beyond the dataset
+    [-1, 0, 1],  # negative index
+])
+def test_copy_features_error_mapping_out_of_range(mapping):
+    path = retrieve_data(
+        "fmt-hdf5_cytoshot_full-features_legacy_allev_2023.zip")
+    path_wrt = path.with_name("written.hdf5")
+
+    with h5py.File(path, "r") as h5_src, h5py.File(path_wrt, "w") as h5_dst:
+        write.copy_metadata(h5_src=h5_src, h5_dst=h5_dst)
+        with pytest.raises(ValueError, match="must only contain indices"):
+            write.copy_features(h5_src=h5_src,
+                                h5_dst=h5_dst,
+                                features=["deform"],
+                                mapping=np.array(mapping),
+                                )
+        assert "deform" not in h5_dst["events"], "no partial output"
+
+
 def test_copy_features_error_missing():
     path = retrieve_data(
         "fmt-hdf5_cytoshot_full-features_legacy_allev_2023.zip")
