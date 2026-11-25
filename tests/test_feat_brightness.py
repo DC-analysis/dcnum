@@ -1,4 +1,5 @@
 import h5py
+import hdf5plugin  # noqa: F401 (loads the HDF5 compression filters)
 import numpy as np
 
 from dcnum.feat import feat_brightness
