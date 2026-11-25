@@ -102,7 +102,9 @@ class UNISegmenter(Segmenter, abc.ABC):
 
         Note that this does not call :meth:`segment_batch`, but the
         segmentation algorithm directly. A :class:`ValueError` is raised
-        if the segmenter requires a batch size larger than one.
+        if the segmenter requires a batch size larger than one or if
+        ``bg_off`` is given for a segmenter that does not employ
+        background correction (as in :meth:`segment_batch`).
         """
         if self.required_batch_size > 1:
             raise ValueError(f"Segmenter {self} only supports segmenting "
@@ -110,7 +112,13 @@ class UNISegmenter(Segmenter, abc.ABC):
 
         segm = self.segment_algorithm_wrapper()
 
-        if bg_off is not None and self.requires_background_correction:
+        if bg_off is not None:
+            if not self.requires_background_correction:
+                raise ValueError(f"The segmenter {self.__class__.__name__} "
+                                 f"does not employ background correction, "
+                                 f"but the `bg_off` keyword argument was "
+                                 f"passed to `segment_single`. Please check "
+                                 f"your analysis pipeline.")
             image = image - bg_off
 
         return segm(image[np.newaxis, :, :])[0]
