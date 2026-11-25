@@ -102,7 +102,10 @@ class UniversalWorker:
         """queue for logging"""
 
         self.started = mp_spawn.Value("i", 0)
+        """set to 1 when the main loop of the worker is started"""
         self.completed = mp_spawn.Value("i", 0)
+        """set to 1 when the worker finished (also after a failure,
+        but not after an interrupt)"""
         self.failed = mp_spawn.Value("i", 0)
         """set to 1 if a task raised an exception"""
 
@@ -162,7 +165,11 @@ class UniversalWorker:
 
         Performs the dedicated tasks via the slot register until its
         state is set to "q". Processing is stalled while the writer
-        queue is large (slow writer).
+        queue is large (slow writer). If a task raises an exception, the
+        traceback is logged, :attr:`failed` is set to 1, and the main
+        loop is stopped. On ``KeyboardInterrupt`` or
+        ``DCNUMHaltInterrupt``, the method returns immediately (without
+        setting :attr:`completed`).
         """
         self.started.value = 1
         # If multiprocessing is used, we now live in our own process.

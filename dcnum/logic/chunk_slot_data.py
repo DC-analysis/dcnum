@@ -178,6 +178,15 @@ class ChunkSlotData:
         If no lock could be acquired, return ``(0, 0)``. The returned
         indices might not match the input batch size: Locks for
         contiguous indices are returned based on availability.
+
+        Parameters
+        ----------
+        req_state: str
+            state the chunk slot must be in (otherwise, no lock is
+            acquired)
+        batch_size: int
+            maximum number of frames to lock (defaults to the entire
+            chunk)
         """
         # array for reserving a new batch
         reserve_array = np.ctypeslib.as_array(self._task_reserve_array)
@@ -225,6 +234,16 @@ class ChunkSlotData:
         task for which a lock was required. This method also updates the
         progress (see ``get_progress``) for the current task. Only release
         the task lock if you acquired it before.
+
+        Parameters
+        ----------
+        start: int
+            start index of the locked frames
+        stop: int
+            stop index of the locked frames
+        task_done: bool
+            whether the task was completed for these frames (updates
+            the progress)
         """
         if task_done:
             progress_array = np.ctypeslib.as_array(self._task_progress_array)

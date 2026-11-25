@@ -83,6 +83,8 @@
    code (e.g. `process_labels`, `segment_batch`, PPID examples)
  - docs: document raised exceptions, side effects, parameters, and
    return values in `read`, `write`, `meta`, and `common`
+ - docs: document job defaults, runner states, raised exceptions, side
+   effects, and missing parameters in `logic`
 0.31.2
  - fix: online gates for `size_x` and `size_y` were ignored (regression in 0.16.6)
  - fix: "pipeline:dcnum yield" and "experiment:event count" were set to
