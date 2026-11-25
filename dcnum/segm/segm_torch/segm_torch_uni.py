@@ -50,7 +50,7 @@ class SegmentTorchUNI(TorchSegmenterBase, UNISegmenter):
             Which device to use (e.g. "cpu", or "cuda"). The device is not
             part of the PPID, because it should not affect reproducibility.
         debug: bool
-            Debugging parameters
+            Enable debugging mode (e.g. no multiprocessing)
         kwargs:
             Additional, optional keyword arguments for ``segment_algorithm``
             defined in the subclass.

@@ -184,11 +184,11 @@ class QueueEventExtractor:
         list of keyword-only arguments for ``get_events_from_masks``,
         e.g.::
 
-            brightness=True^haralick=True
+            brightness=True^haralick=True^volume=True
 
-        which may be abbreviated to::
+        which is abbreviated to::
 
-            b=1^h=1
+            b=1^h=1^v=1
         """
         return self.get_ppid_from_ppkw(self.extract_kwargs)
 

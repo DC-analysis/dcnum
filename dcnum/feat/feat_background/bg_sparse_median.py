@@ -32,8 +32,13 @@ class BackgroundSparseMed(Background):
            contain event data using a lengthy algorithm that is documented
            in the source code (sorry). In short, this gets rid of
            background images that contain streaks of RBCs.
-        3. Each frame gets the background image closest to it
-           based on time from the background series.
+        3. Each frame gets a background image from the background series
+           based on time. The boundaries between the background images
+           are placed in the middle of the original ``split_time``
+           intervals, so frames whose closest background image was
+           removed in the cleansing step may get a background image
+           that is a few seconds away (the background is considered
+           stable).
 
         Parameters
         ----------
@@ -185,8 +190,8 @@ class BackgroundSparseMed(Background):
 
         self.shared_output = np.ctypeslib.as_array(
             self.shared_output_raw).reshape(self.image_shape)
-        """numpy array reshaped view on ``self.shared_output_raw``.
-        The first axis enumerating the events
+        """numpy array reshaped view on ``self.shared_output_raw``
+        (one image)
         """
 
         self.worker_counter = mp_spawn.Value("q", 0)
@@ -225,7 +230,7 @@ class BackgroundSparseMed(Background):
                           frac_cleansing: float = .8,
                           offset_correction: bool = True,
                           ):
-        """Initialize user-defined properties of this class
+        """Check user-defined properties of this class
 
         This method primarily exists so that the CLI knows which
         keyword arguments can be passed to this class.

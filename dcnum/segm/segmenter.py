@@ -151,16 +151,18 @@ class Segmenter(abc.ABC):
 
             KEY:KW_APPROACH:KW_MASK
 
-        Where KEY is e.g. "legacy" or "watershed", and KW_APPROACH is a
-        list of keyword arguments for ``segment_algorithm``, e.g.::
+        Where KEY is the segmenter code (e.g. "thresh" or "torchmpo"),
+        and KW_APPROACH is a list of keyword arguments for
+        ``segment_algorithm``, e.g.::
 
-            thresh=-6^blur=0
+            thresh=-6
 
-        which may be abbreviated to::
+        which is abbreviated to::
 
-            t=-6^b=0
+            t=-6
 
-        KW_MASK represents keyword arguments for ``process_labels``.
+        KW_MASK represents keyword arguments for ``process_labels``
+        (e.g. ``cle=1^f=1^clo=2``).
         """
         return self.get_ppid_from_ppkw(self.kwargs, self.kwargs_mask)
 
@@ -247,9 +249,10 @@ class Segmenter(abc.ABC):
                        closing_disk: int = 5):
         """Post-process retrieved mask image
 
-        This is an optional convenience method that is called for each
-        subclass individually. To enable mask post-processing, set
-        ``mask_postprocessing=True`` in the subclass and specify default
+        This method is called by the pipeline for every labeled image
+        if ``mask_postprocessing`` is True for the segmenter class (the
+        default). Subclasses can disable mask post-processing by setting
+        ``mask_postprocessing=False`` and define defaults in
         ``mask_default_kwargs``.
 
         Parameters
@@ -260,11 +263,16 @@ class Segmenter(abc.ABC):
             clear the image border using an equivalent of
             :func:`skimage.segmentation.clear_border`
         fill_holes: bool
-            binary-fill-holes in the binary mask image using
-            :func:`scipy.ndimage.binary_fill_holes`
+            fill holes in the binary mask image using a flood fill
+            (:func:`cv2.floodFill`) of the background starting at the top
+            left corner; Note that this sets the first row and the first
+            two pixels of the second row to background and also fills
+            background that is enclosed by an object and the image
+            border (only relevant for ``clear_border=False``)
         closing_disk: int or None
-            if > 0, perform a binary closing with a disk
-            of that radius in pixels
+            if > 0, smooth the mask with a disk of that radius in pixels
+            (a morphological opening of the mask, which corresponds to a
+            closing of the dark objects in the image)
         """
         # Every case must modify the `labels` variable such that it is
         # either a uint16 labeling image or a boolean mask.
@@ -302,7 +310,7 @@ class Segmenter(abc.ABC):
             # Do not change this: The flood fill requires a background seed
             # and these pixels never contain information of interest.
             labels[0, :] = 0
-            # ...and a 4x4 pixel region in the top left corner.
+            # ...and two pixels in the top left corner.
             labels[1, :2] = 0
             cv2.floodFill(labels, None, (0, 0), 255)
             # Note that, in contrast to `ndimage.binary_fill_holes`,
@@ -379,7 +387,7 @@ class Segmenter(abc.ABC):
                       ) -> np.ndarray:
         """Return the boolean mask for an entire batch
 
-        This is implemented in the MPO and STO segmenters.
+        This is implemented in the MPO, STO, and UNI segmenters.
         """
 
     def segment_batch_with_labeling(self, images, bg_off=None):
@@ -444,7 +452,7 @@ class Segmenter(abc.ABC):
                        ) -> np.ndarray:
         """Return the boolean mask for one image
 
-        This is implemented in the MPO and STO segmenters.
+        This is implemented in the MPO, STO, and UNI segmenters.
         """
 
     def segment_single_with_labeling(self, image, bg_off=None):

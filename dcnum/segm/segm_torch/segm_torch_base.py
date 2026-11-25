@@ -131,7 +131,7 @@ class TorchSegmenterBase(Segmenter):
     def _validate_applicability_item(item, data_dict, reasons_list):
         """Populate `reasons_list` with invalid entries
 
-        Example `data_dict`::
+        Example ``item``::
 
             {"type": "meta",
              "key": "setup:region",

@@ -29,7 +29,7 @@ class STOSegmenter(Segmenter, abc.ABC):
             Keyword arguments for mask post-processing (see
             ``process_labels``)
         debug: bool
-            Debugging parameters
+            Enable debugging mode (e.g. no multiprocessing)
         kwargs:
             Additional, optional keyword arguments for ``segment_algorithm``
             defined in the subclass.
@@ -48,8 +48,9 @@ class STOSegmenter(Segmenter, abc.ABC):
         """Perform batch segmentation of ``images``
 
         Before segmentation, an optional background offset correction with
-        ``bg_off`` is performed. After segmentation, mask postprocessing is
-        performed according to the class definition.
+        ``bg_off`` is performed. The returned masks are not post-processed
+        (mask post-processing is done after labeling, see
+        :meth:`~dcnum.segm.segmenter.Segmenter.process_labels`).
 
         Parameters
         ----------

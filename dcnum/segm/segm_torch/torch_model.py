@@ -278,7 +278,8 @@ def load_model_v2_pt2(model_meta: dict[str, Any]):
     Torch's eager mode is available via the "torch.eager" backend (strictly
     speaking, this is not a backend at all, it's just the torch default
     execution path op-by-op on the available hardware).
-    In all other cases, the backend is passed to `torch.compile`.
+    TorchScript models are loaded with the "torch.jit" backend.
+    In all other cases, the backend is passed to ``torch.compile``.
 
     """
     content = model_meta["path"].read_bytes()
@@ -383,7 +384,7 @@ def retrieve_model_file(path_or_name):
 
     If a path to a model is given, then this path is returned directly.
     If a file name is given, then look for the file with
-    :func:`dcnum.meta.paths.find_file` using the "torch_model_file"
+    :func:`dcnum.meta.paths.find_file` using the "torch_model_files"
     topic.
     """
     # Did the user already pass a path?
