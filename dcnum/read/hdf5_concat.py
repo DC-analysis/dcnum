@@ -26,15 +26,24 @@ def concatenated_hdf5_data(paths: list[pathlib.Path],
         file.
     path_out:
         If `None`, then the dataset is created in memory. If `True`
-        (default), create a file on disk. If a pathlib.Path is specified,
+        (default), create a temporary file on disk (which is not deleted
+        automatically). If a pathlib.Path or str is specified,
         the dataset is written to that file. Note that datasets in memory
-        are likely not ``pickle``able (so don't use them for multiprocessing).
+        are likely not ``pickle``-able (so don't use them for multiprocessing).
     compute_frame:
         Whether to compute the "events/frame" feature, taking the frame
         data from the input files and properly incrementing them along
         the file index.
     features:
-        List of features to take from the input files.
+        List of features to take from the input files (defaults to
+        all features of the first file).
+
+    Returns
+    -------
+    data: dcnum.read.HDF5Data
+        Instance of the concatenated dataset; The virtual datasets
+        refer to the input files via absolute paths, so the input files
+        must not be moved.
 
     Notes
     -----

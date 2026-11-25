@@ -81,6 +81,8 @@
    (e.g. `reserve_slot_for_task`, `task_enforce_basin_strategy`)
  - docs: correct docstrings in `feat` and `segm` that did not match the
    code (e.g. `process_labels`, `segment_batch`, PPID examples)
+ - docs: document raised exceptions, side effects, parameters, and
+   return values in `read`, `write`, `meta`, and `common`
 0.31.2
  - fix: online gates for `size_x` and `size_y` were ignored (regression in 0.16.6)
  - fix: "pipeline:dcnum yield" and "experiment:event count" were set to

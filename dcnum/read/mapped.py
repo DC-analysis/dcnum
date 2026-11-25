@@ -110,8 +110,11 @@ def get_mapping_indices(
     Raises
     ------
     ValueError
-        If `index_mapping` contains negative values or if it contains
-        indices beyond `size`
+        If ``index_mapping`` contains negative values, if it contains
+        indices beyond ``size``, or if it has an invalid type
+    NotImplementedError
+        If ``index_mapping`` is a slice without start or stop and
+        ``size`` is not given
     """
     check_index_mapping(index_mapping)
     if isinstance(index_mapping, numbers.Integral):
@@ -180,6 +183,12 @@ def get_mapped_object(obj, index_mapping=None):
     ValueError
         If ``index_mapping`` is set and ``obj`` is not a (mapped) HDF5
         dataset
+
+    Notes
+    -----
+    The size of ``obj`` is not taken into account, so slices must have
+    a start and a stop (use e.g.
+    :attr:`dcnum.read.hdf5_data.HDF5Data.index_mapping_indices` instead).
     """
     if index_mapping is None:
         return obj

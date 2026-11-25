@@ -44,7 +44,8 @@ class ChunkWriter(threading.Thread):
         mode:
             HDF5 file opening mode, passed to
             :class:`~dcnum.write.writer.HDF5Writer`; If set to "w",
-            an existing file at `path_out` is deleted first.
+            an existing file at ``path_out`` is deleted first (in this
+            case, ``path_out`` must be a :class:`pathlib.Path`).
         parent_logger:
             optional logger; if set, a child logger "ChunkWriter" is
             used for logging

@@ -44,7 +44,8 @@ class HDF5Writer:
             opening mode when using :class:`h5py.File`
         ds_kwds: dict
             keyword arguments with which to initialize new Datasets
-            (e.g. compression)
+            (e.g. compression); Note that default filter keyword
+            arguments are added to this dictionary in-place.
         """
         if isinstance(obj, h5py.File):
             self.h5 = obj
@@ -210,6 +211,19 @@ class HDF5Writer:
             the measurement identifier of the basin as computed by
             the :func:`~dcnum.read.hdf5_data.get_measurement_identifier`
             function.
+
+        Notes
+        -----
+        If ``mapping`` is given, it is stored as a "basinmapN" feature
+        in the "events" group (an existing identical mapping feature
+        is reused).
+
+        Raises
+        ------
+        ValueError
+            If ``internal_data`` is given together with ``features`` or
+            ``paths``, if an internal basin feature already exists, or if
+            ``paths`` is None for a file basin.
         """
         bdat = {
             "description": description,
@@ -358,6 +372,13 @@ def create_with_basins(
         either a list of paths (to different basins) or a list of
         lists of paths (for basins containing the same information,
         commonly used for relative and absolute paths).
+
+    Notes
+    -----
+    - An existing file at ``path_out`` is overwritten.
+    - The metadata are copied from the first basin file that exists.
+    - If ``basin_paths`` is empty, a
+      :class:`CreatingFileWithoutBasinWarning` is issued.
     """
     path_out = pathlib.Path(path_out)
     if not basin_paths:
@@ -430,6 +451,20 @@ def copy_basins(h5_src: "h5py.File",
     This does not just copy the datasets defined in the "basins"
     group, but it also loads the "basinmap?" features and stores
     them as new "basinmap?" features in the output file.
+
+    Parameters
+    ----------
+    h5_src: h5py.File
+        Input HDF5 file containing the basins
+    h5_dst: h5py.File
+        Output HDF5 file opened in write mode
+    internal_basins: bool
+        Whether to copy internal basins (including their data)
+
+    Notes
+    -----
+    Basins that are neither file-based nor internal basins are ignored
+    (an :class:`IgnoringBasinTypeWarning` is issued).
     """
     basins = HDF5Data.extract_basin_dicts(h5_src, check=False)
     hw = HDF5Writer(h5_dst)

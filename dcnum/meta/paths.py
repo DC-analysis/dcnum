@@ -21,7 +21,19 @@ def register_search_path(topic: str,
 
 def find_file(topic: str,
               file_name: str):
-    """Find a file in the search path for the given topic"""
+    """Find a file in the search path for the given topic
+
+    Returns
+    -------
+    path: pathlib.Path
+        Path to the first file found in the search paths registered
+        for ``topic`` (see :func:`register_search_path`)
+
+    Raises
+    ------
+    KeyError
+        If the file could not be found
+    """
     search_paths = search_path_registry.get(topic, [])
     for pp in search_paths:
         pf = pp / file_name

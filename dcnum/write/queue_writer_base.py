@@ -124,8 +124,19 @@ class QueueWriterBase:
         """Start the writing process
 
         This method is intended to be run in a thread or process.
+        An existing file at ``self.path_out`` is overwritten. If writing
+        to the output file fails, :attr:`failed` is set to 1.
 
-        `buffer_dq` and `writer_dq` are used for testing.
+        Parameters
+        ----------
+        buffer_dq: collections.deque
+            buffer for events that do not belong to the current chunk
+            (only used for testing)
+        writer_dq: collections.deque
+            deque from which the chunk writer takes the data (only used
+            for testing)
+        logger: logging.Logger
+            logger to use (defaults to :meth:`get_logger`)
         """
         if logger is None:
             logger = self.get_logger()
