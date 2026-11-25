@@ -95,7 +95,7 @@ class DCNumPipelineJob:
             use threads instead of processes
         """
         self.kwargs = {}
-        """initialize keyword arguments for this job"""
+        """keyword arguments of this job (with defaults filled in)"""
 
         spec = inspect.getfullargspec(DCNumPipelineJob.__init__)
         locs = locals()

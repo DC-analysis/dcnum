@@ -98,7 +98,7 @@ class ChunkSlotData:
 
         - "0": construction of instance
         - "i": image loading (populates image, image_bg, image_corr, bg_off)
-        - "s": segmentation (populates mask or labels)
+        - "s": segmentation (populates mask)
         - "m": mask labeling (takes mask and populates labels)
         - "l": label processing (modifies labels in-place)
         - "e": feature extraction (requires labels)

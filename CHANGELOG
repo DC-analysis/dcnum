@@ -77,6 +77,8 @@
  - docs: fix typos and broken markup in docstrings and comments
  - docs: correct docstrings in `read`, `write`, and `meta` that did not
    match the code (e.g. `md5sum`, `require_feature`, `copy_features`)
+ - docs: correct docstrings in `logic` that did not match the code
+   (e.g. `reserve_slot_for_task`, `task_enforce_basin_strategy`)
 0.31.2
  - fix: online gates for `size_x` and `size_y` were ignored (regression in 0.16.6)
  - fix: "pipeline:dcnum yield" and "experiment:event count" were set to
