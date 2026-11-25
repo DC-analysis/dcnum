@@ -72,6 +72,10 @@
  - fix: `copy_features` silently wrote zero-valued events for negative
    `mapping` indices or indices beyond the input dataset; it now
    raises a `ValueError`
+ - fix: `UNISegmenter.segment_single` silently ignored and
+   `MPOSegmenter.segment_single` silently applied `bg_off` for
+   segmenters without background correction instead of raising a
+   `ValueError` like `segment_batch`
  - docs: comment on intended behavior of `fill_holes` (mask
    post-processing), Haralick texture features, and the sparsemed
    background assignment after cleansing
