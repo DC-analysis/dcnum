@@ -69,6 +69,9 @@
    default value 10
  - fix: `HDF5Writer` and `set_default_filter_kwargs` modified the
    `ds_kwds` dictionary passed by the caller in-place
+ - fix: `copy_features` silently wrote zero-valued events for negative
+   `mapping` indices or indices beyond the input dataset; it now
+   raises a `ValueError`
  - docs: comment on intended behavior of `fill_holes` (mask
    post-processing), Haralick texture features, and the sparsemed
    background assignment after cleansing
