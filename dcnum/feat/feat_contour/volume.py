@@ -30,8 +30,8 @@ def volume_from_contours(
     -------
     features: dict
         Dictionary with the key ``"volume"``, a float array holding
-        the volume in µm³ for each event (NaN for events with
-        fewer than four contour points)
+        the volume in µm³ for each event (NaN for events without
+        contour (None) or with fewer than four contour points)
 
     Notes
     -----

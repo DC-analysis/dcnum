@@ -43,8 +43,16 @@ class BackgroundRollMed(Background):
         kernel_size: int
             Kernel size for median computation. This is the number of
             events that are used to compute the median for each pixel.
+            Must be an even number. The rolling median for an event at
+            index ``i`` is computed from the events ``i`` to
+            ``i + kernel_size - 1`` (forward-looking window); the last
+            events get the last computed background image. If
+            ``kernel_size`` equals the number of events, all events get
+            the median of all images. A :class:`ValueError` is raised if
+            ``kernel_size`` is larger than the number of events.
         batch_size: int
-            Number of events to process at the same time. Increasing this
+            Number of events to process at the same time (must be larger
+            than ``kernel_size``). Increasing this
             number much more than two orders of magnitude larger than
             ``kernel_size`` will not increase computation speed. Larger
             values lead to a higher memory consumption.
@@ -141,8 +149,16 @@ class BackgroundRollMed(Background):
         kernel_size: int
             Kernel size for median computation. This is the number of
             events that are used to compute the median for each pixel.
+            Must be an even number. The rolling median for an event at
+            index ``i`` is computed from the events ``i`` to
+            ``i + kernel_size - 1`` (forward-looking window); the last
+            events get the last computed background image. If
+            ``kernel_size`` equals the number of events, all events get
+            the median of all images. A :class:`ValueError` is raised if
+            ``kernel_size`` is larger than the number of events.
         batch_size: int
-            Number of events to process at the same time. Increasing this
+            Number of events to process at the same time (must be larger
+            than ``kernel_size``). Increasing this
             number much more than two orders of magnitude larger than
             ``kernel_size`` will not increase computation speed. Larger
             values lead to a higher memory consumption.

@@ -163,7 +163,20 @@ class Gate:
         return event
 
     def gate_events(self, events):
-        """Return boolean array with events that should be used"""
+        """Return boolean array with events that should be used
+
+        Parameters
+        ----------
+        events: dict
+            dictionary of feature arrays (must contain all features
+            for which box gates are defined)
+
+        Raises
+        ------
+        ValueError
+            If ``events`` is empty or if there are no box gates
+            (check ``self.box_gates`` before calling this method)
+        """
         if self.box_gates and bool(events):
             key0 = list(events.keys())[0]
             size = len(events[key0])

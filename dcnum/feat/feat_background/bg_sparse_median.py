@@ -54,6 +54,9 @@ class BackgroundSparseMed(Background):
         kernel_size: int
             Kernel size for median computation. This is the number of
             events that are used to compute the median for each pixel.
+            If ``kernel_size`` is larger than the number of events, it is
+            reduced to the number of events (a warning is logged; the
+            pipeline identifier still contains the original value).
         split_time: float
             Time between background images in the background series
         thresh_cleansing: float
@@ -240,6 +243,9 @@ class BackgroundSparseMed(Background):
         kernel_size: int
             Kernel size for median computation. This is the number of
             events that are used to compute the median for each pixel.
+            If ``kernel_size`` is larger than the number of events, it is
+            reduced to the number of events (a warning is logged; the
+            pipeline identifier still contains the original value).
         split_time: float
             Time between background images in the background series
         thresh_cleansing: float

@@ -23,6 +23,15 @@ def moments_based_features(
         pixel size of the mask image in µm
     ret_contour: bool
         whether to also return the raw contour
+
+    Returns
+    -------
+    features: dict
+        dictionary of feature arrays (e.g. "deform", "area_um",
+        "pos_x"); the boolean array "valid" is False for masks whose
+        contour could not be computed (their features are NaN), and
+        if ``ret_contour`` is set, "contour" holds a list of contours
+        (None for invalid masks)
     """
     assert pixel_size is not None and pixel_size != 0
     raw_contours = []

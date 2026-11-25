@@ -34,6 +34,33 @@ def haralick_texture_features(
     9. ``tex_den``: (11) Difference Entropy
     10. ``tex_f12``: (12) Information Measure of Correlation 1
     11. ``tex_f13``: (13) Information Measure of Correlation 2
+
+    Parameters
+    ----------
+    mask: np.ndarray
+        3D boolean array of the masks (one per event)
+    image: np.ndarray
+        uint8 image data (one image for all masks or one per mask);
+        only used if ``image_corr`` is not given
+    image_bg: np.ndarray
+        uint8 background image data (same shape as ``image``);
+        only used if ``image_corr`` is not given
+    image_corr: np.ndarray
+        int16 background-corrected image data (one image for all masks
+        or one per mask)
+
+    Returns
+    -------
+    features: dict
+        dictionary with one float array for each texture feature
+        (``*_avg`` and ``*_ptp``); NaN for empty masks and for masks
+        for which the features cannot be computed
+
+    Raises
+    ------
+    ValueError
+        If neither ``image_corr`` nor ``image`` and ``image_bg`` are
+        given
     """
     # make sure we have a boolean array
     mask = np.asarray(mask, dtype=bool)

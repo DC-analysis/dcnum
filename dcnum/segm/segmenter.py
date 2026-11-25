@@ -273,6 +273,13 @@ class Segmenter(abc.ABC):
             if > 0, smooth the mask with a disk of that radius in pixels
             (a morphological opening of the mask, which corresponds to a
             closing of the dark objects in the image)
+
+        Returns
+        -------
+        labels: np.ndarray
+            uint16 label image (see :func:`assert_labels`); Note that
+            with ``clear_border``, a label image passed as ``labels``
+            may be modified in-place.
         """
         # Every case must modify the `labels` variable such that it is
         # either a uint16 labeling image or a boolean mask.
@@ -523,6 +530,10 @@ def get_segmenters():
     at any depth (e.g. also subclasses of
     :class:`~dcnum.segm.segm_thresh.SegmentThresh`), regardless of
     whether they are available (see ``get_available_segmenters``).
+
+    The result is cached. If you define a segmenter after this function
+    was called for the first time, call ``get_segmenters.cache_clear()``
+    (and ``get_available_segmenters.cache_clear()``).
     """
     segmenters = {}
     subclasses = list(Segmenter.__subclasses__())
@@ -536,7 +547,12 @@ def get_segmenters():
 
 @functools.cache
 def get_available_segmenters():
-    """Return dictionary of available segmenters"""
+    """Return dictionary of available segmenters
+
+    Same as :func:`get_segmenters`, but only segmenters whose
+    ``is_available`` method returns True are included (e.g. the
+    torch segmenters require PyTorch). The result is cached.
+    """
     segmenters = {}
     for code, cls in get_segmenters().items():
         if cls.is_available():

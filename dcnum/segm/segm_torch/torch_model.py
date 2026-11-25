@@ -383,9 +383,25 @@ def retrieve_model_file(path_or_name):
     """Retrieve a dcnum torch model file
 
     If a path to a model is given, then this path is returned directly.
+    If the path does not exist, the file name of the path is looked up
+    as described below.
     If a file name is given, then look for the file with
     :func:`dcnum.meta.paths.find_file` using the "torch_model_files"
     topic.
+
+    The MD5 sum of the model file is checked (see :func:`check_md5sum`)
+    and the result is cached.
+
+    Raises
+    ------
+    FileNotFoundError
+        If a path is given that cannot be found
+    KeyError
+        If a file name is given that cannot be found in the search paths
+    TypeError
+        If ``path_or_name`` is neither a string nor a path
+    ValueError
+        If the MD5 sum of the model file does not match its file name
     """
     # Did the user already pass a path?
     if isinstance(path_or_name, pathlib.Path):

@@ -16,6 +16,8 @@ if TYPE_CHECKING:
 
 class UNISegmenter(Segmenter, abc.ABC):
     required_batch_size = 0
+    """Number of images the segmenter must process at once
+    (0 means any number)"""
 
     def __init__(self,
                  *,
