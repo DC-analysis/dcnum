@@ -47,9 +47,9 @@ class QueueWriterProcess(QueueWriterBase, mp_spawn.Process):
         """
         # Clear any handlers that might be set for this logger. This is
         # important for the case when we are an instance of
-        # EventExtractorThread, because then all handlers from the main
+        # QueueWriterThread, because then all handlers from the main
         # thread are inherited (as opposed to no handlers in the case
-        # of EventExtractorProcess).
+        # of QueueWriterProcess).
         logger = self.get_logger()
         logger.handlers.clear()
         queue_handler = QueueHandler(self.log_queue)

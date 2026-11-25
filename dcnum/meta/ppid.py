@@ -126,9 +126,9 @@ def get_class_method_info(class_obj: ClassWithPPIDCapabilities,
     ----------
     class_obj: object
         Class to inspect, must implement the ``get_ppid_code`` method.
-    static_kw_methods: list of callable
-        The methods to inspect; all kwargs-only keyword arguments
-        are extracted.
+    static_kw_methods: list of str
+        The names of the methods to inspect; all kwargs-only keyword
+        arguments are extracted.
     static_kw_defaults: dict
         If a key in this dictionary matches an item in ``static_kw_methods``,
         then these are the default values returned in the "defaults"

@@ -21,8 +21,8 @@ def concatenated_hdf5_data(paths: list[pathlib.Path],
     Parameters
     ----------
     paths:
-        Path of the input HDF5 files that will be concatenated along
-        the feature axis. The metadata will be taken from the first
+        Paths of the input HDF5 files that will be concatenated along
+        the event axis. The metadata will be taken from the first
         file.
     path_out:
         If `None`, then the dataset is created in memory. If `True`
