@@ -76,6 +76,12 @@
    `MPOSegmenter.segment_single` silently applied `bg_off` for
    segmenters without background correction instead of raising a
    `ValueError` like `segment_batch`
+ - fix: the PyTorch and OpenVINO setup functions were never executed
+   (regression in 0.31.0), so that PyTorch did not use deterministic
+   algorithms and OpenVINO telemetry was not disabled
+ - fix: do not disable cuDNN; convolutions without cuDNN are four times
+   slower on CUDA devices (only TorchScript models were not affected,
+   because their fused convolutions always use cuDNN)
  - docs: comment on intended behavior of `fill_holes` (mask
    post-processing), Haralick texture features, and the sparsemed
    background assignment after cleansing

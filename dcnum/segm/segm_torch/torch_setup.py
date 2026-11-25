@@ -20,11 +20,11 @@ os.environ["CUBLAS_WORKSPACE_CONFIG"] = ":4096:8"
 
 
 def setup_openvino():
-    """Generator wrapping the import of OpenVINO
+    """Disable OpenVINO telemetry (opt-out); called before the import
 
-    Before the import, OpenVINO telemetry is disabled (opt-out).
+    Note that this must be a regular function and not a generator,
+    because :class:`.LazyLoader` just calls it.
     """
-    # Executed before import.
     # Disable telemetry
     try:
         import openvino_telemetry.main as tm
@@ -42,36 +42,38 @@ def setup_openvino():
         else:
             dir = subdir = None
 
-        if dir is not None and subdir is not None and dir.exists():
+        try:
+            if dir is None or subdir is None or not dir.exists():
+                raise OSError(f"Unknown telemetry directory for {pf}")
             consent_file = dir / subdir / "openvino_telemetry"
+            consent_file.parent.mkdir(parents=True, exist_ok=True)
             consent_file.write_text("0")
-        else:
+        except OSError:
             print("Failed to opt out of openvino telemetry")
-
-    yield
-    # Executed after import.
 
 
 def setup_torch(torch):
-    """Generator wrapping the import of PyTorch
+    """Configure PyTorch; called after the import
 
-    After the import, PyTorch is configured for reproducible,
-    deterministic, single-threaded computation and a warning is
-    issued if the PyTorch version is older than 2.2.
+    PyTorch is configured for reproducible, deterministic,
+    single-threaded computation and a warning is issued if the
+    PyTorch version is older than 2.2.
+
+    Note that this must be a regular function and not a generator,
+    because :class:`.LazyLoader` just calls it.
     """
-    # Executed before import.
-    yield
-    # Executed after import.
-    # REPRODUCIBILITY: All of these settings, including CUBLAS_WORKSPACE_CONFIG
-    # above resulted in a segmentation performance hit of about 10% for an
-    # NVIDIA RTX 2050 Laptop.
     # https://docs.pytorch.org/docs/stable/notes/numerical_accuracy.html
     # Tell pytorch to only use deterministic algorithms.
     torch.use_deterministic_algorithms(True)
     # Disable CUDNN benchmarking for inference (just to be sure).
     torch.backends.cudnn.benchmark = False
-    # Disable CUDNN altogether (this will free some GPU memory).
-    torch.backends.cudnn.enabled = False
+    # Keep CUDNN enabled. Without CUDNN, PyTorch computes convolutions on
+    # CUDA devices with a slow im2col + GEMM fallback (4x slower for the
+    # U-Net models). TorchScript models optimized with
+    # `torch.jit.optimize_for_inference` always used CUDNN for their fused
+    # convolution + ReLU operations, regardless of this setting. CUDNN is
+    # deterministic, because of `use_deterministic_algorithms` above.
+    torch.backends.cudnn.enabled = True
     # We are parallelizing with mp.multiprocessing and do not want
     # pytorch to parallelize for us.
     torch.set_num_threads(1)
