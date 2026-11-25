@@ -1,6 +1,7 @@
 import itertools
 
 import h5py
+import hdf5plugin  # noqa: F401 (loads the HDF5 compression filters)
 import numpy as np
 import pytest
 

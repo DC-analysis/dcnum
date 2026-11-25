@@ -96,6 +96,10 @@
    effects, and missing parameters in `logic`
  - docs: document parameters, return values, raised exceptions, and
    edge cases in `feat` and `segm`
+ - tests: move the `SegmentThresh` tests (a `UNISegmenter`) from
+   `test_segm_mpo.py` to `test_segm_thresh.py` and fix their names
+ - tests: import `hdf5plugin` in test files that read compressed data,
+   so that they also pass when run on their own
 0.31.2
  - fix: online gates for `size_x` and `size_y` were ignored (regression in 0.16.6)
  - fix: "pipeline:dcnum yield" and "experiment:event count" were set to
