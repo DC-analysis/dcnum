@@ -464,3 +464,87 @@ def test_median_sparsemend_worker(tmp_path):
     assert output_path.exists()
     with h5py.File(output_path) as h5:
         assert len(h5["basin_events/image_bg"]) == 2
+
+
+def get_noisy_input_data(event_count=3600, seed=42):
+    """Input images with random cell-like dark spots (for cleansing)"""
+    rng = np.random.default_rng(seed)
+    # noise, so that the background images differ slightly
+    data = np.asarray(rng.integers(95, 106, size=(event_count, 20, 100)),
+                      dtype=np.uint8)
+    # add dark "cells" at random positions in many frames
+    for ii in range(event_count):
+        if rng.random() < 0.7:
+            x0 = rng.integers(0, 90)
+            data[ii, 5:15, x0:x0 + 10] = 40
+    return data
+
+
+@pytest.mark.filterwarnings(
+    "ignore::dcnum.write.writer.CreatingFileWithoutBasinWarning")
+@pytest.mark.parametrize("thresh_cleansing,frac_cleansing,message", [
+    # thresholding approach
+    [0.5, 0.8, "Cleansed"],
+    # thresholding removes too much -> quantile is enforced
+    [1e6, 0.8, "would be removed with the current settings"],
+    # cleansing disabled
+    [0, 1, "Background series cleansing disabled"],
+])
+def test_median_sparsemed_cleansing(tmp_path, caplog, thresh_cleansing,
+                                    frac_cleansing, message):
+    input_data = get_noisy_input_data()
+    with (bg_sparse_median.BackgroundSparseMed(
+            input_data=input_data,
+            output_path=tmp_path / "test.h5",
+            kernel_size=50,
+            split_time=0.011,
+            thresh_cleansing=thresh_cleansing,
+            frac_cleansing=frac_cleansing,
+            num_cpus=1,
+            ) as bic,
+          caplog.at_level("INFO")):
+        bic.process()
+    assert message in caplog.text
+
+
+class KeyboardInterruptQueue:
+    """Queue whose `get` method raises KeyboardInterrupt"""
+    def cancel_join_thread(self):
+        pass
+
+    def get(self, *args, **kwargs):
+        raise KeyboardInterrupt
+
+
+def test_median_sparsemed_worker_keyboard_interrupt():
+    """Workers exit silently when the user presses Ctrl+C"""
+    counter = bg_sparse_median.mp_spawn.Value("l", 0)
+    worker = bg_sparse_median.WorkerSparseMed(
+        job_queue=KeyboardInterruptQueue(),
+        counter=counter,
+        shared_input=bg_sparse_median.mp_spawn.RawArray("B", 10 * 35),
+        shared_output=bg_sparse_median.mp_spawn.RawArray("B", 35),
+        kernel_size=10)
+    # returns without error
+    worker.run()
+    assert counter.value == 0
+
+
+def test_median_sparsemed_worker_empty_queue():
+    """Workers wait for jobs and exit when the counter is negative"""
+    counter = bg_sparse_median.mp_spawn.Value("l", 0)
+    job_queue = bg_sparse_median.mp_spawn.Queue()
+    worker = bg_sparse_median.WorkerSparseMed(
+        job_queue=job_queue,
+        counter=counter,
+        shared_input=bg_sparse_median.mp_spawn.RawArray("B", 10 * 35),
+        shared_output=bg_sparse_median.mp_spawn.RawArray("B", 35),
+        kernel_size=10)
+    thr = threading.Thread(target=worker.run)
+    thr.start()
+    # the worker polls the empty queue
+    thr.join(timeout=0.5)
+    assert thr.is_alive()
+    counter.value = -1
+    thr.join(timeout=5)
+    assert not thr.is_alive()

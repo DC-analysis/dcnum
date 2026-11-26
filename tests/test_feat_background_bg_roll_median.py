@@ -262,3 +262,65 @@ def test_median_rollmed_worker(tmp_path):
     with h5py.File(output_path) as h5:
         assert len(h5["events/image_bg"]) == 720
         assert np.median(h5["events/image_bg"][0]) == 17
+
+
+@pytest.mark.filterwarnings(
+    "ignore::dcnum.write.writer.CreatingFileWithoutBasinWarning")
+def test_median_rollmed_worker_thread(tmp_path):
+    """Run the worker loop in a thread (it normally runs in a process)"""
+    event_count = 720
+    input_data = np.arange(5*7).reshape(1, 5, 7) * np.ones((event_count, 1, 1))
+    input_data = np.array(input_data, dtype=np.uint8)
+    with bg_roll_median.BackgroundRollMed(input_data=input_data,
+                                          output_path=tmp_path / "test.h5",
+                                          kernel_size=10,
+                                          batch_size=90,
+                                          num_cpus=1,
+                                          ) as mic:
+        # make all workers join
+        mic.worker_counter.value = -1000
+        [w.join() for w in mic.workers]
+        mic.worker_counter.value = 0
+        # create our own worker and run it in a thread
+        worker = bg_roll_median.WorkerRollMed(
+            job_queue=mic.queue,
+            counter=mic.worker_counter,
+            shared_input=mic.shared_input_raw,
+            shared_output=mic.shared_output_raw,
+            batch_size=mic.batch_size,
+            kernel_size=mic.kernel_size)
+        thr = threading.Thread(target=worker.run)
+        thr.start()
+        mic.process_next_batch()
+        mic.worker_counter.value = -1000
+        thr.join()
+        assert mic.get_progress() == 90 / event_count
+
+    with h5py.File(tmp_path / "test.h5") as h5:
+        ds = h5["events/image_bg"]
+        assert np.all(ds[:90, 0, 1] == 1)
+        assert np.all(ds[:90, 1, 0] == 7)
+
+
+class KeyboardInterruptQueue:
+    """Queue whose `get` method raises KeyboardInterrupt"""
+    def cancel_join_thread(self):
+        pass
+
+    def get(self, *args, **kwargs):
+        raise KeyboardInterrupt
+
+
+def test_median_rollmed_worker_keyboard_interrupt():
+    """Workers exit silently when the user presses Ctrl+C"""
+    counter = bg_roll_median.mp_spawn.Value("l", 0)
+    worker = bg_roll_median.WorkerRollMed(
+        job_queue=KeyboardInterruptQueue(),
+        counter=counter,
+        shared_input=bg_roll_median.mp_spawn.RawArray("B", (90 + 10) * 35),
+        shared_output=bg_roll_median.mp_spawn.RawArray("B", 90 * 35),
+        batch_size=90,
+        kernel_size=10)
+    # returns without error
+    worker.run()
+    assert counter.value == 0
