@@ -227,7 +227,7 @@ class BackgroundRollMed(Background):
 
     def process_next_batch(self):
         """Process one batch of input data"""
-        cur_slice_in, cur_slice_out, output_size = \
+        cur_slice_in, _cur_slice_out, output_size = \
             self.get_slices_for_batch(self.current_batch)
 
         if output_size:

@@ -61,12 +61,11 @@ def concatenated_hdf5_data(paths: list[pathlib.Path],
     if isinstance(path_out, (pathlib.Path, str)):
         h5kwargs["name"] = path_out
     elif path_out is True:
-        tf = tempfile.NamedTemporaryFile(prefix="dcnum_vc_",
+        with tempfile.NamedTemporaryFile(prefix="dcnum_vc_",
                                          suffix=".hdf5",
-                                         delete=False)
-        tf.write(b"dummy")
-        h5kwargs["name"] = tf.name
-        tf.close()
+                                         delete=False) as tf:
+            tf.write(b"dummy")
+            h5kwargs["name"] = tf.name
     elif path_out is None:
         h5kwargs["name"] = io.BytesIO()
     else:
@@ -128,22 +127,22 @@ def concatenated_hdf5_data(paths: list[pathlib.Path],
         hv.attrs.update(meta)
 
         # Create the virtual datasets
-        for feat in shapes:
-            if len(shapes[feat][0]) == 1:
+        for feat, feat_shapes in shapes.items():
+            if len(feat_shapes[0]) == 1:
                 # scalar feature
-                shape = (sum([sh[0] for sh in shapes[feat]]))
+                shape = (sum([sh[0] for sh in feat_shapes]))
             else:
                 # non-scalar feature
-                length = (sum([sh[0] for sh in shapes[feat]]))
-                shape = list(shapes[feat][0])
+                length = (sum([sh[0] for sh in feat_shapes]))
+                shape = list(feat_shapes[0])
                 shape[0] = length
                 shape = tuple(shape)
             layout = h5py.VirtualLayout(shape=shape, dtype=dtypes[feat])
             loc = 0
             for jj, pp in enumerate(paths):
                 vsource = h5py.VirtualSource(pp, f"events/{feat}",
-                                             shape=shapes[feat][jj])
-                cursize = shapes[feat][jj][0]
+                                             shape=feat_shapes[jj])
+                cursize = feat_shapes[jj][0]
                 layout[loc:loc+cursize] = vsource
                 loc += cursize
             hv.create_virtual_dataset(f"/events/{feat}", layout, fillvalue=0)

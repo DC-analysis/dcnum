@@ -5,6 +5,7 @@ import copy
 import functools
 import inspect
 import logging
+from typing import ClassVar
 
 import numpy as np
 
@@ -40,7 +41,7 @@ class Segmenter(abc.ABC):
     ``segment_algorithm`` implementation.
     """
 
-    mask_default_kwargs = {}
+    mask_default_kwargs: ClassVar[dict] = {}
     """Default keyword arguments for mask post-processing.
     See ``process_labels`` for available options.
     """

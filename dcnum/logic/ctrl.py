@@ -500,7 +500,7 @@ class DCNumJobRunner(threading.Thread):
             # can still store all features in the output file if required.
             if self.job["basin_strategy"] == "drain":
                 orig_feats = []
-                for feat in self.draw.h5["events"].keys():
+                for feat in self.draw.h5["events"]:
                     if isinstance(self.draw.h5["events"][feat], h5py.Dataset):
                         # copy_features does not support Groups
                         orig_feats.append(feat)
@@ -608,7 +608,7 @@ class DCNumJobRunner(threading.Thread):
 
         trun = datetime.timedelta(
             seconds=round(time.perf_counter() - time_start))
-        self.logger.info(f"Run duration: {str(trun)}")
+        self.logger.info(f"Run duration: {trun!s}")
         self.logger.info(time.strftime("Run stop: %Y-%m-%d-%H.%M.%S",
                                        time.gmtime()))
         # Add the log file to the resulting .rtdc file

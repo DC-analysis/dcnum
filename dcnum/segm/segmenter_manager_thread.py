@@ -19,7 +19,7 @@ if typing.TYPE_CHECKING:
 class SegmenterManagerThread(threading.Thread):
     def __init__(self,
                  segmenter: Segmenter,
-                 slot_register: SlotRegister,  # noqa: F821
+                 slot_register: SlotRegister,
                  *args, **kwargs):
         """Manage the segmentation of image data
 

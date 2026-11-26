@@ -76,8 +76,8 @@ def compute_pipeline_hash(*, bg_id, seg_id, feat_id, gate_id,
         hexadecimal MD5 hash of the pipeline
     """
     hasher = hashlib.md5()
-    hasher.update("|".join([
-        gen_id, dat_id, bg_id, seg_id, feat_id, gate_id]).encode())
+    hasher.update(
+        f"{gen_id}|{dat_id}|{bg_id}|{seg_id}|{feat_id}|{gate_id}".encode())
     pph = hasher.hexdigest()
     return pph
 
@@ -237,9 +237,8 @@ def kwargs_to_ppid(cls: ClassWithPPIDCapabilities,
                     val = path.name
             if isinstance(val, (bool, np.bool_)):
                 val = int(val)  # do not print e.g. "True"
-            elif isinstance(val, (float, np.floating)):
-                if val == int(val):
-                    val = int(val)  # omit the ".0" at the end
+            elif isinstance(val, (float, np.floating)) and val == int(val):
+                val = int(val)  # omit the ".0" at the end
             concat_strings.append(f"{abr}={val}")
     return "^".join(concat_strings)
 

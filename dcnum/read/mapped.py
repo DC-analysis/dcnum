@@ -125,8 +125,10 @@ def get_mapping_indices(
     Raises
     ------
     ValueError
-        If ``index_mapping`` contains negative values, if it contains
-        indices beyond ``size``, or if it has an invalid type
+        If ``index_mapping`` contains negative values or indices beyond
+        ``size``
+    TypeError
+        If ``index_mapping`` has an invalid type
     NotImplementedError
         If ``index_mapping`` is a slice without start or stop and
         ``size`` is not given
@@ -149,8 +151,8 @@ def get_mapping_indices(
                              f"the dataset size {size}")
         return np.asarray(indices, dtype=np.uint32)
     else:
-        raise ValueError(f"Invalid type for `index_mapping`: "
-                         f"{type(index_mapping)} ({index_mapping})")
+        raise TypeError(f"Invalid type for `index_mapping`: "
+                        f"{type(index_mapping)} ({index_mapping})")
 
 
 @functools.lru_cache(maxsize=100)
@@ -168,8 +170,8 @@ def _get_mapping_indices_cached(
     elif isinstance(index_mapping, list):
         indices = np.asarray(index_mapping, dtype=np.uint32)
     else:
-        raise ValueError(f"Invalid type for cached `index_mapping`: "
-                         f"{type(index_mapping)} ({index_mapping})")
+        raise TypeError(f"Invalid type for cached `index_mapping`: "
+                        f"{type(index_mapping)} ({index_mapping})")
     # The returned array is shared by all callers (cache), so it must
     # not be modified.
     indices.setflags(write=False)

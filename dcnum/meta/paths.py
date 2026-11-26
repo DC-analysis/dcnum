@@ -39,6 +39,5 @@ def find_file(topic: str,
         pf = pp / file_name
         if pf.is_file():
             return pf
-    else:
-        raise KeyError(f"Could not find {file_name} for {topic} in the "
-                       f"registered search paths {search_paths}")
+    raise KeyError(f"Could not find {file_name} for {topic} in the "
+                   f"registered search paths {search_paths}")

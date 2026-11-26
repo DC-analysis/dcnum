@@ -138,6 +138,11 @@
    the torch tests also pass on Windows without C++ compiler and OpenVINO
  - tests: `test_segm_torch_uni` ("inductor" backend on the CPU) was always
    skipped, because the C++ compiler check never succeeded
+ - ref: fix ruff findings in the dcnum package (unused variables and noqa
+   comments, nested if statements, a context manager for the temporary
+   file in `concatenated_hdf5_data`, `ClassVar` for
+   `mask_default_kwargs`); an invalid type of "index_mapping" now raises a
+   `TypeError` instead of a `ValueError`
 0.31.2
  - fix: online gates for `size_x` and `size_y` were ignored (regression in 0.16.6)
  - fix: "pipeline:dcnum yield" and "experiment:event count" were set to

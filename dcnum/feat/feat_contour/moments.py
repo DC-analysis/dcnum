@@ -94,7 +94,7 @@ def moments_based_features(
             continue
 
         # bounding box
-        x, y, w, h = cv2.boundingRect(cont_raw)
+        _x, _y, w, h = cv2.boundingRect(cont_raw)
 
         feat_area_msd[ii] = mu_raw["m00"]
         feat_area_ratio[ii] = mu_cvx["m00"] / mu_raw["m00"]

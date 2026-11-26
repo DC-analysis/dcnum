@@ -1,5 +1,7 @@
 """Segmentation by thresholding"""
 
+from typing import ClassVar
+
 from .segmenter_uni import UNISegmenter
 
 
@@ -13,7 +15,7 @@ class SegmentThresh(UNISegmenter):
     receives the background-corrected image data (``image_corr``).
     """
     mask_postprocessing = True
-    mask_default_kwargs = {
+    mask_default_kwargs: ClassVar[dict] = {
         "clear_border": True,
         "fill_holes": True,
         "closing_disk": 2,
