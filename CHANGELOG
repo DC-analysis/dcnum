@@ -1,3 +1,5 @@
+0.31.4
+ - docs: explain the pipeline generation `DCNUM_PPID_GENERATION` (#22)
 0.31.3
  - fix: "basinmap1" of the internal sparsemed background basin had the
    shape (1, N) when the output events matched the input frames (e.g. one

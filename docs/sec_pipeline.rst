@@ -224,6 +224,40 @@ job with :meth:`.logic.job.DCNumPipelineJob.get_ppid`; the module
 :mod:`.meta.ppid` contains the underlying logic.
 
 
+.. _sec_pipeline_generation:
+
+Pipeline generation
+~~~~~~~~~~~~~~~~~~~
+The PPIDs of the individual steps describe *which* settings were used,
+but not *how* dcnum implements a step. If a new dcnum version produces
+different results for the same PPIDs (e.g. because a bug in an algorithm
+was fixed), the PPIDs alone would wrongly suggest that two datasets were
+analyzed in the same way. For this reason, dcnum has a pipeline
+generation, :data:`.meta.ppid.DCNUM_PPID_GENERATION`, which is stored
+in the output file next to the step PPIDs::
+
+    pipeline:dcnum generation = 13
+
+The generation is part of the pipeline hash
+(:func:`.meta.ppid.compute_pipeline_hash`), which is stored in the
+attribute ``pipeline:dcnum hash``. This has the following consequences:
+
+- Datasets processed with different generations have different pipeline
+  hashes, even if all step PPIDs are identical. To find out whether two
+  datasets were analyzed in exactly the same way, compare the pipeline
+  hashes (or the generation and all PPIDs), not only the step PPIDs.
+- If the input file was already processed by dcnum with a different
+  generation, dcnum does not reuse any of its results (e.g. the
+  background image data); all steps are computed again.
+
+The generation is incremented whenever a change in dcnum alters the
+results for unchanged PPIDs. This is noted in the changelog, e.g.
+"meta: increment DCNUM_PPID_GENERATION to 13 (torch reproducibility)".
+Changes that alter the PPID of a step themselves (e.g. a new keyword
+argument) do not require a new generation, because the pipeline hash
+changes anyway.
+
+
 Running the steps in parallel
 -----------------------------
 For performance, the steps above are not executed one after another for
