@@ -146,6 +146,9 @@
    file in `concatenated_hdf5_data`, `ClassVar` for
    `mask_default_kwargs`); an invalid type of "index_mapping" now raises a
    `TypeError` instead of a `ValueError`
+ - ref: fix pyright findings in `dcnum.read` and `dcnum.write`
+   (annotations, None checks); `detect_flickering` raises a `ValueError`
+   for `HDF5Data` without image data
 0.31.2
  - fix: online gates for `size_x` and `size_y` were ignored (regression in 0.16.6)
  - fix: "pipeline:dcnum yield" and "experiment:event count" were set to

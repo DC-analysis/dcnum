@@ -6,6 +6,7 @@ import queue
 import multiprocessing as mp
 import pathlib
 import time
+from typing import TYPE_CHECKING
 
 import numpy as np
 
@@ -14,6 +15,9 @@ from ..common import join_worker
 from .chunk_writer import ChunkWriter
 from .event_stash import EventStash
 
+if TYPE_CHECKING:
+    from multiprocessing.sharedctypes import Synchronized, SynchronizedArray
+
 
 mp_spawn = mp.get_context("spawn")
 
@@ -21,8 +25,8 @@ mp_spawn = mp.get_context("spawn")
 class QueueWriterBase:
     def __init__(self,
                  event_queue: "mp.Queue",
-                 write_queue_size: "mp.Value",
-                 feat_nevents: "mp.Array",
+                 write_queue_size: "Synchronized",
+                 feat_nevents: "SynchronizedArray",
                  path_out: pathlib.Path,
                  hdf5_dataset_kwargs: dict | None = None,
                  write_threshold: int = 500,
