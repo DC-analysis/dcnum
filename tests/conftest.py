@@ -4,6 +4,10 @@ import shutil
 import tempfile
 import time
 
+# Load the HDF5 compression filters for all tests (dcnum loads them
+# lazily, which does not cover tests that use h5py directly).
+import hdf5plugin  # noqa: F401
+
 from dcnum.os_env_st import request_single_threaded
 
 
