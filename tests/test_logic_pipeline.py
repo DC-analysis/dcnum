@@ -1226,6 +1226,33 @@ def test_simple_pipeline_spawn_error(monkeypatch):
                 if isinstance(t, write.QueueWriterThread)]
 
 
+def test_simple_pipeline_slow_spawn(monkeypatch):
+    """Universal workers that take long to start must not stop the pipeline
+
+    Up to dcnum 0.31.3, the runner waited only 10 s per universal worker
+    for the workers to start and then stopped the pipeline with
+    "Universal workers failed to spawn" (e.g. on a slow system or when
+    the worker processes were suspended).
+    """
+    path_orig = retrieve_data("fmt-hdf5_cytoshot_full-features_2023.zip")
+    start_orig = logic.universal_worker.UniversalWorkerThread.start
+
+    def start_slow(self):
+        time.sleep(12)
+        start_orig(self)
+
+    monkeypatch.setattr(logic.universal_worker.UniversalWorkerThread,
+                        "start", start_slow)
+
+    job = logic.DCNumPipelineJob(path_in=path_orig, debug=True,
+                                 num_procs=1)
+    with logic.DCNumJobRunner(job=job) as runner:
+        runner.run()
+        assert runner.state == "done"
+        assert runner.error_tb is None
+    assert job["path_out"].exists()
+
+
 def test_simple_pipeline_write_error(monkeypatch):
     """An error when writing to the output file must stop the pipeline
 
