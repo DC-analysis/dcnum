@@ -24,6 +24,12 @@ from .torch_setup import torch, openvino
 
 
 logger = logging.getLogger(__name__)
+
+
+class WiringUnavailableError(ValueError):
+    """None of the wiring options of a model file can be used"""
+
+
 if tempfile.tempdir is not None:
     tempdir = pathlib.Path(tempfile.tempdir) / "dcnum_compiled_models"
 
@@ -130,30 +136,29 @@ def get_model_meta(path_or_name: str | pathlib.Path,
         # "backend", ordered according to efficiency/suggestion decreasing.
         wiring_options: list[dict[str, str]] = model_meta["wiring_options"]
         # Determine the correct wiring based on the input.
-        # Options that cannot be used in the current environment (e.g.
-        # no GPU or no Triton) are skipped, unless the user explicitly
-        # asks for a specific backend and device.
+        # Model files may only be used with the wiring options they list,
+        # unless the user explicitly asks for a backend and device. Options
+        # that cannot be used in the current environment (e.g. no GPU or
+        # no Triton) are skipped.
+        check_backend = True
         if backend is None and device is None:
             # we take the first available item from the wiring options
-            wiring_options = [o for o in wiring_options
-                              if is_wiring_available(o)]
+            candidates = wiring_options
         elif backend is None and device is not None:
-            wiring_options = [o for o in wiring_options
-                              if o["device"] == device
-                              and is_wiring_available(o)]
+            candidates = [o for o in wiring_options if o["device"] == device]
         elif backend is not None and device is None:
             # The user asked for this backend, so we only make sure
             # that the device exists.
-            wiring_options = [o for o in wiring_options
-                              if o["backend"] == backend
-                              and is_wiring_available(o,
-                                                      check_backend=False)]
-        elif backend is not None and device is not None:
+            candidates = [o for o in wiring_options
+                          if o["backend"] == backend]
+            check_backend = False
+        else:
             # This will also allow users to override if this configuration is
             # not baked into the model.
-            wiring_options = [{"backend": backend, "device": device}]
+            candidates = [{"backend": backend, "device": device}]
+            check_backend = None  # no checks at all
 
-        if not wiring_options:
+        if not candidates:
             if backend is None and device is None:
                 raise ValueError(
                     f"The model {model_path.name} does not have wiring "
@@ -164,6 +169,27 @@ def get_model_meta(path_or_name: str | pathlib.Path,
                     f"The current wiring options {backend=}, {device=} "
                     f"are either not supported or invalid for the "
                     f"model {model_path.name}.")
+
+        if check_backend is None:
+            wiring_options = candidates
+        else:
+            wiring_options = []
+            reasons = []
+            for opt in candidates:
+                reason = get_wiring_unavailable_reason(
+                    opt, check_backend=check_backend)
+                if reason is None:
+                    wiring_options.append(opt)
+                else:
+                    reasons.append(f"'{opt['backend']}' on "
+                                   f"'{opt['device']}' ({reason})")
+            if not wiring_options:
+                raise WiringUnavailableError(
+                    f"None of the wiring options of the model "
+                    f"{model_path.name} can be used in this environment: "
+                    + "; ".join(reasons)
+                    + ". Please install the missing dependency or specify "
+                      "'backend' and 'device' manually.")
 
         model_meta["backend"] = wiring_options[0]["backend"]
         model_meta["device"] = wiring_options[0]["device"]
@@ -210,33 +236,45 @@ def has_triton() -> bool:
         return torch_has_triton()
 
 
-def is_wiring_available(wiring: dict[str, str],
-                        check_backend: bool = True) -> bool:
-    """Check whether a backend/device wiring option can be used
+def get_wiring_unavailable_reason(wiring: dict[str, str],
+                                  check_backend: bool = True) -> str | None:
+    """Return why a backend/device wiring option cannot be used
 
     This checks whether the CUDA device exists and, if `check_backend`
     is True, whether OpenVINO is installed for the "openvino" backend
     and whether the "inductor" backend can generate code for the device
     (Triton on CUDA devices, a C++ compiler on the CPU).
+
+    Returns None if the wiring option can be used.
     """
     backend = wiring["backend"]
     device = str(wiring["device"])
     if device.startswith("cuda"):
         if not torch.cuda.is_available():
-            return False
+            return "CUDA is not available"
         index = int(device.split(":")[1]) if device.count(":") else 0
         if index >= torch.cuda.device_count():
-            return False
+            return f"there is no CUDA device with index {index}"
     if not check_backend:
-        return True
+        return None
     if backend == "inductor":
         if device.startswith("cuda") and not has_triton():
-            return False
+            return "Triton is not installed"
         if device == "cpu" and not has_cpp_compiler():
-            return False
+            return "no C++ compiler found"
     if backend == "openvino" and not openvino.module_available():
-        return False
-    return True
+        return "OpenVINO is not installed"
+    return None
+
+
+def is_wiring_available(wiring: dict[str, str],
+                        check_backend: bool = True) -> bool:
+    """Check whether a backend/device wiring option can be used
+
+    See :func:`get_wiring_unavailable_reason` for details.
+    """
+    return get_wiring_unavailable_reason(
+        wiring, check_backend=check_backend) is None
 
 
 def load_model(path_or_name: str | pathlib.Path,

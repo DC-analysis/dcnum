@@ -85,7 +85,7 @@ def test_optimize_for_inference_only_on_cuda():
 def test_load_model_graph_optimizations_cpu(monkeypatch):
     monkeypatch.setattr(torch_model, "cache_model", {})
     model_file = retrieve_model(
-        "segm-torch-model_unet-dcnum-test_g2_0901b.zip")
+        "segm-torch-model_unet-dcnum-test_g2_cb32a.zip")
     _, meta = torch_model.load_model(model_file,
                                      backend="torch.eager",
                                      device="cpu")

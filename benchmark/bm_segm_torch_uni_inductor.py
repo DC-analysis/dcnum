@@ -8,8 +8,9 @@ model sees at least two different batch sizes. This benchmark segments
 the inductor caches disabled, so every repetition includes compiling the
 model for every batch size it encounters.
 
-Runs on the GPU if CUDA is available, otherwise on the CPU. Note that the
-test model in the dcnum repository was exported on the CPU.
+Runs on the CPU, because the test model in the dcnum repository was
+exported on the CPU (exported models only run on the device they were
+exported for).
 """
 import pathlib
 import tempfile
@@ -42,7 +43,7 @@ class Benchmark:
         torch_model.cache_model.clear()
 
         self.model_file = extract(
-            "segm-torch-model_unet-dcnum-test_g2_0901b.zip", ".dcnm")
+            "segm-torch-model_unet-dcnum-test_g2_cb32a.zip", ".dcnm")
         path_data = extract(
             "fmt-hdf5_cytoshot_full-features_2024.zip", ".rtdc")
         with h5py.File(path_data) as h5:
@@ -50,7 +51,7 @@ class Benchmark:
         num_frames = 2137
         reps = num_frames // len(image) + 1
         self.images = np.concatenate([image] * reps)[:num_frames]
-        self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        self.device = "cpu"
 
     def benchmark(self):
         for start in range(0, len(self.images), 1000):
