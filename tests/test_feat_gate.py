@@ -249,3 +249,47 @@ def test_ppid():
 
         gt3 = Gate(data=hd, online_gates=True, size_thresh_mask=22)
         assert gt3.get_ppid() == "norm:o=1^s=22"
+
+
+def test_gate_online_polygon_not_implemented():
+    """Polygon online gates are not supported"""
+    path = retrieve_data(
+        "fmt-hdf5_cytoshot_full-features_legacy_allev_2023.zip")
+    with h5py.File(path, "a") as h5:
+        h5.attrs["online_filter:area_um,deform polygon points"] = \
+            "[[50, 0.01], [100, 0.01], [100, 0.1]]"
+
+    with (HDF5Data(path) as hd,
+          pytest.raises(NotImplementedError, match="Polygon gating")):
+        Gate(data=hd, online_gates=True)
+
+
+def test_gate_online_unexpected_key():
+    """Unknown online gate keys are ignored with a warning"""
+    path = retrieve_data(
+        "fmt-hdf5_cytoshot_full-features_legacy_allev_2023.zip")
+    with h5py.File(path, "a") as h5:
+        h5.attrs["online_filter:deform min"] = 0.01
+        h5.attrs["online_filter:deform soft limit"] = False
+        h5.attrs["online_filter:peter"] = 1
+
+    with (HDF5Data(path) as hd,
+          pytest.warns(UserWarning, match="Unexpected online gate 'peter'")):
+        gt = Gate(data=hd, online_gates=True)
+    assert "deform" in gt.features
+    assert "peter" not in gt.features
+
+
+def test_gate_events_empty():
+    """Gating an empty events dictionary raises an error"""
+    path = retrieve_data(
+        "fmt-hdf5_cytoshot_full-features_legacy_allev_2023.zip")
+    with h5py.File(path, "a") as h5:
+        h5.attrs["online_filter:deform min"] = 0.01
+        h5.attrs["online_filter:deform soft limit"] = False
+
+    with HDF5Data(path) as hd:
+        gt = Gate(data=hd, online_gates=True)
+        assert gt.box_gates
+        with pytest.raises(ValueError, match="Empty events provided"):
+            gt.gate_events({})
