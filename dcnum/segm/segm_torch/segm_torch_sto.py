@@ -1,4 +1,5 @@
 """PyTorch segmenter (single-threaded operation)"""
+from __future__ import annotations
 
 import numpy as np
 

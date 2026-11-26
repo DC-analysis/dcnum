@@ -1,5 +1,6 @@
 # flake8: noqa: F401
 """Segmenters for detecting events in image data"""
+from __future__ import annotations
 
 from .segmenter import (
     Segmenter,

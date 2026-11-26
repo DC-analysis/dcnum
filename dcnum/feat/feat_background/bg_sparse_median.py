@@ -1,4 +1,6 @@
 """Sparse median background image computation with cleansing"""
+from __future__ import annotations
+
 import ctypes
 import queue
 import time

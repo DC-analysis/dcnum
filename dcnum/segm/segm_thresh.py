@@ -1,4 +1,5 @@
 """Segmentation by thresholding"""
+from __future__ import annotations
 
 from typing import ClassVar
 

@@ -1,4 +1,6 @@
 """Shared-memory data arrays and state of a chunk slot"""
+from __future__ import annotations
+
 import ctypes
 import multiprocessing as mp
 

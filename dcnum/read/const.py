@@ -1,4 +1,5 @@
 """Constants for reading data"""
+from __future__ import annotations
 
 PROTECTED_FEATURES = [
     "bg_off",

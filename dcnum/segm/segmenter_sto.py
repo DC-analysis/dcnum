@@ -1,4 +1,5 @@
 """Segmenter base class for single-threaded operation"""
+from __future__ import annotations
 
 import abc
 

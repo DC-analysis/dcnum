@@ -1,4 +1,5 @@
 """Base class for PyTorch segmenters"""
+from __future__ import annotations
 
 import functools
 import pathlib

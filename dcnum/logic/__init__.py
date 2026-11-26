@@ -1,5 +1,7 @@
 # flake8: noqa: F401
 """Logic for running the dcnum pipeline"""
+from __future__ import annotations
+
 from .chunk_slot import ChunkSlot
 from .ctrl import DCNumJobRunner
 from .job import DCNumPipelineJob

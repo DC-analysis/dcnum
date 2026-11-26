@@ -1,4 +1,6 @@
 """JSON encoder for pipeline metadata"""
+from __future__ import annotations
+
 import json
 import numbers
 import pathlib

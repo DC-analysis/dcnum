@@ -1,4 +1,6 @@
 """Computation of OpenCV moments-based features from mask images"""
+from __future__ import annotations
+
 import numpy as np
 
 from ...common import LazyLoader

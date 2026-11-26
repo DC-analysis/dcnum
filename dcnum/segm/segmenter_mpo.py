@@ -1,4 +1,5 @@
 """Segmenter base class for multiprocessing operation"""
+from __future__ import annotations
 
 import abc
 import multiprocessing as mp

@@ -1,4 +1,6 @@
 """Process-based queue writer"""
+from __future__ import annotations
+
 import traceback
 from logging.handlers import QueueHandler
 import multiprocessing as mp

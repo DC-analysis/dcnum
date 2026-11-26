@@ -1,4 +1,6 @@
 """Pipeline job definition"""
+from __future__ import annotations
+
 import collections
 import copy
 import inspect
@@ -107,13 +109,15 @@ class DCNumPipelineJob:
         self.kwargs = {}
         """keyword arguments of this job (with defaults filled in)"""
 
-        spec = inspect.getfullargspec(DCNumPipelineJob.__init__)
+        # Evaluate the annotations (they are strings due to
+        # `from __future__ import annotations`).
+        sig = inspect.signature(DCNumPipelineJob.__init__, eval_str=True)
         locs = locals()
-        for arg in spec.args:
+        for arg, param in sig.parameters.items():
             if arg == "self":
                 continue
             value = locs[arg]
-            if spec.annotations[arg] == dict | None:
+            if param.annotation == dict | None:
                 # Do not modify the dictionaries passed by the caller.
                 value = {} if value is None else copy.deepcopy(value)
             self.kwargs[arg] = value

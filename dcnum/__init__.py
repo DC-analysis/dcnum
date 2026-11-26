@@ -23,4 +23,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 """
 # flake8: noqa: F401
+from __future__ import annotations
+
 from ._version import __version__, __version_tuple__

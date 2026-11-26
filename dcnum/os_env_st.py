@@ -3,6 +3,8 @@
 Helpers for requesting single-threaded operation of libraries such as
 numpy or numba via environment variables.
 """
+from __future__ import annotations
+
 import logging
 import os
 

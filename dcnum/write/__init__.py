@@ -1,5 +1,7 @@
 # flake8: noqa: F401
 """Writing pipeline output to HDF5 (.rtdc) files"""
+from __future__ import annotations
+
 from .chunk_writer import ChunkWriter
 from .event_stash import EventStash
 from .queue_writer_process import QueueWriterProcess

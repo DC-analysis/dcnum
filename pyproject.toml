@@ -59,6 +59,8 @@ write_to = "dcnum/_version.py"
 version_scheme = "post-release"
 
 [tool.ruff.lint]
+# all modules must import annotations from __future__ (I002)
+extend-select = ["I002"]
 ignore = [
     # Do not organize imports (we have our own scheme)
     "I001",
@@ -69,8 +71,12 @@ ignore = [
     "S112",
 ]
 
+[tool.ruff.lint.isort]
+required-imports = ["from __future__ import annotations"]
+
 [tool.ruff.lint.per-file-ignores]
 # flake8 (CI) requires `noqa: E402` for imports after `pytest.importorskip`
 # and `request_single_threaded()`, which ruff considers unused.
-"tests/*" = ["RUF100"]
-"benchmark/*" = ["RUF100"]
+"tests/*" = ["I002", "RUF100"]
+"benchmark/*" = ["I002", "RUF100"]
+"docs/*" = ["I002"]

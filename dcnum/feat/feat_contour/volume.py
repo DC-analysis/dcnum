@@ -1,4 +1,6 @@
 """Volume computation from event contours (rotational symmetry)"""
+from __future__ import annotations
+
 import numpy as np
 
 

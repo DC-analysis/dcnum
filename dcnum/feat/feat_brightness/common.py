@@ -1,4 +1,6 @@
 """Names of the brightness features"""
+from __future__ import annotations
+
 brightness_names = [
     "bg_med",
     "bright_avg",

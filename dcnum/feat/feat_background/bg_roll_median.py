@@ -1,4 +1,6 @@
 """Rolling median background image computation"""
+from __future__ import annotations
+
 import ctypes
 import queue
 import time
