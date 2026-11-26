@@ -73,10 +73,10 @@ class Background(abc.ABC):
         self.hdin: HDF5Data | None = None
         """HDF5Data instance for input data"""
 
-        self.h5in: h5py.File | None = None
+        self.h5in: h5py.File | None = None  # type: ignore
         """input h5py.File"""
 
-        self.h5out: h5py.File | None = None
+        self.h5out: h5py.File | None = None  # type: ignore
         """output h5py.File"""
 
         self.paths_ref = []
@@ -101,7 +101,11 @@ class Background(abc.ABC):
             #  because HDF5Data properly resolves basins and the image
             #  feature might be in a basin.
             self.hdin = HDF5Data(self.h5in, md5_5m=md5_5m)
-            self.input_data = self.hdin.image.h5ds
+            image = self.hdin.image
+            if image is None:
+                raise ValueError(f"The input data {input_data} do not "
+                                 f"contain the 'image' feature")
+            self.input_data = image.h5ds
         else:
             self.input_data = input_data
 
@@ -215,6 +219,7 @@ class Background(abc.ABC):
         "bg_off" features defined in the output file ``self.h5out``.
         """
         t0 = time.perf_counter()
+        assert self.h5out is not None
 
         # Delete any old background data
         for ds_key in ["image_bg", "bg_off"]:

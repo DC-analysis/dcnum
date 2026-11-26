@@ -49,7 +49,7 @@ def postprocess_masks(masks,
         masks = masks[:, 0, :, :]
 
     # Label the mask image
-    labels = np.empty(masks.shape, dtype=np.uint16)
+    labels: np.ndarray = np.empty(masks.shape, dtype=np.uint16)
     for ii in range(masks.shape[0]):
         ndi.label(
             input=masks[ii],
@@ -59,7 +59,7 @@ def postprocess_masks(masks,
     batch_size = labels.shape[0]
 
     # Revert padding and cropping from preprocessing
-    mask_shape_ret = labels.shape[1:]
+    mask_shape_ret = tuple(labels.shape[1:])
     # height
     s0diff = original_image_shape[0] - mask_shape_ret[0]
     s0t = abs(s0diff) // 2

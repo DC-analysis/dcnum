@@ -1,4 +1,5 @@
 """Sparse median background image computation with cleansing"""
+import ctypes
 import queue
 import time
 
@@ -130,32 +131,33 @@ class BackgroundSparseMed(Background):
         """offset/flickering correction"""
 
         # time axis
-        self.time = None
+        time_axis = None
         if self.h5in is not None:
             hd = HDF5Data(self.h5in)
             if "time" in hd:
                 # use actual time from dataset
-                self.time = hd["time"][:]
-                self.time -= self.time[0]
+                time_axis = hd["time"][:]
+                time_axis -= time_axis[0]
             elif "imaging:frame rate" in hd.meta:
                 fr = hd.meta["imaging:frame rate"]
                 if "frame" in hd:
                     # compute time from frame rate and frame numbers
-                    self.time = hd["frame"] / fr
-                    self.time -= self.time[0]
+                    time_axis = hd["frame"] / fr
+                    time_axis -= time_axis[0]
                 else:
                     # compute time using frame rate (approximate)
                     dur = self.image_count / fr * 1.5
                     self.logger.info(
                         f"Approximating duration: {dur/60:.1f}min")
-                    self.time = np.linspace(0, dur, self.image_count,
+                    time_axis = np.linspace(0, dur, self.image_count,
                                             endpoint=True)
-        if self.time is None:
+        if time_axis is None:
             # No HDF5 file or no information therein; Make an educated guess.
             dur = self.image_count / 3600 * 1.5
             self.logger.info(f"Guessing duration: {dur/60:.1f}min")
-            self.time = np.linspace(0, dur, self.image_count,
+            time_axis = np.linspace(0, dur, self.image_count,
                                     endpoint=True)
+        self.time = time_axis
 
         self.duration = self.time[-1] - self.time[0]
         """duration of the measurement"""
@@ -172,12 +174,12 @@ class BackgroundSparseMed(Background):
         """array containing all background images"""
 
         self.shared_input_raw = mp_spawn.RawArray(
-            np.ctypeslib.ctypes.c_uint8,
+            ctypes.c_uint8,
             int(np.prod(self.image_shape)) * kernel_size)
         """mp.RawArray for temporary batch input data"""
 
         self.shared_output_raw = mp_spawn.RawArray(
-            np.ctypeslib.ctypes.c_uint8,
+            ctypes.c_uint8,
             int(np.prod(self.image_shape)))
         """mp.RawArray for the median background image"""
 
@@ -374,7 +376,7 @@ class BackgroundSparseMed(Background):
             idx0 = idx1
         if idx1 is not None:
             # Fill up remainder of index array with last entry
-            bg_idx[idx1:] = ii
+            bg_idx[idx1:] = len(step_times) - 1
 
         # Store the background images as an internal mapped basin
         self.writer.store_basin(

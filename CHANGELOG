@@ -151,6 +151,9 @@
    for `HDF5Data` without image data
  - ref: fix pyright findings in `dcnum.logic` (typed `count_time`
    decorator, annotations, None checks)
+ - ref: fix pyright findings in `dcnum.feat`, `dcnum.segm`, `dcnum.meta`,
+   and `dcnum.common`; background computation raises a `ValueError` for
+   input data without images
 0.31.2
  - fix: online gates for `size_x` and `size_y` were ignored (regression in 0.16.6)
  - fix: "pipeline:dcnum yield" and "experiment:event count" were set to

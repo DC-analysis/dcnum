@@ -58,11 +58,11 @@ def brightness_features(image: npt.NDArray[np.uint8],
     if image_bg is not None:
         br_dict["bg_med"][:] = compute_median(image_bg)
 
-    if image_bg is not None or image_corr is not None:
-        # Background-corrected brightness values
-        if image_corr is None:
-            image_corr = np.asarray(image, dtype=np.int16) - image_bg
+    if image_corr is None and image_bg is not None:
+        image_corr = np.asarray(image, dtype=np.int16) - image_bg
 
+    if image_corr is not None:
+        # Background-corrected brightness values
         avg_sd_corr = compute_avg_sd_masked_int16(image_corr, mask)
         br_dict["bright_bc_avg"][:] = avg_sd_corr[:, 0]
         br_dict["bright_bc_sd"][:] = avg_sd_corr[:, 1]

@@ -157,3 +157,16 @@ def test_base_background_output_basin_simple(
     with HDF5Data(output_path) as hd:
         assert "image" in hd
         assert "image_bg" in hd
+
+
+def test_base_background_input_without_images(tmp_path):
+    """Input data without images raise a clear error"""
+    path_in = tmp_path / "in.rtdc"
+    with h5py.File(path_in, "w") as h5:
+        h5.attrs["experiment:event count"] = 10
+        h5["events/deform"] = np.linspace(0, .1, 10)
+    with pytest.raises(ValueError, match="do not contain the 'image'"):
+        bg_sparse_median.BackgroundSparseMed(
+            input_data=path_in,
+            output_path=tmp_path / "out.rtdc",
+            kernel_size=5)

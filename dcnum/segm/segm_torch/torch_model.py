@@ -64,7 +64,8 @@ def get_model_meta(path_or_name: str | pathlib.Path,
     """
     # Make sure 'device' is a string
     if isinstance(device, torch.device):
-        device = device.type
+        # pyright cannot narrow `torch.device` (lazily loaded module)
+        device = device.type  # type: ignore
     # Use first CUDA device if not specified
     if device and device.startswith("cuda") and not device.count(":"):
         device = "cuda:0"

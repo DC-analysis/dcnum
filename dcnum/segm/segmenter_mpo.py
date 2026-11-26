@@ -92,7 +92,7 @@ class MPOSegmenter(Segmenter, abc.ABC):
 
     def __setstate__(self, state):
         # Restore instance attributes
-        self.__dict__.update(state)
+        vars(self).update(state)
 
     def join_workers(self):
         """Ask all workers to stop and join them"""
@@ -193,9 +193,13 @@ class MPOSegmenter(Segmenter, abc.ABC):
                            available_features=available_features)
 
         if self.requires_background_correction:
-            cs.image_corr[:] = images
+            image_corr = cs.image_corr
+            assert image_corr is not None
+            image_corr[:] = images
             if bg_off is not None:
-                cs.bg_off[:] = bg_off
+                cs_bg_off = cs.bg_off
+                assert cs_bg_off is not None
+                cs_bg_off[:] = bg_off
         else:
             cs.image[:] = images
 

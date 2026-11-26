@@ -25,6 +25,11 @@ class BackgroundCopy(Background):
                 if "image_bg" in bn_dict["features"]:
                     # load the basin data
                     h5group, _features, mapping = self.hdin.get_basin_data(ii)
+                    if h5group is None:
+                        bn_name = bn_dict.get("name")
+                        raise ValueError(
+                            f"Could not access the basin {bn_name} that "
+                            f"contains 'image_bg'")
                     if isinstance(mapping, (int, slice, list)):
                         raise NotImplementedError(
                             f"Image data mapping for {type(mapping)} "

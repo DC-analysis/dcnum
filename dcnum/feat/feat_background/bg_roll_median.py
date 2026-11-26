@@ -1,4 +1,5 @@
 """Rolling median background image computation"""
+import ctypes
 import queue
 import time
 
@@ -83,12 +84,12 @@ class BackgroundRollMed(Background):
         """number of events processed at once"""
 
         self.shared_input_raw = mp_spawn.RawArray(
-            np.ctypeslib.ctypes.c_uint8,
+            ctypes.c_uint8,
             int(np.prod(self.image_shape)) * (batch_size + kernel_size))
         """mp.RawArray for temporary batch input data"""
 
         self.shared_output_raw = mp_spawn.RawArray(
-            np.ctypeslib.ctypes.c_uint8,
+            ctypes.c_uint8,
             int(np.prod(self.image_shape)) * batch_size)
         """mp.RawArray for temporary batch output data"""
 
@@ -206,6 +207,7 @@ class BackgroundRollMed(Background):
             self.process_next_batch()
 
         # Set the remaining median bg images to the last one.
+        assert self.h5out is not None
         if "image_bg" in self.h5out["events"]:
             num_remaining = (self.input_data.shape[0]
                              - self.h5out["events/image_bg"].shape[0])

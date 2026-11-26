@@ -272,11 +272,12 @@ class QueueEventExtractor:
         if sub_index == 0:
             # We have to check whether the last image from the previous
             # chunk matches the current image.
-            data = self.slot_register.data
-            if (chunk != 0
-                    and np.all(images[sub_index] == data.image[index - 1])):
-                # skip duplicate events that have been analyzed already
-                return None
+            if chunk != 0:
+                image_data = self.slot_register.data.image
+                assert image_data is not None
+                if np.all(images[sub_index] == image_data[index - 1]):
+                    # skip duplicate events that have been analyzed already
+                    return None
         else:
             if np.all(images[sub_index] == images[sub_index - 1]):
                 # skip duplicate events that have been analyzed already
