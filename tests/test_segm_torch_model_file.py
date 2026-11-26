@@ -55,3 +55,31 @@ def test_segm_torch_complement_wiring_options():
     meta2 = torch_model.get_model_meta(model_file, backend="openvino")
     assert meta2["backend"] == "openvino"
     assert meta2["device"] == "cpu"
+
+
+@pytest.mark.parametrize("backend,layout_opt_disabled", [
+    ("inductor", True),
+    ("cudagraphs", False),
+])
+def test_compile_inductor_without_layout_optimization(monkeypatch, backend,
+                                                      layout_opt_disabled):
+    """Inductor's layout optimization (channels-last) must be disabled"""
+    calls = []
+
+    def compile_mock(model, **kwargs):
+        calls.append(kwargs)
+        return model
+
+    monkeypatch.setattr(torch_model.torch, "compile", compile_mock)
+    # make sure the model is not taken from the cache
+    monkeypatch.setattr(torch_model, "cache_model", {})
+    model_file = retrieve_model(
+        "segm-torch-model_unet-dcnum-test_g2_0901b.zip")
+    torch_model.load_model(model_file, backend=backend, device="cpu")
+    assert len(calls) == 1
+    assert calls[0]["backend"] == backend
+    options = calls[0].get("options", {})
+    if layout_opt_disabled:
+        assert options["layout_optimization"] is False
+    else:
+        assert "layout_optimization" not in options
