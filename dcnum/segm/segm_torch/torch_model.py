@@ -130,14 +130,24 @@ def get_model_meta(path_or_name: str | pathlib.Path,
         # "backend", ordered according to efficiency/suggestion decreasing.
         wiring_options: list[dict[str, str]] = model_meta["wiring_options"]
         # Determine the correct wiring based on the input.
+        # Options that cannot be used in the current environment (e.g.
+        # no GPU or no Triton) are skipped, unless the user explicitly
+        # asks for a specific backend and device.
         if backend is None and device is None:
-            pass  # we take the first item from the wiring options
+            # we take the first available item from the wiring options
+            wiring_options = [o for o in wiring_options
+                              if is_wiring_available(o)]
         elif backend is None and device is not None:
             wiring_options = [o for o in wiring_options
-                              if o["device"] == device]
+                              if o["device"] == device
+                              and is_wiring_available(o)]
         elif backend is not None and device is None:
+            # The user asked for this backend, so we only make sure
+            # that the device exists.
             wiring_options = [o for o in wiring_options
-                              if o["backend"] == backend]
+                              if o["backend"] == backend
+                              and is_wiring_available(o,
+                                                      check_backend=False)]
         elif backend is not None and device is not None:
             # This will also allow users to override if this configuration is
             # not baked into the model.
@@ -168,6 +178,65 @@ def get_model_meta(path_or_name: str | pathlib.Path,
         cache_model_meta[cache_key_2] = model_meta
 
     return model_meta
+
+
+@functools.cache
+def has_cpp_compiler() -> bool:
+    """Return True if a C++ compiler for TorchInductor on the CPU exists"""
+    from torch._inductor import cpp_builder
+    try:
+        cpp_builder.get_cpp_compiler()
+    except BaseException:
+        return False
+    else:
+        return True
+
+
+@functools.cache
+def has_triton() -> bool:
+    """Return True if Triton is available for TorchInductor on the GPU
+
+    Triton is an optional dependency. It is installed with the CUDA
+    builds of PyTorch on Linux. On Windows, it can be installed with
+    the community package "triton-windows" (the version must match the
+    PyTorch version).
+    """
+    try:
+        from torch.utils._triton import has_triton as torch_has_triton
+    except ImportError:
+        import importlib.util
+        return importlib.util.find_spec("triton") is not None
+    else:
+        return torch_has_triton()
+
+
+def is_wiring_available(wiring: dict[str, str],
+                        check_backend: bool = True) -> bool:
+    """Check whether a backend/device wiring option can be used
+
+    This checks whether the CUDA device exists and, if `check_backend`
+    is True, whether OpenVINO is installed for the "openvino" backend
+    and whether the "inductor" backend can generate code for the device
+    (Triton on CUDA devices, a C++ compiler on the CPU).
+    """
+    backend = wiring["backend"]
+    device = str(wiring["device"])
+    if device.startswith("cuda"):
+        if not torch.cuda.is_available():
+            return False
+        index = int(device.split(":")[1]) if device.count(":") else 0
+        if index >= torch.cuda.device_count():
+            return False
+    if not check_backend:
+        return True
+    if backend == "inductor":
+        if device.startswith("cuda") and not has_triton():
+            return False
+        if device == "cpu" and not has_cpp_compiler():
+            return False
+    if backend == "openvino" and not openvino.module_available():
+        return False
+    return True
 
 
 def load_model(path_or_name: str | pathlib.Path,

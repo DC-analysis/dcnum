@@ -34,6 +34,15 @@ For GPU-based segmentation with CUDA, make sure that you install a version
 of PyTorch that matches your CUDA installation (see the
 `PyTorch installation instructions <https://pytorch.org/get-started/locally/>`_).
 
+The ``"inductor"`` backend of the ``"torchuni"`` segmenter needs
+`Triton <https://triton-lang.org>`_ on CUDA devices and a C++ compiler
+on the CPU. Triton is optional: the CUDA builds of PyTorch for Linux
+include it, and on Windows you can install the community package
+``triton-windows`` (its version must match your PyTorch version). If a
+model file lists a backend that is not available, dcnum uses the next
+available wiring option of the model (e.g. ``"torch.eager"``), unless
+you request a backend explicitly.
+
 
 Running a pipeline
 ------------------
