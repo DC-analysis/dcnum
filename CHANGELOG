@@ -1,4 +1,8 @@
 0.31.4
+ - fix: the pipeline stopped with "Universal workers failed to spawn"
+   when starting the universal workers took longer than 10 s per worker
+   (e.g. on a slow system or when the worker processes were suspended);
+   wait as long as the workers are alive instead
  - enh: record the logs of the worker processes of multiprocessing
    segmenters (e.g. "torchmpo") in the pipeline log (#19)
  - docs: explain the pipeline generation `DCNUM_PPID_GENERATION` (#22)

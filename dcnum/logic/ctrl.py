@@ -1053,18 +1053,34 @@ class DCNumJobRunner(threading.Thread):
 
         if not all(w.started.value for w in uni_workers):
             self.logger.info("Waiting for universal workers to start")
-        for _ in range(100 * len(uni_workers)):
+        # Wait until all universal workers have started. There is no
+        # fixed timeout, because starting the workers may take long on
+        # a slow (or suspended) system. Instead, we stop waiting as soon
+        # as it is clear that a worker will never start.
+        t_wait = time.perf_counter()
+        while True:
             if all(w.started.value for w in uni_workers):
                 break
             elif all(w.completed.value for w in uni_workers):
                 # unexpectedly, we are already done (probably a small dataset)
                 self.logger.info("Universal workers completed early")
                 break
-            else:
-                time.sleep(0.1)
-        else:
-            # Stop the other workers and the writer below.
-            error = "Universal workers failed to spawn"
+            elif any(w.failed.value for w in uni_workers):
+                error = "Universal worker failed (see log for details)"
+                break
+            elif not thr_uw.is_alive() and any(
+                    not w.started.value and not w.is_alive()
+                    for w in uni_workers):
+                # All workers were started (or the starter thread
+                # failed), but some of them are not running.
+                # Stop the other workers and the writer below.
+                error = "Universal workers failed to spawn"
+                break
+            elif time.perf_counter() - t_wait > 30:
+                self.logger.info("Still waiting for universal workers to "
+                                 "start")
+                t_wait = time.perf_counter()
+            time.sleep(0.1)
 
         # We can lean back now. We do not have to do anything
         # besides monitoring the progress.
