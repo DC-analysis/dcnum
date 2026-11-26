@@ -1014,9 +1014,14 @@ class DCNumJobRunner(threading.Thread):
         worker_segm = None
         if not issubclass(seg_cls, UNISegmenter):
             # Initialize segmenter manager thread
+            segmenter = seg_cls(debug=self.job["debug"],
+                                **self.job["segmenter_kwargs"])
+            if isinstance(segmenter, MPOSegmenter):
+                # Record the logs of the segmenter worker processes
+                segmenter.log_queue = self.log_queue
+                segmenter.log_level = self.job["log_level"]
             worker_segm = SegmenterManagerThread(
-                segmenter=seg_cls(debug=self.job["debug"],
-                                  **self.job["segmenter_kwargs"]),
+                segmenter=segmenter,
                 slot_register=slot_register,
             )
             worker_segm.start()
