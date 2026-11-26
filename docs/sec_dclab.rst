@@ -83,3 +83,74 @@ and how it accesses the data:
        pipeline identifier (pixel size and index mapping), which is part
        of the pipeline hash (see :ref:`sec_pipeline_ppid`).
      - No pipeline identifiers.
+
+
+.. _sec_dclab_hdf5writer:
+
+HDF5Writer and dclab.RTDCWriter
+-------------------------------
+:class:`.write.writer.HDF5Writer` writes the output file of the
+pipeline. In the pipeline, it is used by the queue writer
+(:mod:`.write.queue_writer_base`), which collects the events from the
+feature extraction workers and writes them in the correct order. It
+writes the same file format as dclab's
+:class:`dclab.rtdc_dataset.writer.RTDCWriter`, but it is a low-level writer
+without the checks and conveniences of dclab:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 20 40 40
+
+   * - Aspect
+     - :class:`.write.writer.HDF5Writer`
+     - :class:`dclab.rtdc_dataset.writer.RTDCWriter`
+   * - Feature names
+     - Not checked; any feature name can be written
+       (:meth:`.write.writer.HDF5Writer.store_feature_chunk`).
+     - Must be defined in dclab (``ValueError`` otherwise); the data
+       type of special features (e.g. ``index``, contours, traces) is
+       handled by dclab.
+   * - Writing data
+     - Feature data are appended in chunks of events (arrays whose
+       first axis is the event axis). Boolean masks are stored as
+       ``uint8`` (0 and 255).
+     - Feature data are appended per call; ragged data (contours) and
+       traces are supported. Masks are stored as ``uint8`` as well.
+   * - Existing data
+     - New data are always appended to existing features.
+     - The ``mode`` argument defines whether data are appended,
+       replaced, or the file is reset.
+   * - Metadata
+     - Written directly to the HDF5 attributes
+       (``writer.h5.attrs``), without validation.
+       :func:`.write.writer.copy_metadata` copies the metadata, logs,
+       and tables of another file.
+     - :meth:`~dclab.rtdc_dataset.writer.RTDCWriter.store_metadata` validates
+       the metadata. When used as a context manager, the writer
+       completes the event count and the ROI size
+       (:meth:`~dclab.rtdc_dataset.writer.RTDCWriter.rectify_metadata`) and
+       stores the dclab version when the file is closed.
+   * - Logs and tables
+     - Logs (:meth:`.write.writer.HDF5Writer.store_log`); tables only
+       via :func:`.write.writer.copy_metadata`.
+     - Logs and tables
+       (:meth:`~dclab.rtdc_dataset.writer.RTDCWriter.store_log`,
+       :meth:`~dclab.rtdc_dataset.writer.RTDCWriter.store_table`).
+   * - Basins
+     - File-based basins (HDF5 files) and internal basins
+       (:meth:`.write.writer.HDF5Writer.store_basin`).
+     - File, internal, and remote basins (DCOR, S3, HTTP).
+   * - Compression and checksums
+     - Zstandard compression (level 5) and Fletcher-32 checksums by
+       default (:func:`.write.writer.set_default_filter_kwargs`); can be
+       changed with ``ds_kwds``.
+     - Zstandard compression (level 5) and Fletcher-32 checksums by
+       default; can be changed with ``compression_kwargs``.
+   * - Chunking
+     - Chunks of about 1 MiB, but at least 10 and at most 1000 events
+       per chunk, so that appending small numbers of events is fast.
+     - Chunks of about 1 MiB, at least 10 events per chunk.
+   * - HDF5 chunk cache
+     - Files opened by the writer use a larger chunk cache (10 MiB per
+       dataset) to allow partial writes of chunks.
+     - Default h5py chunk cache.
