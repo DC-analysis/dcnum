@@ -1,4 +1,6 @@
 """Common helpers: lazy module loading, CPU counting, and worker handling"""
+from __future__ import annotations
+
 from collections.abc import Callable
 import importlib
 import logging

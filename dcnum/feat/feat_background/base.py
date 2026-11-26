@@ -1,4 +1,6 @@
 """Base class and helpers for background image computation"""
+from __future__ import annotations
+
 import abc
 import functools
 import inspect

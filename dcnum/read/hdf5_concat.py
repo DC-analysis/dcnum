@@ -1,4 +1,5 @@
 """Concatenation of multiple HDF5 files"""
+from __future__ import annotations
 
 import io
 import pathlib

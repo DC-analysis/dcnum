@@ -1,4 +1,6 @@
 """Thread-based queue writer"""
+from __future__ import annotations
+
 import threading
 
 from .queue_writer_base import QueueWriterBase

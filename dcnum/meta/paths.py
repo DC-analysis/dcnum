@@ -1,4 +1,6 @@
 """Registry of search paths for locating pipeline resource files"""
+from __future__ import annotations
+
 import pathlib
 
 search_path_registry = {}

@@ -1,4 +1,5 @@
 """Lazy loading and setup of PyTorch and OpenVINO"""
+from __future__ import annotations
 
 import os
 import pathlib

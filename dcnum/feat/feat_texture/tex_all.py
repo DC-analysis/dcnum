@@ -1,4 +1,6 @@
 """Computation of Haralick texture features"""
+from __future__ import annotations
+
 from mahotas.features import haralick as mh_haralick
 import numpy as np
 

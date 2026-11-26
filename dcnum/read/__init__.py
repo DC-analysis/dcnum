@@ -1,5 +1,6 @@
 # flake8: noqa: F401
 """Read and access deformability cytometry (.rtdc) data"""
+from __future__ import annotations
 
 from .cache import md5sum
 from .const import PROTECTED_FEATURES

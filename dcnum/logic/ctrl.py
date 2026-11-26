@@ -1,4 +1,6 @@
 """Pipeline job runner"""
+from __future__ import annotations
+
 import atexit
 import datetime
 import importlib

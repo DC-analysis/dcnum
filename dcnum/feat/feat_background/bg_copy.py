@@ -1,4 +1,6 @@
 """Background "computation" by copying existing background data"""
+from __future__ import annotations
+
 from ...common import h5py
 from ...write import HDF5Writer
 from .base import Background

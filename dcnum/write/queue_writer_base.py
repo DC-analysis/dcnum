@@ -1,4 +1,6 @@
 """Base class for collecting events from a queue and writing them"""
+from __future__ import annotations
+
 import collections
 from collections import deque
 import logging
@@ -24,9 +26,9 @@ mp_spawn = mp.get_context("spawn")
 
 class QueueWriterBase:
     def __init__(self,
-                 event_queue: "mp.Queue",
-                 write_queue_size: "Synchronized",
-                 feat_nevents: "SynchronizedArray",
+                 event_queue: mp.Queue,
+                 write_queue_size: Synchronized,
+                 feat_nevents: SynchronizedArray,
                  path_out: pathlib.Path,
                  hdf5_dataset_kwargs: dict | None = None,
                  write_threshold: int = 500,

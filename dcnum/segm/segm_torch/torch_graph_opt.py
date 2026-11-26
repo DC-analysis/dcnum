@@ -16,6 +16,8 @@ The pattern "convolution -> batch normalization -> ReLU" is not fused.
 Batch normalization should be folded into the convolutions when the
 model is exported (dcnm-model-files does this).
 """
+from __future__ import annotations
+
 from .torch_setup import torch
 
 

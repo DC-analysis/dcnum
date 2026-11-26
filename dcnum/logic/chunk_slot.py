@@ -1,4 +1,6 @@
 """Shared-memory slot holding one chunk of input data"""
+from __future__ import annotations
+
 import multiprocessing as mp
 
 import numpy as np

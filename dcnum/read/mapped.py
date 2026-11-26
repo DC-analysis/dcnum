@@ -1,4 +1,5 @@
 """Index-mapped access to HDF5 datasets"""
+from __future__ import annotations
 
 import functools
 import numbers

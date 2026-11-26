@@ -1,4 +1,5 @@
 """Preprocessing of image data for machine-learning segmenters"""
+from __future__ import annotations
 
 import numpy as np
 
