@@ -441,13 +441,30 @@ def load_model_v2_pt2(model_meta: dict[str, Any]):
                           "backend": backend,
                           }
         if backend == "inductor":
+            # Let `torch.compile` decide which dimensions are dynamic,
+            # so that it respects `maybe_mark_dynamic` below.
+            compile_kwargs["dynamic"] = None
             # By default, inductor converts the convolutions to the
             # channels-last memory format. For U-Net models with a
             # single input channel, cuDNN then selects convolution
             # kernels that are about three times slower.
             compile_kwargs["options"] = {"layout_optimization": False}
-        model = torch.compile(get_optimized_graph_module(mod, model_meta),
-                              **compile_kwargs)
+        model_compiled = torch.compile(
+            get_optimized_graph_module(mod, model_meta), **compile_kwargs)
+        if backend == "inductor":
+            def model(images):
+                # Compile the model once for all batch sizes. The last
+                # chunk of a dataset (and its batches on the GPU) is
+                # usually smaller than the others, and with static shapes,
+                # inductor compiles the model again for every new batch
+                # size. Only the batch size is marked dynamic, all other
+                # shapes (images and weights) stay static (`dynamic=True`
+                # would make them dynamic, too, which makes the generated
+                # code slower on the CPU).
+                torch._dynamo.maybe_mark_dynamic(images, 0)
+                return model_compiled(images)
+        else:
+            model = model_compiled
         model_meta["mask_func"] = lambda x: x.detach().cpu().numpy()
 
     return model, model_meta
