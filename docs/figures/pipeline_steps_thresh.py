@@ -38,8 +38,8 @@ mask = sizes[labels] > 10
 panels = [
     ("1. raw image (\"image\")", image, "gray", (0, 255)),
     ("2. background image (\"image_bg\")", image_bg, "gray", (0, 255)),
-    ("3. background-corrected image (image − image_bg − bg_off; "
-     "red is darker than the background)",
+    (("3. background-corrected image (image − image_bg − bg_off; "
+      "red is darker than the background)"),
      image_corr, "RdBu", (-40, 40)),
     ("4. thresholding (pixels darker than −6)", mask_raw, "gray_r",
      (0, 1)),

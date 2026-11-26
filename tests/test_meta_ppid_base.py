@@ -50,8 +50,9 @@ def test_compute_pipeline_hash():
     ["2", float, 2.0],
     ["2.0", float, 2.0],
     ["true", bool, True],
-    ["2", Union[None, int], 2],
-    ["2", Union[int, None], 2],
+    # `typing.Union` must be supported (not only `X | Y`)
+    ["2", Union[None, int], 2],  # noqa: UP007
+    ["2", Union[int, None], 2],  # noqa: UP007
     ["2", [None, int], 2],
     ["2", [int, None], 2],
     ["2", [int, type(None)], 2],
@@ -105,7 +106,7 @@ def test_unique_prefix_unordered(in_list, out_list):
     ["UnknownClass", "UnknownClass"],  # string passed through
     ["str | int", [str, int]],  # converted to list
     [str, str],  # type pass-through
-    [Union[str, float], Union[str, float]],
+    [Union[str, float], Union[str, float]],  # noqa: UP007
 ])
 def test_simple_type_eval(type_in, type_out):
     assert type_out == ppid.simple_type_eval(type_in)
@@ -171,7 +172,7 @@ def test_kwargs_to_ppid_invalid():
 ])
 def test_ppid_to_kwargs(kwargs, pid):
     # get the default keyword arguments
-    meth = getattr(ExampleClass, "cook")
+    meth = ExampleClass.cook
     spec = inspect.getfullargspec(meth)
     kwargs_full = spec.kwonlydefaults
     # update with given kwargs

@@ -1,3 +1,5 @@
+from typing import ClassVar
+
 from dcnum import segm
 import numpy as np
 
@@ -10,7 +12,7 @@ class MockSTOSegmenter(segm.STOSegmenter):
     """Mock threshold-based segmenter"""
     requires_background_correction = True
     mask_postprocessing = True
-    mask_default_kwargs = {
+    mask_default_kwargs: ClassVar[dict] = {
         "clear_border": True,
         "fill_holes": True,
         "closing_disk": None,

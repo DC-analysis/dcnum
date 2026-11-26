@@ -1,7 +1,7 @@
 import shutil
 
 from dcnum import common, logic
-from dcnum.segm.segm_torch import segm_torch_base  # noqa: E402
+from dcnum.segm.segm_torch import segm_torch_base
 import h5py
 
 import pytest

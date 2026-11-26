@@ -68,3 +68,9 @@ ignore = [
     "S110",
     "S112",
 ]
+
+[tool.ruff.lint.per-file-ignores]
+# flake8 (CI) requires `noqa: E402` for imports after `pytest.importorskip`
+# and `request_single_threaded()`, which ruff considers unused.
+"tests/*" = ["RUF100"]
+"benchmark/*" = ["RUF100"]

@@ -355,7 +355,7 @@ def test_open_real_data():
 
         # feature names
         assert len(h5dat.keys()) == 48
-        assert "deform" in h5dat.keys()
+        assert "deform" in h5dat
         assert "deform" in h5dat
 
 

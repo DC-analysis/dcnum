@@ -126,7 +126,7 @@ def test_basin_path_absolute():
         bn_group, bn_feats, _ = hd.get_basin_data(0)
         assert "image" in bn_feats
         assert "image" in bn_group
-        assert "image" in hd.keys()
+        assert "image" in hd
         assert np.median(hd["image"][0]) == 187
 
 
@@ -179,9 +179,9 @@ def test_basin_scalar_features():
         bn_group, bn_feats, _ = hd.get_basin_data(0)
         assert "image" in bn_feats
         assert "image" in bn_group
-        assert "image" in hd.keys()
-        assert "area_um" in hd.keys()
-        assert "deform" in hd.keys()
+        assert "image" in hd
+        assert "area_um" in hd
+        assert "deform" in hd
         assert np.median(hd["image"][0]) == 187
         assert np.median(hd.image[0]) == 187
         assert np.median(hd.image_corr[0]) == 1
@@ -205,7 +205,7 @@ def test_basin_self_reference():
         bn_group, bn_feats, _ = hd.get_basin_data(0)
         assert "image" in bn_feats
         assert "image" in bn_group
-        assert "image" in hd.keys()
+        assert "image" in hd
         assert np.median(hd["image"][0]) == 187
         assert np.median(hd.image[0]) == 187
         assert np.median(hd.image_corr[0]) == 1

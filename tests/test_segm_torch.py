@@ -19,7 +19,7 @@ def test_metadata_loading_from_unet_g1_910c2():
         "segm-torch-model_unet-dcnum-test_g1_910c2.zip")
     _, metadata = torch_model.load_model(model_file, device="cpu")
     assert isinstance(metadata, dict)
-    assert "preprocessing" in metadata.keys()
+    assert "preprocessing" in metadata
     assert metadata["preprocessing"]["image_shape"] == [64, 256]
     assert metadata["preprocessing"]["norm_mean"] == 0.487
     assert metadata["preprocessing"]["norm_std"] == 0.084
@@ -37,8 +37,8 @@ def test_segm_torch_validate_model_file_logs():
 
     with write.HDF5Writer(path) as hw:
         hw.store_log("testing-fail",
-                     ["dear user of this software, I am here to "
-                      "inform you that the measurement failed"])
+                     [("dear user of this software, I am here to "
+                       "inform you that the measurement failed")])
 
     with read.HDF5Data(path) as hd:
         # sanity check

@@ -22,8 +22,7 @@ def get_log(hd: read.hdf5_data.HDF5Data,
     for key in hd.logs:
         if key.startswith(startswith):
             return hd.logs[key]
-    else:
-        raise KeyError(f"Log starting with {startswith} not found!")
+    raise KeyError(f"Log starting with {startswith} not found!")
 
 
 @pytest.mark.parametrize("override_attrs,delete_keys,meas_id", [
@@ -887,9 +886,9 @@ def test_error_file_exists():
                                  path_out=path_out,
                                  debug=True)
     path_out.touch()
-    with logic.DCNumJobRunner(job=job) as runner:
-        with pytest.raises(FileExistsError, match=path_out.name):
-            runner.run()
+    with (logic.DCNumJobRunner(job=job) as runner,
+          pytest.raises(FileExistsError, match=path_out.name)):
+        runner.run()
 
 
 def test_error_file_exists_in_thread():
@@ -928,10 +927,10 @@ def test_error_pipeline_log_file_remains():
                                   path_out=path.with_name("test2.rtdc"),
                                   debug=True)
 
-    with pytest.raises(ValueError, match="My Test Error In The Context"):
-        with logic.DCNumJobRunner(job=job2) as runner:
-            runner.run()
-            raise ValueError("My Test Error In The Context")
+    with (pytest.raises(ValueError, match="My Test Error In The Context"),
+          logic.DCNumJobRunner(job=job2) as runner):
+        runner.run()
+        raise ValueError("My Test Error In The Context")
     # log file should still be there
     assert runner.path_log.exists(), "log file expected"
 
@@ -1271,7 +1270,7 @@ def test_simple_pipeline(debug):
     seg_id = "thresh:t=-6:cle=1^f=1^clo=0"
     feat_id = "legacy:b=1^h=1^v=1"
     gate_id = "norm:o=0^s=10"
-    jobid = "|".join([gen_id, dat_id, bg_id, seg_id, feat_id, gate_id])
+    jobid = f"{gen_id}|{dat_id}|{bg_id}|{seg_id}|{feat_id}|{gate_id}"
 
     job = logic.DCNumPipelineJob(
         path_in=path,
@@ -1563,7 +1562,7 @@ def test_simple_pipeline_no_offset_correction(debug):
     seg_id = "thresh:t=-6:cle=1^f=1^clo=0"
     feat_id = "legacy:b=1^h=1^v=1"
     gate_id = "norm:o=0^s=10"
-    jobid = "|".join([gen_id, dat_id, bg_id, seg_id, feat_id, gate_id])
+    jobid = f"{gen_id}|{dat_id}|{bg_id}|{seg_id}|{feat_id}|{gate_id}"
 
     job = logic.DCNumPipelineJob(
         path_in=path,
@@ -1790,7 +1789,7 @@ def test_recomputation_of_background_metadata_changed(attr, oldval, newbg):
             has_old_bg = np.all(h5["basin_events/image_bg"][:, 0, 0] == 200)
         else:
             has_old_bg = np.all(h5["events/image_bg"][:, 0, 0] == 200)
-        assert not has_old_bg == newbg
+        assert has_old_bg != newbg
 
 
 def test_temporary_files_atexit_registered_once():
@@ -1800,15 +1799,15 @@ def test_temporary_files_atexit_registered_once():
     ncallbacks = atexit._ncallbacks()
     with logic.DCNumJobRunner(job=job) as runner:
         for _ in range(10):
-            runner.path_temp_in
-            runner.path_temp_out
+            _ = runner.path_temp_in
+            _ = runner.path_temp_out
         assert atexit._ncallbacks() - ncallbacks <= 2
         runner.run()
         # Other libraries may register callbacks during the run.
         ncallbacks_run = atexit._ncallbacks()
         for _ in range(10):
-            runner.path_temp_in
-            runner.path_temp_out
+            _ = runner.path_temp_in
+            _ = runner.path_temp_out
         assert atexit._ncallbacks() == ncallbacks_run
 
 
@@ -1835,7 +1834,7 @@ def test_task_background():
     seg_id = "thresh:t=-6:cle=1^f=1^clo=2"
     feat_id = "legacy:b=1^h=1^v=1"
     gate_id = "norm:o=0^s=10"
-    jobid = "|".join([gen_id, dat_id, bg_id, seg_id, feat_id, gate_id])
+    jobid = f"{gen_id}|{dat_id}|{bg_id}|{seg_id}|{feat_id}|{gate_id}"
 
     job = logic.DCNumPipelineJob(path_in=path, debug=True)
     assert job.get_ppid() == jobid

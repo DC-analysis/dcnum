@@ -501,7 +501,7 @@ def test_writer_basin_file():
     # OK, now open the dataset and make sure that it contains all information.
     with h5py.File(path_test) as h5:
         assert "basins" in h5
-        key = list(h5["basins"].keys())[0]
+        key = next(iter(h5["basins"].keys()))
         data = "\n".join([s.decode() for s in h5["basins"][key][:].tolist()])
         data_hash = hashlib.md5(data.encode("utf-8",
                                             errors="ignore")).hexdigest()
@@ -530,7 +530,7 @@ def test_writer_basin_file_relative():
     # OK, now open the dataset and make sure that it contains all information.
     with h5py.File(path_test) as h5:
         assert "basins" in h5
-        key = list(h5["basins"].keys())[0]
+        key = next(iter(h5["basins"].keys()))
         data = "\n".join([s.decode() for s in h5["basins"][key][:].tolist()])
         data_hash = hashlib.md5(data.encode("utf-8",
                                             errors="ignore")).hexdigest()
