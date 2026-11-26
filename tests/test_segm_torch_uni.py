@@ -34,7 +34,7 @@ else:
 def test_segm_torch_validate_model_file_logs_negate():
     """Test whether model validation fails for invalid logs"""
     model_file = retrieve_model(
-        "segm-torch-model_unet-dcnum-test_g2_0901b.zip")
+        "segm-torch-model_unet-dcnum-test_g2_cb32a.zip")
     sm = segm.segm_torch.SegmentTorchUNI
 
     # Creating a specific log file will mak the model invalid
@@ -71,7 +71,7 @@ def test_segm_torch_validate_model_file_logs_negate():
 def test_segm_torch_validate_model_file_meta_value():
     """Test whether model validation fails for invalid metadata"""
     model_file = retrieve_model(
-        "segm-torch-model_unet-dcnum-test_g2_0901b.zip")
+        "segm-torch-model_unet-dcnum-test_g2_cb32a.zip")
     sm = segm.segm_torch.SegmentTorchUNI
 
     # Create a test dataset with metadata that will make the model invalid

@@ -16,9 +16,9 @@ def test_missing_model_file_type():
                                device="cpu")
 
 
-def test_metadata_loading_from_g2_0901b():
+def test_metadata_loading_from_g2_cb32a():
     model_file = retrieve_model(
-        "segm-torch-model_unet-dcnum-test_g2_0901b.zip")
+        "segm-torch-model_unet-dcnum-test_g2_cb32a.zip")
     _, meta = torch_model.load_model(model_file,
                                      backend="inductor",
                                      device="cpu")
@@ -32,7 +32,7 @@ def test_metadata_loading_from_g2_0901b():
 def test_segm_torch_invalid_no_gpu():
     """Test whether model validation fails for invalid logs"""
     model_file = retrieve_model(
-        "segm-torch-model_unet-dcnum-test_g2_0901b.zip")
+        "segm-torch-model_unet-dcnum-test_g2_cb32a.zip")
 
     with pytest.raises(ValueError,
                        match="not supported or invalid"):
@@ -42,14 +42,23 @@ def test_segm_torch_invalid_no_gpu():
 def test_segm_torch_complement_wiring_options():
     """Test whether model validation fails for invalid logs"""
     model_file = retrieve_model(
-        "segm-torch-model_unet-dcnum-test_g2_0901b.zip")
+        "segm-torch-model_unet-dcnum-test_g2_cb32a.zip")
+
+    # The wiring options are "inductor", "openvino", and "torch.eager"
+    # on the CPU; the first available one is used.
+    if torch_model.has_cpp_compiler():
+        expected = "inductor"
+    elif torch_model.openvino.module_available():
+        expected = "openvino"
+    else:
+        expected = "torch.eager"
 
     meta = torch_model.get_model_meta(model_file)
-    assert meta["backend"] == "inductor"
+    assert meta["backend"] == expected
     assert meta["device"] == "cpu"
 
     meta = torch_model.get_model_meta(model_file, device=torch.device("cpu"))
-    assert meta["backend"] == "inductor"
+    assert meta["backend"] == expected
     assert meta["device"] == "cpu"
 
     meta2 = torch_model.get_model_meta(model_file, backend="openvino")
@@ -74,7 +83,7 @@ def test_compile_inductor_without_layout_optimization(monkeypatch, backend,
     # make sure the model is not taken from the cache
     monkeypatch.setattr(torch_model, "cache_model", {})
     model_file = retrieve_model(
-        "segm-torch-model_unet-dcnum-test_g2_0901b.zip")
+        "segm-torch-model_unet-dcnum-test_g2_cb32a.zip")
     torch_model.load_model(model_file, backend=backend, device="cpu")
     assert len(calls) == 1
     assert calls[0]["backend"] == backend
@@ -114,15 +123,15 @@ def test_wiring_skip_inductor_without_cpp_compiler(monkeypatch):
     monkeypatch.setattr(torch_model, "has_cpp_compiler", lambda: False)
     monkeypatch.setattr(torch_model, "cache_model_meta", {})
     model_file = retrieve_model(
-        "segm-torch-model_unet-dcnum-test_g2_0901b.zip")
-    # The wiring options are ("inductor", "cpu") and ("openvino", "cpu").
+        "segm-torch-model_unet-dcnum-test_g2_cb32a.zip")
+    # The wiring options are "inductor", "openvino", and "torch.eager"
+    # on the CPU.
+    meta = torch_model.get_model_meta(model_file)
     if torch_model.openvino.module_available():
-        meta = torch_model.get_model_meta(model_file)
         assert meta["backend"] == "openvino"
-        assert meta["device"] == "cpu"
     else:
-        with pytest.raises(ValueError, match="not have wiring options"):
-            torch_model.get_model_meta(model_file)
+        assert meta["backend"] == "torch.eager"
+    assert meta["device"] == "cpu"
     # explicitly asking for a backend skips the backend check
     meta = torch_model.get_model_meta(model_file, backend="inductor")
     assert meta["backend"] == "inductor"
@@ -139,7 +148,7 @@ def test_compile_inductor_dynamic_batch_size(monkeypatch):
     # make sure the model is not taken from the cache
     monkeypatch.setattr(torch_model, "cache_model", {})
     model_file = retrieve_model(
-        "segm-torch-model_unet-dcnum-test_g2_0901b.zip")
+        "segm-torch-model_unet-dcnum-test_g2_cb32a.zip")
     model, _ = torch_model.load_model(model_file,
                                       backend="inductor",
                                       device="cpu")
@@ -157,3 +166,46 @@ def test_compile_inductor_dynamic_batch_size(monkeypatch):
     assert mask_b.shape == (69, 80, 320)
     assert mask_c.shape == (68, 80, 320)
     assert mask_d.shape == (16, 80, 320)
+
+
+def test_wiring_none_available_clear_error(monkeypatch):
+    """Model files must only be used with the wiring options they list"""
+    reason_orig = torch_model.get_wiring_unavailable_reason
+
+    def reason_mock(wiring, check_backend=True):
+        if wiring["backend"] == "torch.eager":
+            return "mocked unavailable"
+        return reason_orig(wiring, check_backend=check_backend)
+
+    monkeypatch.setattr(torch_model, "get_wiring_unavailable_reason",
+                        reason_mock)
+    monkeypatch.setattr(torch_model, "has_cpp_compiler", lambda: False)
+    monkeypatch.setattr(torch_model.openvino, "module_available",
+                        lambda: False)
+    monkeypatch.setattr(torch_model, "cache_model_meta", {})
+    model_file = retrieve_model(
+        "segm-torch-model_unet-dcnum-test_g2_cb32a.zip")
+    with pytest.raises(torch_model.WiringUnavailableError) as exc:
+        torch_model.get_model_meta(model_file)
+    msg = str(exc.value)
+    assert "'inductor' on 'cpu' (no C++ compiler found)" in msg
+    assert "'openvino' on 'cpu' (OpenVINO is not installed)" in msg
+    assert "'torch.eager' on 'cpu' (mocked unavailable)" in msg
+    with pytest.raises(torch_model.WiringUnavailableError):
+        torch_model.get_model_meta(model_file, device="cpu")
+    # specifying backend and device manually always works
+    meta = torch_model.get_model_meta(model_file, backend="torch.eager",
+                                      device="cpu")
+    assert meta["backend"] == "torch.eager"
+
+
+def test_metadata_wiring_options_cb32a():
+    model_file = retrieve_model(
+        "segm-torch-model_unet-dcnum-test_g2_cb32a.zip")
+    meta = torch_model.get_model_meta(model_file, backend="torch.eager",
+                                      device="cpu")
+    assert meta["wiring_options"] == [
+        {"backend": "inductor", "device": "cpu"},
+        {"backend": "openvino", "device": "cpu"},
+        {"backend": "torch.eager", "device": "cpu"},
+    ]

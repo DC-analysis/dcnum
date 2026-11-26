@@ -86,6 +86,10 @@
    backend for exported models (dcnm 2.0); with it, cuDNN used convolution
    kernels that were up to three times slower for U-Net models with a
    single input channel
+ - fix: if none of the wiring options of a model file can be used in the
+   current environment, raise a `WiringUnavailableError` that names the
+   reason for every option (was a misleading "does not have wiring
+   options" error)
  - enh: when the backend of the "torchuni" segmenter is chosen
    automatically, skip the wiring options of the model file that cannot be
    used (missing CUDA device, "inductor" without Triton on CUDA or without
@@ -121,6 +125,10 @@
    `test_segm_mpo.py` to `test_segm_thresh.py` and fix their names
  - tests: import `hdf5plugin` in test files that read compressed data,
    so that they also pass when run on their own
+ - tests: replace the test model "unet-dcnum-test_g2_0901b" with the
+   re-exported "unet-dcnum-test_g2_cb32a" (batch normalization folded,
+   valid ZIP comment, "torch.eager" as last CPU wiring option), so that
+   the torch tests also pass on Windows without C++ compiler and OpenVINO
 0.31.2
  - fix: online gates for `size_x` and `size_y` were ignored (regression in 0.16.6)
  - fix: "pipeline:dcnum yield" and "experiment:event count" were set to
