@@ -98,8 +98,10 @@ class ChunkSlot(ChunkSlotData):
 
         if self.mp_image_bg is not None:
             image_bg = self.image_bg
-            image_bg[:] = self.data.image_bg.get_chunk(idx)
             image_corr = self.image_corr
+            # allocated together with `mp_image_bg`
+            assert image_bg is not None and image_corr is not None
+            image_bg[:] = self.data.image_bg.get_chunk(idx)
             image_corr[:] = np.asarray(image, dtype=np.int16) - image_bg
         else:
             image_bg = None
@@ -107,6 +109,7 @@ class ChunkSlot(ChunkSlotData):
 
         if self.mp_bg_off is not None:
             bg_off = self.bg_off
+            assert bg_off is not None
             chunk_slice = self.data.image.get_chunk_slice(idx)
             bg_off[:] = self.data["bg_off"][chunk_slice]
         else:

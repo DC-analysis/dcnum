@@ -706,7 +706,10 @@ class DCNumJobRunner(threading.Thread):
                     basinmap0 = idx_um
                 else:
                     self.logger.info("Converting input mapping")
-                    basinmap0 = self.draw.index_mapping_indices[idx_um]
+                    im_indices = self.draw.index_mapping_indices
+                    # computed, because the index mapping is set
+                    assert im_indices is not None
+                    basinmap0 = im_indices[idx_um]
                     # Store the mapped basin data in the output file.
                     hw.store_feature_chunk("basinmap0", basinmap0)
                 self.logger.info("Input mapped to output with basinmap0")
@@ -830,7 +833,7 @@ class DCNumJobRunner(threading.Thread):
                     self.logger.debug(f"Creating basin for {feats}")
                     # Relative and absolute paths.
                     pin = pathlib.Path(hin.filename).resolve()
-                    paths = [pin]
+                    paths: list[str | pathlib.Path] = [pin]
                     pout = pathlib.Path(hout.filename).resolve().parent
                     try:
                         paths.append(os.path.relpath(pin, pout))
@@ -902,7 +905,7 @@ class DCNumJobRunner(threading.Thread):
                 self.logger.debug(f"Creating basin for {bn_feats} from "
                                   f"input basin")
                 pin = pathlib.Path(h5bn.filename).resolve()
-                paths = [pin]
+                paths: list[str | pathlib.Path] = [pin]
                 pout = pathlib.Path(hw.h5.filename).resolve().parent
                 try:
                     paths.append(os.path.relpath(pin, pout))
@@ -1006,6 +1009,7 @@ class DCNumJobRunner(threading.Thread):
                                         name="UniversalWorker",
                                         )
 
+        worker_segm = None
         if not issubclass(seg_cls, UNISegmenter):
             # Initialize segmenter manager thread
             worker_segm = SegmenterManagerThread(
@@ -1133,7 +1137,7 @@ class DCNumJobRunner(threading.Thread):
         join_worker(worker=thr_uw,
                     logger=self.logger,
                     name="worker starter")
-        if not issubclass(seg_cls, UNISegmenter):
+        if worker_segm is not None:
             join_worker(worker=worker_segm,
                         logger=self.logger,
                         name="segmentation")
