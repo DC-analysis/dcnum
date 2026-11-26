@@ -28,9 +28,9 @@ def test_state_warden_changes_state():
 def test_state_warden_changes_state_wrong_initial():
     cs = ChunkSlotData((100, 80, 320))
     assert cs.state == "i"
-    with pytest.raises(ValueError, match="does not match"):
-        with StateWarden(cs, current_state="s", next_state="e"):
-            pass
+    with (pytest.raises(ValueError, match="does not match"),
+          StateWarden(cs, current_state="s", next_state="e")):
+        pass
     assert cs.state == "i"
     start, stop = cs.acquire_task_lock("i")
     # acquiring new lock for next state must be possible
@@ -59,9 +59,8 @@ def test_state_warden_changes_state_wrong_initial_3():
     start, stop = cs.acquire_task_lock("s")
     assert start == stop == 0
     cs.state = "i"
-    with pytest.raises(ValueError, match="does not match"):
-        with warden:
-            pass
+    with pytest.raises(ValueError, match="does not match"), warden:
+        pass
     assert cs.state == "i"
     start, stop = cs.acquire_task_lock("i")
     # acquiring new lock for next state must be possible
@@ -84,9 +83,9 @@ def test_state_warden_doubled():
 def test_state_warden_no_change_on_error():
     cs = ChunkSlotData((100, 80, 320))
     assert cs.state == "i"
-    with pytest.raises(ValueError, match="custom test error"):
-        with StateWarden(cs, current_state="i", next_state="s"):
-            raise ValueError("custom test error")
+    with (pytest.raises(ValueError, match="custom test error"),
+          StateWarden(cs, current_state="i", next_state="s")):
+        raise ValueError("custom test error")
     assert cs.state == "i"
     start, stop = cs.acquire_task_lock("i")
     # acquiring new lock for next state must be possible

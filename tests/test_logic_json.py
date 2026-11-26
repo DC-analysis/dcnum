@@ -9,9 +9,9 @@ import numpy as np
 
 @pytest.mark.parametrize("input,output", [
     [pathlib.Path("/peter/pan"), str(pathlib.Path("/peter/pan"))],
-    [1, int(1)],
-    [np.int64(1), int(1)],
-    [np.uint8(1), int(1)],
+    [1, 1],
+    [np.int64(1), 1],
+    [np.uint8(1), 1],
     [True, True],
     [np.bool_(True), True],
     ["hans", "hans"],

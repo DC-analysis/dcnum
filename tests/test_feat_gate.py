@@ -72,12 +72,12 @@ def test_gate_events():
 
         exp = np.array([True, True, False, False, False, False],
                        dtype=bool)
-        act = gt.gate_events(dict(
-            deform=np.array([0.3, 0.3, 0.01, 0.3, 0.6, 0.6], dtype=float),
-            area_um=np.array([55, 55, 55, 40, 55, 22], dtype=float),
-            size_x=np.full(6, 200, dtype=float),
-            size_y=np.full(6, 200, dtype=float),
-        ))
+        act = gt.gate_events({
+            "deform": np.array([0.3, 0.3, 0.01, 0.3, 0.6, 0.6], dtype=float),
+            "area_um": np.array([55, 55, 55, 40, 55, 22], dtype=float),
+            "size_x": np.full(6, 200, dtype=float),
+            "size_y": np.full(6, 200, dtype=float),
+        })
 
         assert isinstance(act, np.ndarray)
         assert np.all(exp == act)
@@ -101,16 +101,16 @@ def test_gate_events_size_limits():
         # the minimum size of 3 pixels (Shape-In) still applies
         assert gt.box_gates["size_y"] == [3 * px_size, 10]
 
-        act = gt.gate_events(dict(
-            size_x=np.array([2, 10, 50], dtype=float),
-            size_y=np.array([5, 5, 5], dtype=float),
-        ))
+        act = gt.gate_events({
+            "size_x": np.array([2, 10, 50], dtype=float),
+            "size_y": np.array([5, 5, 5], dtype=float),
+        })
         assert np.all(act == [False, True, False])
 
-        act = gt.gate_events(dict(
-            size_x=np.array([10, 10, 10], dtype=float),
-            size_y=np.array([0.5, 5, 50], dtype=float),
-        ))
+        act = gt.gate_events({
+            "size_x": np.array([10, 10, 10], dtype=float),
+            "size_y": np.array([0.5, 5, 50], dtype=float),
+        })
         assert np.all(act == [False, True, False])
 
 

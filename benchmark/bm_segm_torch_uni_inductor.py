@@ -32,7 +32,7 @@ def extract(zip_name, suffix):
     tmp = pathlib.Path(tempfile.mkdtemp(prefix="bm_segm_torch_uni_"))
     with zipfile.ZipFile(data_dir / zip_name) as zf:
         zf.extractall(tmp)
-    return sorted(tmp.glob(f"*{suffix}"))[0]
+    return min(tmp.glob(f"*{suffix}"))
 
 
 class Benchmark:

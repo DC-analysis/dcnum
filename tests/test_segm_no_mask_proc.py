@@ -1,4 +1,3 @@
-# flake8: noqa: F821
 import pytest
 
 from dcnum import segm
@@ -13,7 +12,7 @@ def test_ppid_nomask_segmenter():
 
         def __init__(self, thresh=-6, *args, **kwargs):
             """Threshold for testing without mask"""
-            super(SegmentNoMask, self).__init__(thresh=thresh, *args, **kwargs)
+            super().__init__(*args, thresh=thresh, **kwargs)
 
         @staticmethod
         def segment_algorithm(image, *,

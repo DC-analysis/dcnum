@@ -138,6 +138,9 @@
    the torch tests also pass on Windows without C++ compiler and OpenVINO
  - tests: `test_segm_torch_uni` ("inductor" backend on the CPU) was always
    skipped, because the C++ compiler check never succeeded
+ - tests: fix ruff findings in the tests, benchmarks, and docs figure
+   scripts; ruff ignores unused `noqa` comments (RUF100) in tests and
+   benchmarks, because flake8 needs them
  - ref: fix ruff findings in the dcnum package (unused variables and noqa
    comments, nested if statements, a context manager for the temporary
    file in `concatenated_hdf5_data`, `ClassVar` for

@@ -211,13 +211,13 @@ def test_median_rollmed_small_file(tmp_path):
     assert np.all(input_data[0].flatten() == np.arange(5*7))
     assert np.median(np.arange(5*7)) == 17, "sanity check"
 
-    with pytest.raises(ValueError, match="Cannot compute background"):
-        with bg_roll_median.BackgroundRollMed(input_data=input_data,
-                                              output_path=output_path,
-                                              kernel_size=kernel_size,
-                                              batch_size=1000,
-                                              ):
-            pass
+    with (pytest.raises(ValueError, match="Cannot compute background"),
+          bg_roll_median.BackgroundRollMed(input_data=input_data,
+                                           output_path=output_path,
+                                           kernel_size=kernel_size,
+                                           batch_size=1000,
+                                           )):
+        pass
 
 
 @pytest.mark.filterwarnings(

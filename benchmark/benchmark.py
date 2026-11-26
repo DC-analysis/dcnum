@@ -60,8 +60,8 @@ if __name__ == "__main__":
 
     for bmp in sorted(benchmark_paths):
         bmp = pathlib.Path(bmp)
-        print("")
+        print()
         res = run_benchmark(bmp)
         with bmp.with_suffix(".txt").open("a") as fd:
             fd.write(time.strftime(f"%Y-%m-%d_%H.%M.%S {res}\n"))
-        print("")
+        print()
