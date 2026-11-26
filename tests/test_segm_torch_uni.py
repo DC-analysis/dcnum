@@ -122,7 +122,8 @@ def test_segm_torch_uni():
     assert not sm.requires_background_correction
     assert sm.mask_postprocessing
     assert not sm.mask_default_kwargs["closing_disk"]
-    assert sm.get_ppid() == f"torchuni:m={model_file.name}:cle=1^f=1^clo=0"
+    assert sm.get_ppid() == (f"torchuni:m={model_file.name}^b=inductor:"
+                             f"cle=1^f=1^clo=0")
 
     with read.HDF5Data(path) as hd:
         labels_seg = sm.segment_batch_with_labeling(
@@ -146,7 +147,8 @@ def test_segm_torch_uni_no_compile():
     assert not sm.requires_background_correction
     assert sm.mask_postprocessing
     assert not sm.mask_default_kwargs["closing_disk"]
-    assert sm.get_ppid() == f"torchuni:m={model_file.name}:cle=1^f=1^clo=0"
+    assert sm.get_ppid() == (f"torchuni:m={model_file.name}^b=torch.eager:"
+                             f"cle=1^f=1^clo=0")
 
     with read.HDF5Data(path) as hd:
         labels_seg = sm.segment_batch_with_labeling(
@@ -197,7 +199,8 @@ def test_segm_torch_uni_openvino():
     assert not sm.requires_background_correction
     assert sm.mask_postprocessing
     assert not sm.mask_default_kwargs["closing_disk"]
-    assert sm.get_ppid() == f"torchuni:m={model_file.name}:cle=1^f=1^clo=0"
+    assert sm.get_ppid() == (f"torchuni:m={model_file.name}^b=openvino:"
+                             f"cle=1^f=1^clo=0")
 
     with read.HDF5Data(path) as hd:
         labels_seg = sm.segment_batch_with_labeling(
@@ -206,3 +209,22 @@ def test_segm_torch_uni_openvino():
         assert np.sum(labels_seg[0] == 0) == 14978  # background
         assert np.sum(labels_seg[0] == 1) == 831  # first label
         assert np.sum(labels_seg[0] == 2) == 575  # first label
+
+
+@pytest.mark.parametrize("backend", ["torch.eager", "inductor", None])
+def test_segm_torch_uni_ppid_backend(backend):
+    """The backend is part of the pipeline identifier"""
+    model_file = retrieve_model(
+        "segm-torch-model_unet-dcnum-test_g2_cb32a.zip")
+    sm = segm.segm_torch.SegmentTorchUNI(model_file=model_file,
+                                         backend=backend,
+                                         device="cpu")
+    # without a backend, the first available wiring option of the model
+    used_backend = backend or sm.kwargs["backend"]
+    ppid = sm.get_ppid()
+    assert ppid == (f"torchuni:m={model_file.name}^b={used_backend}:"
+                    f"cle=1^f=1^clo=0")
+    # the backend is restored from the pipeline identifier
+    kwargs = segm.segm_torch.SegmentTorchUNI.get_ppkw_from_ppid(ppid)
+    assert kwargs["backend"] == used_backend
+    assert "device" not in kwargs

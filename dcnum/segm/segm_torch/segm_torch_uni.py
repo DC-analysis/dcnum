@@ -162,7 +162,10 @@ class SegmentTorchUNI(TorchSegmenterBase, UNISegmenter):
     def segment_algorithm(images,
                           *,
                           model_file: str | None = None,
-                          backend: str | None,
+                          # Only keyword arguments with a default value
+                          # are part of the pipeline identifier: `backend`
+                          # is, `device` is not.
+                          backend: str | None = None,
                           device: str | None,
                           ):
         """Segment images in batches with a PyTorch model
