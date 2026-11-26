@@ -93,6 +93,10 @@
  - fix: the backend of the "torchuni" segmenter was not part of the
    pipeline identifier, although different backends may produce slightly
    different masks
+ - fix: `HDF5ImageCache` raised an `AttributeError` instead of warning
+   about zero-length image data from a `MappedHDF5Dataset` (e.g. an empty
+   "index_mapping"); `MappedHDF5Dataset` now has the "dtype", "file", and
+   "name" attributes of the underlying dataset
  - enh: when the backend of the "torchuni" segmenter is chosen
    automatically, skip the wiring options of the model file that cannot be
    used (missing CUDA device, "inductor" without Triton on CUDA or without
