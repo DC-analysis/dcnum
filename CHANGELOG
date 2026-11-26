@@ -17,6 +17,8 @@
    and `dcnum.feat.feat_texture`
  - tests: load `hdf5plugin` in `conftest.py` for all tests (some test files
    failed when run on their own)
+ - tests: 100% coverage for `dcnum.feat.queue_event_extractor` (including
+   box gating of events with online gates)
 0.31.3
  - fix: "basinmap1" of the internal sparsemed background basin had the
    shape (1, N) when the output events matched the input frames (e.g. one
