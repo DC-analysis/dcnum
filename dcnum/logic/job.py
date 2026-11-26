@@ -5,7 +5,7 @@ import inspect
 import logging
 import pathlib
 import re
-from typing import Literal
+from typing import Any, Literal
 
 from ..common import LazyLoader, cpu_count
 from ..feat import QueueEventExtractor
@@ -182,7 +182,7 @@ class DCNumPipelineJob:
         """Validate and return output HDF5 Dataset keyword arguments
         """
         cp = str(self.kwargs["compression"]).lower().strip()
-        ds_kw = {"fletcher32": True}
+        ds_kw: dict[str, Any] = {"fletcher32": True}
         if cp == "none":
             # No compression
             ds_kw["compression"] = None
@@ -250,7 +250,7 @@ class DCNumPipelineJob:
 
         ppid = "|".join(pp_hash_kw.values())
 
-        ret = [ppid]
+        ret: list[Any] = [ppid]
         if ret_hash:
             pp_hash = compute_pipeline_hash(**pp_hash_kw)
             ret.append(pp_hash)

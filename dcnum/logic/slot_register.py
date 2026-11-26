@@ -6,7 +6,8 @@ import logging
 import multiprocessing as mp
 import sys
 import time
-from typing import TYPE_CHECKING
+from collections.abc import Callable
+from typing import TYPE_CHECKING, Concatenate, ParamSpec, TypeVar
 
 import numpy as np
 
@@ -26,8 +27,8 @@ if TYPE_CHECKING:
     import typing
 
     class _LockType(contextlib.AbstractContextManager, typing.Protocol):
+        # `locked()` is only available since Python 3.14 (see `is_locked`)
         def acquire(self, block: bool = ..., timeout: float = ...) -> bool: ...
-        def locked(self) -> bool: ...
         def release(self) -> None: ...
 
 
@@ -47,10 +48,16 @@ def is_locked(lock):
         return lock._semlock._is_zero()
 
 
+_S = TypeVar("_S")
+_P = ParamSpec("_P")
+_R = TypeVar("_R")
+
+
 class count_time:
     """Decorator for counting execution time"""
 
-    def __call__(self, func):
+    def __call__(self, func: Callable[Concatenate[_S, _P], _R]
+                 ) -> Callable[Concatenate[_S, _P], _R]:
         @functools.wraps(func)
         def method(inst, *args, **kwargs):
             t0 = time.perf_counter()

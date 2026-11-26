@@ -47,7 +47,7 @@ class ChunkSlotData:
         self._state = mp_spawn.RawValue("u", "0")
 
         # Initialize with negative value to avoid ambiguities with first chunk.
-        self._chunk = mp_spawn.Value(ctypes.c_long, -1, lock=False)
+        self._chunk = mp_spawn.RawValue(ctypes.c_long, -1)
 
         # Initialize all shared arrays
         if self.length:
@@ -82,12 +82,12 @@ class ChunkSlotData:
         self._state.value = "i"
 
     @property
-    def chunk(self):
+    def chunk(self) -> int:
         """Current chunk being analyzed"""
         return self._chunk.value
 
     @chunk.setter
-    def chunk(self, value):
+    def chunk(self, value: int):
         self._chunk.value = value
 
     @property
