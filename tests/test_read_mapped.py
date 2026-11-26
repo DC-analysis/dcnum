@@ -2,6 +2,7 @@ import h5py
 import numpy as np
 import pytest
 
+from dcnum import read
 from dcnum.read.mapped import (
     MappedHDF5Dataset, get_mapped_object, get_mapping_indices
 )
@@ -39,3 +40,27 @@ def test_mapping_indices_cache_not_modifiable(index_mapping):
     with pytest.raises(ValueError, match="read-only"):
         indices[0] = 99
     assert np.all(get_mapping_indices(index_mapping) == reference)
+
+
+def test_mapped_dataset_attributes(tmp_path):
+    path = tmp_path / "test.h5"
+    with h5py.File(path, "w") as h5:
+        h5["image"] = np.zeros((5, 4, 4), dtype=np.uint8)
+    with h5py.File(path) as h5:
+        mds = MappedHDF5Dataset(h5["image"], mapping_indices=np.arange(3))
+        assert mds.name == "/image"
+        assert mds.file.filename == str(path)
+        assert mds.dtype == np.uint8
+
+
+def test_mapped_dataset_zero_length_image_cache(tmp_path):
+    """HDF5ImageCache warns about zero-length data (no AttributeError)"""
+    path = tmp_path / "test.h5"
+    with h5py.File(path, "w") as h5:
+        h5["image"] = np.zeros((5, 4, 4), dtype=np.uint8)
+    with h5py.File(path) as h5:
+        mds = MappedHDF5Dataset(h5["image"],
+                                mapping_indices=np.array([], dtype=int))
+        with pytest.warns(read.cache.EmptyDatasetWarning,
+                          match="Input image '/image' in file"):
+            read.cache.HDF5ImageCache(mds)

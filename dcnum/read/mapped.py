@@ -51,6 +51,21 @@ class MappedHDF5Dataset:
     def __len__(self):
         return self.shape[0]
 
+    @property
+    def dtype(self):
+        """Data type of the underlying HDF5 dataset"""
+        return self.h5ds.dtype
+
+    @property
+    def file(self):
+        """HDF5 file of the underlying HDF5 dataset"""
+        return self.h5ds.file
+
+    @property
+    def name(self):
+        """Name of the underlying HDF5 dataset"""
+        return self.h5ds.name
+
 
 def check_index_mapping(
         index_mapping: numbers.Integral | slice | list | np.ndarray | None
