@@ -4,6 +4,7 @@ from __future__ import annotations
 import hashlib
 import json
 import pathlib
+from typing import Any
 import warnings
 
 import numpy as np
@@ -25,6 +26,10 @@ class IgnoringBasinTypeWarning(UserWarning):
 
 
 class HDF5Writer:
+    #: The output `h5py.File` (h5py is loaded lazily, so it cannot be
+    #: used in annotations)
+    h5: Any
+
     def __init__(self,
                  obj: h5py.File | pathlib.Path | str,  # type: ignore
                  mode: str = "a",
@@ -84,7 +89,9 @@ class HDF5Writer:
             self.h5.close()
 
     @staticmethod
-    def get_best_nd_chunks(item_shape, feat_dtype=np.float64):
+    def get_best_nd_chunks(item_shape: tuple[int, ...],
+                           feat_dtype: np.dtype | type = np.float64
+                           ) -> tuple[int, ...]:
         """Return best chunks for HDF5 datasets
 
         Chunking has performance implications. It’s recommended to keep the
@@ -441,8 +448,8 @@ def create_with_basins(
                            )
 
 
-def copy_basins(h5_src: h5py.File,
-                h5_dst: h5py.File,
+def copy_basins(h5_src: h5py.File,  # type: ignore
+                h5_dst: h5py.File,  # type: ignore
                 internal_basins: bool = True
                 ):
     """Reassemble basin data in the output file

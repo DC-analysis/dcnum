@@ -68,6 +68,10 @@ class BasinFileGroup:
 
 class HDF5Data:
     """HDF5 (.rtdc) input file data instance"""
+    #: The underlying, lazily opened `h5py.File` (h5py is loaded lazily,
+    #: so it cannot be used in annotations)
+    _h5: Any
+
     def __init__(self,
                  path: pathlib.Path | h5py.File | BinaryIO,  # type: ignore
                  pixel_size: float | None = None,
@@ -137,7 +141,7 @@ class HDF5Data:
         # and use it for multiprocessing.
         if isinstance(path, h5py.File):
             self._h5 = path
-            path = path.filename
+            path = self._h5.filename
         else:
             self._h5 = None
 
@@ -226,7 +230,8 @@ class HDF5Data:
                 # Check the basins
                 for idx in range(len(self.basins)):
                     bn_grp, bn_feats, bn_map = self.get_basin_data(idx)
-                    if bn_feats and feat in bn_feats:
+                    if (bn_grp is not None
+                            and bn_feats and feat in bn_feats):
                         mapped_ds = get_mapped_object(obj=bn_grp[feat],
                                                       index_mapping=bn_map)
                         return mapped_ds
@@ -355,8 +360,9 @@ class HDF5Data:
 
     def __len__(self):
         if self._len is None:
-            if self.index_mapping is not None:
-                self._len = self.index_mapping_indices.size
+            indices = self.index_mapping_indices
+            if indices is not None:
+                self._len = indices.size
             else:
                 self._len = self.h5.attrs["experiment:event count"]
         return self._len
@@ -378,7 +384,7 @@ class HDF5Data:
         return self._index_mapping_indices
 
     @property
-    def h5(self) -> h5py.File:
+    def h5(self) -> h5py.File:  # type: ignore
         """The underlying HDF5 file, opened lazily in read-only mode"""
         if self._h5 is None:
             self._h5 = h5py.File(self.path, libver="latest")
@@ -794,7 +800,8 @@ class HDF5Data:
                 # search all basins (internal basins are always first)
                 for idx in range(len(self.basins)):
                     bn_grp, bn_feats, bn_map = self.get_basin_data(idx)
-                    if bn_feats is not None and feat in bn_feats:
+                    if (bn_grp is not None
+                            and bn_feats is not None and feat in bn_feats):
                         # HDF5 dataset
                         ds = bn_grp[feat]
                         # Index mapping (taken from the basins which

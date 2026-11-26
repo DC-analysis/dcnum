@@ -36,20 +36,23 @@ class QueueWriterProcess(QueueWriterBase, mp_spawn.Process):
 
         super().__init__(*args, name="QueueWriterProcess", **kwargs)
 
-    def run(self, **kwargs):
+    def run(self, buffer_dq=None, writer_dq=None, logger=None):
         """Collect and write events (executed in the subprocess)
 
         Sets up a logger that forwards all records to ``log_queue`` and
         then calls
         :meth:`~dcnum.write.queue_writer_base.QueueWriterBase.run`.
-        Keyword arguments are ignored (a warning is logged for each one
-        that is not None).
+        The arguments of the base class method are ignored (a warning is
+        logged for each one that is not None).
         """
         # Clear any handlers that might be set for this logger. This is
         # important for the case when we are an instance of
         # QueueWriterThread, because then all handlers from the main
         # thread are inherited (as opposed to no handlers in the case
         # of QueueWriterProcess).
+        kwargs = {"buffer_dq": buffer_dq,
+                  "writer_dq": writer_dq,
+                  "logger": logger}
         logger = self.get_logger()
         logger.handlers.clear()
         queue_handler = QueueHandler(self.log_queue)

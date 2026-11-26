@@ -87,8 +87,9 @@ class BaseImageChunkCache(abc.ABC):
         return self._dtype
 
     @abc.abstractmethod
-    def _get_chunk_data(self, chunk_slice):
+    def _get_chunk_data(self, chunk_slice) -> np.ndarray:
         """Implemented in subclass to obtain actual data"""
+        raise NotImplementedError("Implement this method in a subclass")
 
     def _get_chunk_index_for_index(self, index):
         if not -self._len <= index < self._len:

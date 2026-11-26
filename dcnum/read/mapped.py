@@ -68,7 +68,8 @@ class MappedHDF5Dataset:
 
 
 def check_index_mapping(
-        index_mapping: numbers.Integral | slice | list | np.ndarray | None
+        index_mapping: int | numbers.Integral | slice | list | np.ndarray
+        | None
         ):
     """Raise a ValueError if `index_mapping` contains negative values"""
     if index_mapping is None:
@@ -91,9 +92,9 @@ def check_index_mapping(
 
 
 def get_mapping_indices(
-        index_mapping: numbers.Integral | slice | list | np.ndarray,
+        index_mapping: int | numbers.Integral | slice | list | np.ndarray,
         size: int | None = None,
-        ):
+        ) -> np.ndarray:
     """Return integer numpy array with mapping indices for a range
 
     Parameters
@@ -135,9 +136,10 @@ def get_mapping_indices(
     """
     check_index_mapping(index_mapping)
     if isinstance(index_mapping, numbers.Integral):
+        num_events = int(index_mapping)
         if size is not None:
-            index_mapping = min(index_mapping, size)
-        return _get_mapping_indices_cached(int(index_mapping))
+            num_events = min(num_events, size)
+        return _get_mapping_indices_cached(num_events)
     elif isinstance(index_mapping, slice):
         if size is not None:
             # Limit slice to the dataset size
@@ -157,10 +159,10 @@ def get_mapping_indices(
 
 @functools.lru_cache(maxsize=100)
 def _get_mapping_indices_cached(
-        index_mapping: numbers.Integral | tuple
-        ):
+        index_mapping: int | tuple
+        ) -> np.ndarray:
     if isinstance(index_mapping, numbers.Integral):
-        indices = np.arange(index_mapping)
+        indices = np.arange(int(index_mapping))
     elif isinstance(index_mapping, tuple):
         im_slice = slice(*index_mapping)
         if im_slice.stop is None or im_slice.start is None:

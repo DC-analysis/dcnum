@@ -44,9 +44,13 @@ def detect_flickering(image_data: np.ndarray | HDF5Data,
         whether flickering was detected
     """
     if isinstance(image_data, HDF5Data):
-        image_data = image_data.image
+        images = image_data.image
+        if images is None:
+            raise ValueError(f"No image data in {image_data}")
+    else:
+        images = image_data
     # slice event axis first in case we have an image cache
-    roi_data = image_data[:max_frames][:, :roi_height, :]
+    roi_data = images[:max_frames][:, :roi_height, :]
     roi_median = np.median(roi_data, axis=(1, 2))
     roi_offset = roi_median - np.median(roi_median)
     flickering_events = np.sum(np.abs(roi_offset) >= abs(brightness_threshold))

@@ -3,6 +3,7 @@
 import io
 import pathlib
 import tempfile
+from typing import Any
 import warnings
 
 import numpy as np
@@ -57,7 +58,7 @@ def concatenated_hdf5_data(paths: list[pathlib.Path],
       algorithms that need a time axis (e.g. sparse median background
       computation) fall back to "frame" and "imaging:frame rate".
     """
-    h5kwargs = {"mode": "w", "libver": "latest"}
+    h5kwargs: dict[str, Any] = {"mode": "w", "libver": "latest"}
     if isinstance(path_out, (pathlib.Path, str)):
         h5kwargs["name"] = path_out
     elif path_out is True:
@@ -90,6 +91,8 @@ def concatenated_hdf5_data(paths: list[pathlib.Path],
         shapes = {}
         dtypes = {}
         size = 0
+        meta = {}
+        features_used: list[str] = list(features) if features else []
         for ii, pp in enumerate(paths):
             with h5py.File(pp, libver="latest") as h5:
                 # get all feature keys
@@ -97,14 +100,14 @@ def concatenated_hdf5_data(paths: list[pathlib.Path],
                 # get metadata
                 if ii == 0:
                     meta = dict(h5.attrs)
-                    if not features:
-                        features = featsi
+                    if not features_used:
+                        features_used = featsi
                 # make sure number of features are consistent
-                if not set(features) <= set(featsi):
+                if not set(features_used) <= set(featsi):
                     raise ValueError(
                         f"File {pp} contains more features than {paths[0]}!")
                 # populate shapes for all features
-                for feat in features:
+                for feat in features_used:
                     if not isinstance(h5["events"][feat], h5py.Dataset):
                         warnings.warn(
                             f"Ignoring {feat}; not implemented yet!")
@@ -118,7 +121,7 @@ def concatenated_hdf5_data(paths: list[pathlib.Path],
                     if ii == 0:
                         dtypes[feat] = h5["events"][feat].dtype
                 # increment size
-                size += h5["events"][features[0]].shape[0]
+                size += h5["events"][features_used[0]].shape[0]
                 # remember the frame feature if requested
                 if compute_frame:
                     frames.append(h5["events/frame"][:])
