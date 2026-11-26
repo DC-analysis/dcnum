@@ -134,7 +134,7 @@ class Gate:
         key = cls.get_ppid_code()
         cback = kwargs_to_ppid(cls, "__init__", kwargs)
 
-        return ":".join([key, cback])
+        return f"{key}:{cback}"
 
     @staticmethod
     def get_ppkw_from_ppid(gate_ppid):
@@ -178,7 +178,7 @@ class Gate:
             (check ``self.box_gates`` before calling this method)
         """
         if self.box_gates and bool(events):
-            key0 = list(events.keys())[0]
+            key0 = next(iter(events))
             size = len(events[key0])
             valid = np.ones(size, dtype=bool)
             for feat in self.features:

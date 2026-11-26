@@ -315,7 +315,7 @@ class HDF5Data:
                     else:
                         # List of curves with predefined dtypes
                         tabdict = {}
-                        for tkey in fields.keys():
+                        for tkey in fields:
                             tabdict[tkey] = \
                                 np.asarray(h5["tables"][tab][tkey]).reshape(-1)
                         self.tables[tab] = tabdict
@@ -462,7 +462,7 @@ class HDF5Data:
         # TODO: support iterative mapped basins and catch
         #  circular basin definitions.
         basins = []
-        for bnkey in h5.get("basins", {}).keys():
+        for bnkey in h5.get("basins", {}):
             bn_data = "\n".join(
                 [s.decode() for s in h5["basins"][bnkey][:].tolist()])
             bn_dict = json.loads(bn_data)
@@ -557,8 +557,8 @@ class HDF5Data:
         ppid_ps = f"{kwargs['pixel_size']:.8f}".rstrip("0")
         # index mapping
         ppid_im = cls.get_ppid_index_mapping(kwargs.get("index_mapping", None))
-        kwid = "^".join([f"p={ppid_ps}", f"i={ppid_im}"])
-        return ":".join([code, kwid])
+        kwid = f"p={ppid_ps}^i={ppid_im}"
+        return f"{code}:{kwid}"
 
     @staticmethod
     def get_ppid_index_mapping(index_mapping):
@@ -794,15 +794,14 @@ class HDF5Data:
                 # search all basins (internal basins are always first)
                 for idx in range(len(self.basins)):
                     bn_grp, bn_feats, bn_map = self.get_basin_data(idx)
-                    if bn_feats is not None:
-                        if feat in bn_feats:
-                            # HDF5 dataset
-                            ds = bn_grp[feat]
-                            # Index mapping (taken from the basins which
-                            # already includes the mapping from the current
-                            # instance).
-                            idx_map = bn_map
-                            break
+                    if bn_feats is not None and feat in bn_feats:
+                        # HDF5 dataset
+                        ds = bn_grp[feat]
+                        # Index mapping (taken from the basins which
+                        # already includes the mapping from the current
+                        # instance).
+                        idx_map = bn_map
+                        break
                 else:
                     ds = None
 
@@ -867,6 +866,6 @@ def get_measurement_identifier(h5: h5py.Group  # type: ignore
             # Only compute an identifier if all of the above
             # are defined.
             hasher = hashlib.md5(
-                f"{m_time}_{m_date}_{m_sid}".encode("utf-8"))
+                f"{m_time}_{m_date}_{m_sid}".encode())
             mid = str(uuid.UUID(hex=hasher.hexdigest()))
     return mid

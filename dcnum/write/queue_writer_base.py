@@ -24,7 +24,7 @@ class QueueWriterBase:
                  write_queue_size: "mp.Value",
                  feat_nevents: "mp.Array",
                  path_out: pathlib.Path,
-                 hdf5_dataset_kwargs: dict = None,
+                 hdf5_dataset_kwargs: dict | None = None,
                  write_threshold: int = 500,
                  *args, **kwargs
                  ):

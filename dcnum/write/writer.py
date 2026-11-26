@@ -18,12 +18,10 @@ hdf5plugin = LazyLoader("hdf5plugin")
 
 class CreatingFileWithoutBasinWarning(UserWarning):
     """Issued when creating a basin-based dataset without basins"""
-    pass
 
 
 class IgnoringBasinTypeWarning(UserWarning):
     """Issued when a specific basin type is ignored"""
-    pass
 
 
 class HDF5Writer:
@@ -443,8 +441,8 @@ def create_with_basins(
                            )
 
 
-def copy_basins(h5_src: "h5py.File",
-                h5_dst: "h5py.File",
+def copy_basins(h5_src: h5py.File,
+                h5_dst: h5py.File,
                 internal_basins: bool = True
                 ):
     """Reassemble basin data in the output file
@@ -544,13 +542,13 @@ def copy_features(h5_src: h5py.File,  # type: ignore
     hw = HDF5Writer(h5_dst, ds_kwds=ds_kwds)
     for feat in features:
         if feat in eo:
-            if ei[feat].shape == eo[feat].shape:
-                # Feature already exists in output file
-                if (len(ei[feat].shape) == 1
-                        and np.all(ei[feat][:] == eo[feat][:])):
-                    # Scalar features are identical, nothing to do.
-                    continue
-                # TODO: Check non-scalar features with loop as well (OOM)?
+            # Feature already exists in output file
+            if (ei[feat].shape == eo[feat].shape
+                    and len(ei[feat].shape) == 1
+                    and np.all(ei[feat][:] == eo[feat][:])):
+                # Scalar features are identical, nothing to do.
+                continue
+            # TODO: Check non-scalar features with loop as well (OOM)?
             raise ValueError(f"Output file {h5_dst.filename} already contains "
                              f"the feature {feat}.")
         if not isinstance(ei[feat], h5py.Dataset):
@@ -621,8 +619,8 @@ def copy_metadata(h5_src: h5py.File,  # type: ignore
     ds_kwds = set_default_filter_kwargs()
     # set attributes
     src_attrs = dict(h5_src.attrs)
-    for kk in src_attrs:
-        h5_dst.attrs.setdefault(kk, src_attrs[kk])
+    for kk, val in src_attrs.items():
+        h5_dst.attrs.setdefault(kk, val)
     copy_data = ["logs", "tables"]
     # copy other metadata
     for topic in copy_data:

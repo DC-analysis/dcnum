@@ -179,13 +179,12 @@ class MPOSegmenter(Segmenter, abc.ABC):
         from ..logic.chunk_slot_data import ChunkSlotData
         available_features = ["image_bg"]
 
-        if bg_off is not None:
-            if not self.requires_background_correction:
-                raise ValueError(f"The segmenter {self.__class__.__name__} "
-                                 f"does not employ background correction, "
-                                 f"but the `bg_off` keyword argument was "
-                                 f"passed to `segment_batch`. Please check "
-                                 f"your analysis pipeline.")
+        if bg_off is not None and not self.requires_background_correction:
+            raise ValueError(f"The segmenter {self.__class__.__name__} "
+                             f"does not employ background correction, "
+                             f"but the `bg_off` keyword argument was "
+                             f"passed to `segment_batch`. Please check "
+                             f"your analysis pipeline.")
 
         if bg_off is not None:
             available_features.append("bg_off")
@@ -206,7 +205,7 @@ class MPOSegmenter(Segmenter, abc.ABC):
         return cs.mask[:]
 
     def segment_chunk(self,
-                      chunk: int,  # noqa: F821
+                      chunk: int,
                       slot_list: list,
                       ):
         """Segment the image data of one chunk slot

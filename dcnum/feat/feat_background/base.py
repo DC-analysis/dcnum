@@ -175,8 +175,7 @@ class Background(abc.ABC):
         if cls is Background:
             raise ValueError("Cannot get `key` for `Background` base class!")
         key = cls.__name__.lower()
-        if key.startswith("background"):
-            key = key[10:]
+        key = key.removeprefix("background")
         return key
 
     @classmethod
@@ -184,7 +183,7 @@ class Background(abc.ABC):
         """Return the PPID based on given keyword arguments for a subclass"""
         code = cls.get_ppid_code()
         cback = ppid.kwargs_to_ppid(cls, "check_user_kwargs", kwargs)
-        return ":".join([code, cback])
+        return f"{code}:{cback}"
 
     @staticmethod
     def get_ppkw_from_ppid(bg_ppid):

@@ -18,7 +18,6 @@ from .mapped import MappedHDF5Dataset
 
 class EmptyDatasetWarning(UserWarning):
     """Used for files that contain no actual data"""
-    pass
 
 
 class BaseImageChunkCache(abc.ABC):

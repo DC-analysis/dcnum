@@ -421,7 +421,7 @@ class BackgroundSparseMed(Background):
 
     def process_second(self,
                        ii: int,
-                       second: float | int):
+                       second: float):
         """Compute one background image of the background series
 
         The median is computed in parallel by the worker processes
