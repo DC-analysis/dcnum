@@ -21,6 +21,7 @@ be opened with e.g. `dclab <https://dclab.readthedocs.io>`_ or
    sec_getting_started
    sec_pipeline
    sec_design
+   sec_dclab
    sec_changelog
 
 
