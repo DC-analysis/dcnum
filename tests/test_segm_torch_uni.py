@@ -28,7 +28,7 @@ try:
 except BaseException:
     CPP_COMPILER_OK = False
 else:
-    CPP_COMPILER_OK = False
+    CPP_COMPILER_OK = True
 
 
 def test_segm_torch_validate_model_file_logs_negate():
@@ -108,7 +108,7 @@ def test_segm_torch_validate_model_file_meta_value():
 
 
 @pytest.mark.skipif(not CPP_COMPILER_OK,
-                    reason="Not CPP compiler found")
+                    reason="No C++ compiler found")
 def test_segm_torch_uni():
     """Basic PyTorch segmenter"""
     path = retrieve_data(

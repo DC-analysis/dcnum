@@ -132,6 +132,8 @@
    re-exported "unet-dcnum-test_g2_cb32a" (batch normalization folded,
    valid ZIP comment, "torch.eager" as last CPU wiring option), so that
    the torch tests also pass on Windows without C++ compiler and OpenVINO
+ - tests: `test_segm_torch_uni` ("inductor" backend on the CPU) was always
+   skipped, because the C++ compiler check never succeeded
 0.31.2
  - fix: online gates for `size_x` and `size_y` were ignored (regression in 0.16.6)
  - fix: "pipeline:dcnum yield" and "experiment:event count" were set to
