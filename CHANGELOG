@@ -94,6 +94,9 @@
    exported models (dcnm 2.0) with cuDNN's fused convolution + bias + ReLU
    kernel, as `torch.jit.optimize_for_inference` does for TorchScript
    models
+ - enh: compile exported models with the "inductor" backend only once for
+   all batch sizes (dynamic batch size); before, the model was recompiled
+   e.g. for the smaller batches of the last chunk of a dataset
  - docs: comment on intended behavior of `fill_holes` (mask
    post-processing), Haralick texture features, and the sparsemed
    background assignment after cleansing

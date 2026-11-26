@@ -127,3 +127,33 @@ def test_wiring_skip_inductor_without_cpp_compiler(monkeypatch):
     meta = torch_model.get_model_meta(model_file, backend="inductor")
     assert meta["backend"] == "inductor"
     assert meta["device"] == "cpu"
+
+
+def test_compile_inductor_dynamic_batch_size(monkeypatch):
+    """Inductor must not recompile the model for a new batch size"""
+    from torch._inductor import cpp_builder
+    try:
+        cpp_builder.get_cpp_compiler()
+    except BaseException:
+        pytest.skip("No C++ compiler found")
+    # make sure the model is not taken from the cache
+    monkeypatch.setattr(torch_model, "cache_model", {})
+    model_file = retrieve_model(
+        "segm-torch-model_unet-dcnum-test_g2_0901b.zip")
+    model, _ = torch_model.load_model(model_file,
+                                      backend="inductor",
+                                      device="cpu")
+    with torch.inference_mode():
+        # batch sizes like the GPU batches of a chunk with 1000 frames
+        # and of a last chunk with 137 frames
+        mask_a = model(torch.zeros((250, 80, 320), dtype=torch.uint8))
+        with torch.compiler.set_stance("fail_on_recompile"):
+            mask_b = model(torch.zeros((69, 80, 320), dtype=torch.uint8))
+            mask_c = model(torch.zeros((68, 80, 320), dtype=torch.uint8))
+            # Note that PyTorch's convolution adds a guard for batch
+            # sizes below 16, so very small batches compile once more.
+            mask_d = model(torch.zeros((16, 80, 320), dtype=torch.uint8))
+    assert mask_a.shape == (250, 80, 320)
+    assert mask_b.shape == (69, 80, 320)
+    assert mask_c.shape == (68, 80, 320)
+    assert mask_d.shape == (16, 80, 320)
