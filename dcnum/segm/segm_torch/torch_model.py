@@ -367,12 +367,17 @@ def load_model_v2_pt2(model_meta: dict[str, Any]):
         model_meta["mask_func"] = lambda x: next(iter(x.values()))
     else:
         # https://docs.pytorch.org/docs/main/generated/torch.compile.html#torch.compile
-        model = torch.compile(
-            mod.module(),
-            fullgraph=True,
-            dynamic=False,
-            backend=backend,
-        )
+        compile_kwargs = {"fullgraph": True,
+                          "dynamic": False,
+                          "backend": backend,
+                          }
+        if backend == "inductor":
+            # By default, inductor converts the convolutions to the
+            # channels-last memory format. For U-Net models with a
+            # single input channel, cuDNN then selects convolution
+            # kernels that are about three times slower.
+            compile_kwargs["options"] = {"layout_optimization": False}
+        model = torch.compile(mod.module(), **compile_kwargs)
         model_meta["mask_func"] = lambda x: x.detach().cpu().numpy()
 
     return model, model_meta
