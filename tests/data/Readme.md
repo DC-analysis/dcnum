@@ -7,3 +7,10 @@
 
 ## Fixed segmentation test data
 - ``segm-torch-test-data_unet-dcnum-test_g1_910c2.zip``: images and segmented mask images
+
+## Feature reference values
+- ``feat_reference_values.json``: values of all scalar features for the
+  40 events of ``fmt-hdf5_cytoshot_full-features_2023.zip`` (computed from
+  the masks, images, and background images in that file); used in
+  ``tests/test_feat_reproducibility.py``, which also describes how to
+  regenerate this file
