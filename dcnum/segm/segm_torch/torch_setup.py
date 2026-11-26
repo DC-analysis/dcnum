@@ -27,7 +27,7 @@ def setup_openvino():
     """
     # Disable telemetry
     try:
-        import openvino_telemetry.main as tm
+        import openvino_telemetry.main as tm  # type: ignore
         opt_in_checker = tm.OptInChecker()
         opt_in_checker.update_result(tm.ConsentCheckResult.DECLINED)
     except ImportError:

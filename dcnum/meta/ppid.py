@@ -32,19 +32,22 @@ class ClassWithPPIDCapabilities(typing.Protocol):
     """
     def get_ppid(self) -> str:
         """full pipeline identifier for the class (instance method)"""
-        return ""
+        ...
 
-    def get_ppid_code(self) -> str:
+    @classmethod
+    def get_ppid_code(cls) -> str:
         """string representing the class in the pipeline (classmethod)"""
-        return ""
+        ...
 
-    def get_ppid_from_ppkw(self) -> str:
+    @classmethod
+    def get_ppid_from_ppkw(cls, kwargs: dict, /) -> str:
         """pipeline identifier from specific pipeline keywords (classmethod)"""
-        return ""
+        ...
 
-    def get_ppkw_from_ppid(self) -> dict:
+    @staticmethod
+    def get_ppkw_from_ppid(ppid: str, /) -> dict:
         """class keywords from full pipeline identifier (staticmethod)"""
-        return {}
+        ...
 
 
 def compute_pipeline_hash(*, bg_id, seg_id, feat_id, gate_id,
@@ -118,7 +121,7 @@ def convert_to_dtype(value, dtype):
     return value
 
 
-def get_class_method_info(class_obj: ClassWithPPIDCapabilities,
+def get_class_method_info(class_obj: type[ClassWithPPIDCapabilities],
                           static_kw_methods: list | None = None,
                           static_kw_defaults: dict | None = None,
                           ) -> dict[str, typing.Any]:
@@ -165,7 +168,7 @@ def get_class_method_info(class_obj: ClassWithPPIDCapabilities,
     return info
 
 
-def kwargs_to_ppid(cls: ClassWithPPIDCapabilities,
+def kwargs_to_ppid(cls: type[ClassWithPPIDCapabilities],
                    method: str,
                    kwargs: dict,
                    allow_invalid_keys: bool = True):

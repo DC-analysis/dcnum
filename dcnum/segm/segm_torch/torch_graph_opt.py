@@ -36,13 +36,13 @@ def _is_conv2d(node):
 
 
 @torch.library.custom_op("dcnum::conv2d_relu", mutates_args=())
-def conv2d_relu(x: torch.Tensor,
-                weight: torch.Tensor,
-                bias: torch.Tensor | None,
+def conv2d_relu(x: torch.Tensor,  # type: ignore
+                weight: torch.Tensor,  # type: ignore
+                bias: torch.Tensor | None,  # type: ignore
                 stride: list[int],
                 padding: list[int],
                 dilation: list[int],
-                groups: int) -> torch.Tensor:
+                groups: int) -> torch.Tensor:  # type: ignore
     """2D convolution followed by ReLU
 
     On CUDA devices with cuDNN, this uses cuDNN's fused convolution +
@@ -63,7 +63,7 @@ def _conv2d_relu_fake(x, weight, bias, stride, padding, dilation, groups):
         x, weight, bias, stride, padding, dilation, False, [0, 0], groups)
 
 
-def fuse_conv_relu(gm: torch.fx.GraphModule) -> int:
+def fuse_conv_relu(gm: torch.fx.GraphModule) -> int:  # type: ignore
     """Replace `conv2d -> relu` with ``dcnum::conv2d_relu`` in-place
 
     Only convolutions whose output is used by the ReLU alone are fused.
@@ -91,7 +91,8 @@ def fuse_conv_relu(gm: torch.fx.GraphModule) -> int:
     return count
 
 
-def optimize_for_inference(gm: torch.fx.GraphModule, device: str) -> dict:
+def optimize_for_inference(gm: torch.fx.GraphModule,  # type: ignore
+                           device: str) -> dict:
     """Apply all inference optimizations suitable for `device` in-place
 
     Returns a dictionary with the number of applied optimizations.

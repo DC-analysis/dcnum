@@ -183,6 +183,7 @@ class Segmenter(abc.ABC):
         get_ppid: Same method for class instances
         """
         kwargs = copy.deepcopy(kwargs)
+        kwargs_mask_used = {}
         if cls.mask_postprocessing:
             if kwargs_mask is None and kwargs.get("kwargs_mask", None) is None:
                 raise KeyError("`kwargs_mask` must be either specified as "
@@ -358,10 +359,12 @@ class Segmenter(abc.ABC):
 
     @staticmethod
     @abc.abstractmethod
-    def segment_algorithm(image, mask_out=None) -> np.ndarray:
+    def segment_algorithm(image, /, *args, **kwargs) -> np.ndarray:
         """The segmentation algorithm implemented in the subclass
 
-        Perform segmentation and return boolean mask image
+        Perform segmentation and return boolean mask image. Subclasses
+        define the keyword-only arguments of the segmentation approach
+        (which are part of the pipeline identifier).
         """
 
     def segment_algorithm_wrapper(self):

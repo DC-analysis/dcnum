@@ -119,7 +119,8 @@ def cpu_count() -> int:
     if hasattr(os, "sched_getaffinity"):
         cpu_affin = len(os.sched_getaffinity(0))
     elif hasattr(os, "process_cpu_count"):
-        cpu_affin = os.process_cpu_count()
+        # Python 3.13+ (`hasattr` check above)
+        cpu_affin = os.process_cpu_count()  # type: ignore
     else:
         cpu_affin = os.cpu_count()
     if cpu_affin is not None:
