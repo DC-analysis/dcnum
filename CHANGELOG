@@ -86,6 +86,10 @@
    backend for exported models (dcnm 2.0); with it, cuDNN used convolution
    kernels that were up to three times slower for U-Net models with a
    single input channel
+ - enh: when the backend of the "torchuni" segmenter is chosen
+   automatically, skip the wiring options of the model file that cannot be
+   used (missing CUDA device, "inductor" without Triton on CUDA or without
+   C++ compiler on the CPU, OpenVINO not installed); Triton is optional
  - docs: comment on intended behavior of `fill_holes` (mask
    post-processing), Haralick texture features, and the sparsemed
    background assignment after cleansing

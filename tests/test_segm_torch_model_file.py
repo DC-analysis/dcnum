@@ -83,3 +83,47 @@ def test_compile_inductor_without_layout_optimization(monkeypatch, backend,
         assert options["layout_optimization"] is False
     else:
         assert "layout_optimization" not in options
+
+
+def test_wiring_available_cuda(monkeypatch):
+    monkeypatch.setattr(torch_model.torch.cuda, "is_available", lambda: True)
+    monkeypatch.setattr(torch_model.torch.cuda, "device_count", lambda: 1)
+    monkeypatch.setattr(torch_model, "has_triton", lambda: False)
+    is_available = torch_model.is_wiring_available
+    assert is_available({"backend": "torch.eager", "device": "cuda"})
+    assert is_available({"backend": "torch.eager", "device": "cuda:0"})
+    # there is only one GPU
+    assert not is_available({"backend": "torch.eager", "device": "cuda:1"})
+    # inductor requires Triton on CUDA devices
+    assert not is_available({"backend": "inductor", "device": "cuda"})
+    monkeypatch.setattr(torch_model, "has_triton", lambda: True)
+    assert is_available({"backend": "inductor", "device": "cuda"})
+
+
+def test_wiring_available_no_cuda(monkeypatch):
+    monkeypatch.setattr(torch_model.torch.cuda, "is_available",
+                        lambda: False)
+    is_available = torch_model.is_wiring_available
+    assert is_available({"backend": "torch.eager", "device": "cpu"})
+    assert not is_available({"backend": "torch.eager", "device": "cuda"})
+    assert not is_available({"backend": "cudagraphs", "device": "cuda:0"})
+
+
+def test_wiring_skip_inductor_without_cpp_compiler(monkeypatch):
+    """The first wiring option of the model is not available"""
+    monkeypatch.setattr(torch_model, "has_cpp_compiler", lambda: False)
+    monkeypatch.setattr(torch_model, "cache_model_meta", {})
+    model_file = retrieve_model(
+        "segm-torch-model_unet-dcnum-test_g2_0901b.zip")
+    # The wiring options are ("inductor", "cpu") and ("openvino", "cpu").
+    if torch_model.openvino.module_available():
+        meta = torch_model.get_model_meta(model_file)
+        assert meta["backend"] == "openvino"
+        assert meta["device"] == "cpu"
+    else:
+        with pytest.raises(ValueError, match="not have wiring options"):
+            torch_model.get_model_meta(model_file)
+    # explicitly asking for a backend skips the backend check
+    meta = torch_model.get_model_meta(model_file, backend="inductor")
+    assert meta["backend"] == "inductor"
+    assert meta["device"] == "cpu"
