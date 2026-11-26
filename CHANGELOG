@@ -8,6 +8,9 @@
  - docs: explain the pipeline generation `DCNUM_PPID_GENERATION` (#22)
  - docs: compare `HDF5Data` with dclab's `RTDCBase` (#35)
  - docs: compare `HDF5Writer` with dclab's `RTDCWriter` (#34)
+ - ref: remove unreachable branch for non-array basin mappings in
+   `BackgroundCopy`
+ - tests: 100% coverage for `dcnum.feat.feat_background`
 0.31.3
  - fix: "basinmap1" of the internal sparsemed background basin had the
    shape (1, N) when the output events matched the input frames (e.g. one

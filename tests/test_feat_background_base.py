@@ -170,3 +170,59 @@ def test_base_background_input_without_images(tmp_path):
             input_data=path_in,
             output_path=tmp_path / "out.rtdc",
             kernel_size=5)
+
+
+@pytest.mark.filterwarnings(
+    "ignore::dcnum.write.writer.CreatingFileWithoutBasinWarning")
+def test_base_background_input_path_str(tmp_path):
+    """The input path may be given as a string"""
+    input_path = tmp_path / "input.h5"
+    with h5py.File(input_path, "a") as h5:
+        h5["events/image"] = \
+            np.arange(5*7).reshape(1, 5, 7) * np.ones((50, 1, 1))
+    with bg_sparse_median.BackgroundSparseMed(input_data=str(input_path),
+                                              output_path=tmp_path / "o.h5",
+                                              kernel_size=10,
+                                              split_time=0.011,
+                                              thresh_cleansing=0,
+                                              frac_cleansing=.8,
+                                              ) as bic:
+        assert bic.image_count == 50
+
+
+def test_base_background_get_ppid_code_base_class():
+    from dcnum.feat.feat_background.base import Background
+    with pytest.raises(ValueError, match="for `Background` base class"):
+        Background.get_ppid_code()
+
+
+def test_base_background_get_ppkw_from_ppid_invalid_code():
+    from dcnum.feat.feat_background.base import Background
+    with pytest.raises(ValueError,
+                       match="Could not find background computation method"):
+        Background.get_ppkw_from_ppid("peter:k=10")
+
+
+@pytest.mark.filterwarnings(
+    "ignore::dcnum.write.writer.CreatingFileWithoutBasinWarning")
+def test_base_background_process_twice(tmp_path):
+    """Processing again replaces the existing background data"""
+    event_count = 720
+    input_data = np.arange(5*7).reshape(1, 5, 7) * np.ones((event_count, 1, 1))
+    output_path = tmp_path / "test.h5"
+    with bg_sparse_median.BackgroundSparseMed(input_data=input_data,
+                                              output_path=output_path,
+                                              kernel_size=10,
+                                              split_time=0.011,
+                                              thresh_cleansing=0,
+                                              frac_cleansing=.8,
+                                              ) as bic:
+        bic.process()
+        bg_1 = bic.h5out["basin_events/image_bg"][:]
+        bic.process()
+        bg_2 = bic.h5out["basin_events/image_bg"][:]
+        assert np.all(bg_1 == bg_2)
+        assert bic.get_progress() == 1
+        # no images -> no progress
+        bic.image_count = 0
+        assert bic.get_progress() == 0

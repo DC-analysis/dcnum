@@ -1,5 +1,7 @@
 import h5py
+import hdf5plugin  # noqa: F401 (loads the HDF5 compression filters)
 import numpy as np
+import pytest
 
 from dcnum.feat.feat_background import bg_copy
 from dcnum.read import HDF5Data
@@ -147,3 +149,28 @@ def test_copy_basin_based_background():
                       == np.array(hd.image[2], dtype=int) - bg2)
         assert np.all(hd.image_corr[10]
                       == np.array(hd.image[10], dtype=int) - bg2)
+
+
+def test_copy_basin_based_background_missing_file(tmp_path):
+    """A missing basin file with "image_bg" raises a clear error"""
+    path = retrieve_data(
+        "fmt-hdf5_cytoshot_full-features_legacy_allev_2023.zip")
+    path_bg = tmp_path / "background.rtdc"
+    path_out = tmp_path / "output.rtdc"
+    with h5py.File(path, "a") as h5:
+        image_bg = h5["events/image_bg"][:]
+        del h5["events/image_bg"]
+    with h5py.File(path_bg, "w") as h5:
+        h5["events/image_bg"] = image_bg
+    with HDF5Writer(path) as hw:
+        hw.store_basin(name="background file",
+                       paths=[path_bg],
+                       features=["image_bg"])
+    # remove the basin file
+    path_bg.unlink()
+
+    with (pytest.raises(ValueError,
+                        match="Could not access the basin background file"),
+          bg_copy.BackgroundCopy(input_data=path,
+                                 output_path=path_out) as bic):
+        bic.process()

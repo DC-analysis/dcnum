@@ -32,10 +32,6 @@ class BackgroundCopy(Background):
                         raise ValueError(
                             f"Could not access the basin {bn_name} that "
                             f"contains 'image_bg'")
-                    if isinstance(mapping, (int, slice, list)):
-                        raise NotImplementedError(
-                            f"Image data mapping for {type(mapping)} "
-                            f"not supported yet")
                     with HDF5Writer(self.h5out) as hw:
                         hw.store_basin(
                             name=bn_dict["name"],
