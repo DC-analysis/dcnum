@@ -396,7 +396,7 @@ def load_model_v2_pt2(model_meta: dict[str, Any]):
         model_meta["mask_func"] = lambda x: x.detach().cpu().numpy()
     elif backend == "torch.eager":
         # In eager mode, nothing is compiled at all.
-        model = mod.module()
+        model = get_optimized_graph_module(mod, model_meta)
         model_meta["mask_func"] = lambda x: x.detach().cpu().numpy()
     elif backend == "openvino":
         assert openvino.module_available()
@@ -446,10 +446,33 @@ def load_model_v2_pt2(model_meta: dict[str, Any]):
             # single input channel, cuDNN then selects convolution
             # kernels that are about three times slower.
             compile_kwargs["options"] = {"layout_optimization": False}
-        model = torch.compile(mod.module(), **compile_kwargs)
+        model = torch.compile(get_optimized_graph_module(mod, model_meta),
+                              **compile_kwargs)
         model_meta["mask_func"] = lambda x: x.detach().cpu().numpy()
 
     return model, model_meta
+
+
+def get_optimized_graph_module(exported_program, model_meta):
+    """Return the module of an ExportedProgram optimized for inference
+
+    On CUDA devices, convolutions followed by a ReLU are replaced with
+    cuDNN's fused convolution + bias + ReLU operation (see
+    :mod:`.torch_graph_opt`), as :func:`torch.jit.optimize_for_inference`
+    does for TorchScript models. The number of applied optimizations is
+    stored in ``model_meta["graph_optimizations"]``.
+    """
+    gm = exported_program.module()
+    device = str(model_meta["device"])
+    if (device.startswith("cuda")
+            # custom operators require torch 2.4
+            and hasattr(torch.library, "custom_op")):
+        from . import torch_graph_opt  # registers a custom operator
+        model_meta["graph_optimizations"] = \
+            torch_graph_opt.optimize_for_inference(gm, device=device)
+    else:
+        model_meta["graph_optimizations"] = {}
+    return gm
 
 
 @functools.cache

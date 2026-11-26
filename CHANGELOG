@@ -90,6 +90,10 @@
    automatically, skip the wiring options of the model file that cannot be
    used (missing CUDA device, "inductor" without Triton on CUDA or without
    C++ compiler on the CPU, OpenVINO not installed); Triton is optional
+ - enh: on CUDA devices, replace convolutions followed by a ReLU in
+   exported models (dcnm 2.0) with cuDNN's fused convolution + bias + ReLU
+   kernel, as `torch.jit.optimize_for_inference` does for TorchScript
+   models
  - docs: comment on intended behavior of `fill_holes` (mask
    post-processing), Haralick texture features, and the sparsemed
    background assignment after cleansing
