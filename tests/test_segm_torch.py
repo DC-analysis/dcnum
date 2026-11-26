@@ -1,10 +1,12 @@
+import logging
+
 import cv2
 import h5py
 import numpy as np
 
 import pytest
 
-from dcnum import read, segm, write
+from dcnum import logic, read, segm, write
 
 from helper_methods import extract_data, retrieve_data, retrieve_model
 
@@ -243,3 +245,34 @@ def test_segm_torch_mpo_sto_similarity(image_stem):
     mask_sto = segm.segm_torch.SegmentTorchSTO.segment_algorithm(
         images, model_file=model_file)
     assert np.all(mask_mpo == mask_sto[0])
+
+
+def test_segm_torch_mpo_worker_logs():
+    """The logs of the MPO segmenter worker processes are recorded (#19)"""
+    model_file = retrieve_model(
+        "segm-torch-model_unet-dcnum-test_g1_910c2.zip")
+    path = retrieve_data(
+        "fmt-hdf5_cytoshot_full-features_legacy_allev_2023.zip")
+
+    job = logic.DCNumPipelineJob(
+        path_in=path,
+        segmenter_code="torchmpo",
+        segmenter_kwargs={"model_file": model_file, "num_workers": 2},
+        log_level=logging.DEBUG,
+        debug=False)
+
+    with logic.DCNumJobRunner(job=job) as runner:
+        runner.run()
+
+    with read.HDF5Data(job["path_out"]) as hd:
+        for key in hd.logs:
+            if key.startswith("dcnum-log-"):
+                logdat = "\n".join(hd.logs[key])
+                break
+        else:
+            assert False, "dcnum log not found"
+    # one message from each of the two worker processes
+    lines = [ll for ll in logdat.split("\n")
+             if "dcnum.segm.segmenter.SegmentTorchMPO" in ll
+             and "ready for the images" in ll]
+    assert len(lines) == 2, logdat

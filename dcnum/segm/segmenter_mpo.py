@@ -2,7 +2,11 @@
 from __future__ import annotations
 
 import abc
+import logging
+from logging.handlers import QueueHandler
 import multiprocessing as mp
+import multiprocessing.queues
+import os
 import time
 import threading
 
@@ -67,6 +71,16 @@ class MPOSegmenter(Segmenter, abc.ABC):
         self.mp_shutdown = mp_spawn.Event()
         """Shutdown event tells workers to stop when set"""
 
+        self.log_queue: multiprocessing.queues.Queue | None = None
+        """Queue to which worker processes send their log records
+
+        Set by :class:`dcnum.logic.ctrl.DCNumJobRunner`; if None, the
+        logs of worker processes are not recorded.
+        """
+
+        self.log_level = logging.INFO
+        """Log level for worker processes"""
+
         # workers
         self._worker_starter = None
         self._workers = []
@@ -94,6 +108,9 @@ class MPOSegmenter(Segmenter, abc.ABC):
     def __setstate__(self, state):
         # Restore instance attributes
         vars(self).update(state)
+        # Restore the logger (removed in `__getstate__`)
+        self.logger = logging.getLogger("dcnum.segm.segmenter").getChild(
+            self.__class__.__name__)
 
     def join_workers(self):
         """Ask all workers to stop and join them"""
@@ -343,8 +360,21 @@ class MPOSegmenterWorker:
         ``segment_single`` and the result is written to the ``mask``
         array of the slot.
         """
+        if (isinstance(self, mp_spawn.Process)
+                and self.segmenter.log_queue is not None):
+            # In a spawned process, the loggers have no handlers. Send
+            # all dcnum logs to the log queue of the pipeline.
+            dcnum_logger = logging.getLogger("dcnum")
+            dcnum_logger.handlers.clear()
+            dcnum_logger.setLevel(self.segmenter.log_level)
+            queue_handler = QueueHandler(self.segmenter.log_queue)
+            queue_handler.setLevel(self.segmenter.log_level)
+            dcnum_logger.addHandler(queue_handler)
         # confirm single-threadedness (prints to log)
         confirm_single_threaded()
+        self.segmenter.logger.debug(
+            f"Worker {os.getpid()} ready for the images "
+            f"{self.sl_start}:{self.sl_stop} of each chunk")
         last_chunk = -1
 
         while True:
