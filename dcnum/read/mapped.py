@@ -8,6 +8,8 @@ import numpy as np
 
 from ..common import h5py
 
+from .chopped import ChoppedImageDataset
+
 
 class MappedHDF5Dataset:
     def __init__(self,
@@ -186,7 +188,8 @@ def get_mapped_object(obj, index_mapping=None):
 
     Parameters
     ----------
-    obj: h5py.Dataset | dcnum.read.mapped.MappedHDF5Dataset
+    obj: h5py.Dataset | dcnum.read.mapped.MappedHDF5Dataset | \
+            dcnum.read.chopped.ChoppedImageDataset
         dataset to map
     index_mapping: int | slice | list | np.ndarray | None
         index mapping (see ``get_mapping_indices``); if None,
@@ -212,7 +215,7 @@ def get_mapped_object(obj, index_mapping=None):
     """
     if index_mapping is None:
         return obj
-    elif isinstance(obj, h5py.Dataset):
+    elif isinstance(obj, (h5py.Dataset, ChoppedImageDataset)):
         return MappedHDF5Dataset(
             obj,
             mapping_indices=get_mapping_indices(index_mapping))

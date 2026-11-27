@@ -1,3 +1,9 @@
+0.31.5
+ - feat: support reading chopped image data (internal "h5datasetchop"
+   basins written by `dclab-compress --crop-event-images`); the pipeline
+   accepts chopped input data and logs a warning
+ - enh: support the basin mapping "same" (written by dclab)
+
 0.31.4
  - fix: the pipeline stopped with "Universal workers failed to spawn"
    when starting the universal workers took longer than 10 s per worker

@@ -28,6 +28,8 @@ from ..segm.segmenter_mpo import MPOSegmenter
 from ..segm.segmenter_sto import STOSegmenter
 from ..meta import ppid
 from ..read import HDF5Data, get_measurement_identifier
+from ..read.chopped import get_data
+from ..read.hdf5_data import ChoppedBasinGroup
 from .._version import version, version_tuple
 from ..write import (
     HDF5Writer, QueueWriterProcess, QueueWriterThread, copy_features,
@@ -409,6 +411,12 @@ class DCNumJobRunner(threading.Thread):
                 f"Output file {self.job['path_out']} already exists!")
         # Make sure the output directory exists.
         self.job["path_out"].parent.mkdir(parents=True, exist_ok=True)
+        if self.draw.is_chopped("image"):
+            self.logger.warning(
+                "The input image data are chopped (e.g. by "
+                "`dclab-compress --crop-event-images`): Outside the event "
+                "regions, the images are the background images. The "
+                "results may differ from those of the original data.")
         self.state = "setup"
         # First get a list of all pipeline IDs. If the input file has
         # already been processed by dcnum, then we do not have to redo
@@ -811,6 +819,16 @@ class DCNumJobRunner(threading.Thread):
                                    and f not in hout["events"])],
                         basinmap0=basinmap0,
                     )
+                    # Features that the raw input file stores as chopped
+                    # image data (e.g. "image" after
+                    # `dclab-compress --crop-event-images`).
+                    self._transfer_raw_chopped_features(
+                        hw=hw,
+                        feats=[f for f in feats
+                               if (f not in hin["events"]
+                                   and f not in hout["events"])],
+                        basinmap0=basinmap0,
+                    )
                 # Only consider features that are available in the input
                 # and that are not already in the output.
                 feats = [f for f in feats
@@ -920,6 +938,71 @@ class DCNumJobRunner(threading.Thread):
                                paths=paths,
                                description=f"Created with dcnum {version}",
                                identifier=bn_dict.get("identifier"),
+                               )
+            feats = [f for f in feats if f not in bn_feats]
+
+    def _transfer_raw_chopped_features(self, hw, feats, basinmap0):
+        """Transfer chopped image features of the raw input file
+
+        Chopped image data ("h5datasetchop" internal basins) are stored
+        for the events of the raw input file. For the "drain" basin
+        strategy, the full frames are written to the output file. For
+        the "tap" basin strategy, a file basin that refers to the raw
+        input file is created (the frames are reassembled when reading).
+
+        Parameters
+        ----------
+        hw: dcnum.write.HDF5Writer
+            writer for the output file
+        feats: list of str
+            features to transfer (features that are not stored as
+            chopped image data are ignored)
+        basinmap0: np.ndarray | None
+            mapping from output events to raw input events
+        """
+        h5in = self.draw.h5
+        for bn_dict in self.draw.basins:
+            if (bn_dict["type"] != "internal"
+                    or bn_dict.get("format") != "h5datasetchop"):
+                continue
+            bn_grp = ChoppedBasinGroup(h5in[bn_dict["paths"][0]])
+            bn_feats = [f for f in feats
+                        if (f in bn_dict.get("features", [])
+                            and f in bn_grp
+                            and f not in hw.h5["events"])]
+            if not bn_feats:
+                continue
+            if self.job["basin_strategy"] == "drain":
+                self.logger.debug(f"Transferring chopped {bn_feats} from "
+                                  f"input file to output file")
+                for feat in bn_feats:
+                    ds = bn_grp[feat]
+                    num_events = len(ds) if basinmap0 is None \
+                        else len(basinmap0)
+                    for start in range(0, num_events, 1000):
+                        stop = min(start + 1000, num_events)
+                        if basinmap0 is None:
+                            data = ds[start:stop]
+                        else:
+                            data = get_data(ds, basinmap0[start:stop])
+                        hw.store_feature_chunk(feat, data)
+            else:
+                self.logger.debug(f"Creating basin for chopped {bn_feats} "
+                                  f"from input file")
+                pin = pathlib.Path(h5in.filename).resolve()
+                paths: list[str | pathlib.Path] = [pin]
+                pout = pathlib.Path(hw.h5.filename).resolve().parent
+                try:
+                    paths.append(os.path.relpath(pin, pout))
+                except ValueError:
+                    # different drive letter on Windows
+                    pass
+                hw.store_basin(name="dcnum basin (chopped)",
+                               features=bn_feats,
+                               mapping=basinmap0,
+                               paths=paths,
+                               description=f"Created with dcnum {version}",
+                               identifier=get_measurement_identifier(h5in),
                                )
             feats = [f for f in feats if f not in bn_feats]
 

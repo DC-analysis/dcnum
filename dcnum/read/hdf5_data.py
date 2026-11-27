@@ -16,9 +16,11 @@ import numpy as np
 from ..common import h5py
 
 from .cache import HDF5ImageCache, ImageCorrCache, md5sum
+from .chopped import ChoppedImageDataset
 from .const import PROTECTED_FEATURES
 from .mapped import (
-    check_index_mapping, get_mapped_object, get_mapping_indices
+    MappedHDF5Dataset, check_index_mapping, get_mapped_object,
+    get_mapping_indices
 )
 
 
@@ -64,6 +66,89 @@ class BasinFileGroup:
     def keys(self):
         """Return the sorted features, including the nested features"""
         return sorted(set(self.h5group.keys()) | set(self.nested_data))
+
+
+class ChoppedBasinGroup:
+    def __init__(self, h5group: h5py.Group):  # type: ignore
+        """An internal basin group with chopped image data
+
+        Features (e.g. "image") are accessed as
+        :class:`dcnum.read.chopped.ChoppedImageDataset` objects, which
+        reassemble the full frames from the chopped image data.
+
+        Parameters
+        ----------
+        h5group: h5py.Group
+            the group of the internal basin (normally "basin_events")
+        """
+        self.h5group = h5group
+        self._datasets = {}
+
+    def __contains__(self, feat):
+        return (feat in self.h5group
+                and isinstance(self.h5group[feat], h5py.Group)
+                and "index" in self.h5group[feat])
+
+    def __getitem__(self, feat):
+        if feat not in self._datasets:
+            if feat not in self:
+                raise KeyError(f"Chopped feature '{feat}' not found in "
+                               f"'{self.h5group.name}'")
+            grp = self.h5group[feat]
+            h5 = self.h5group.file
+            if (inv_bg := grp.attrs.get("inverse_background_feature")):
+                inverse_background = get_feature_from_file(h5, inv_bg)
+            else:
+                inverse_background = None
+            self._datasets[feat] = ChoppedImageDataset(
+                h5group=grp,
+                roi_shape=(h5.attrs["imaging:roi size y"],
+                           h5.attrs["imaging:roi size x"]),
+                inverse_background=inverse_background)
+        return self._datasets[feat]
+
+    @property
+    def file(self):
+        """The HDF5 file of the basin"""
+        return self.h5group.file
+
+    @property
+    def id(self):
+        """The HDF5 identifier of the basin group"""
+        return self.h5group.id
+
+    def keys(self):
+        """Return the sorted chopped features"""
+        return sorted(f for f in self.h5group if f in self)
+
+
+def get_feature_from_file(h5, feat):
+    """Return the data of a feature in the event indices of an HDF5 file
+
+    The feature is taken from the "events" group or from an internal
+    basin of `h5` (not from file basins). Mapped internal basins (e.g.
+    "image_bg" from sparsemed background computation) are returned as
+    :class:`dcnum.read.mapped.MappedHDF5Dataset`.
+
+    Raises
+    ------
+    KeyError
+        If the feature is not available
+    """
+    if feat in h5["events"]:
+        return h5["events"][feat]
+    for bn_dict in HDF5Data.extract_basin_dicts(h5):
+        if (bn_dict["type"] == "internal"
+                and bn_dict.get("format") != "h5datasetchop"
+                and feat in bn_dict.get("features", [])
+                and feat in h5[bn_dict["paths"][0]]):
+            ds = h5[bn_dict["paths"][0]][feat]
+            if (basinmap := bn_dict.get("mapping")) is not None:
+                ds = get_mapped_object(
+                    obj=ds, index_mapping=h5["events"][basinmap][:])
+            return ds
+    raise KeyError(f"Feature '{feat}' not found in '{h5.filename}' "
+                   f"(events or internal basins)")
 
 
 class HDF5Data:
@@ -472,6 +557,10 @@ class HDF5Data:
             bn_data = "\n".join(
                 [s.decode() for s in h5["basins"][bnkey][:].tolist()])
             bn_dict = json.loads(bn_data)
+            if bn_dict.get("mapping") == "same":
+                # dclab uses "same" for basins with the same event indices
+                # as the referring dataset (no mapping feature).
+                bn_dict["mapping"] = None
             if check:
                 if bn_dict["type"] not in ["internal", "file"]:
                     # we only support file-based and internal basins
@@ -759,6 +848,8 @@ class HDF5Data:
             if bn_dict["type"] != "internal":
                 continue
             bn_grp = h5[bn_dict["paths"][0]]
+            if bn_dict.get("format") == "h5datasetchop":
+                bn_grp = ChoppedBasinGroup(bn_grp)
             for feat in bn_dict["features"]:
                 if (feat in features
                         and feat not in nested_data
@@ -783,6 +874,10 @@ class HDF5Data:
             raise ValueError(
                 f"Encountered invalid internal basin '{bn_dict}': "
                 f"'features' must be defined")
+        if bn_dict.get("format") == "h5datasetchop":
+            h5group = ChoppedBasinGroup(h5group)
+            # Do not advertise features we cannot access.
+            features = [f for f in features if f in h5group]
         return h5group, features
 
     def get_image_cache(self, feat):
@@ -823,6 +918,22 @@ class HDF5Data:
             self._image_cache[feat] = image
 
         return self._image_cache[feat]
+
+    def is_chopped(self, feat: str = "image") -> bool:
+        """Whether an image feature is reassembled from chopped data
+
+        Chopped image data (internal "h5datasetchop" basin, e.g. from
+        ``dclab-compress --crop-event-images``) only contain the image
+        data around the events; the rest of the frame is the background
+        image (for "image").
+        """
+        cache = self.get_image_cache(feat)
+        if cache is None:
+            return False
+        ds = cache.h5ds
+        if isinstance(ds, MappedHDF5Dataset):
+            ds = ds.h5ds
+        return isinstance(ds, ChoppedImageDataset)
 
     def keys(self):
         """Return sorted list of features, including basin features"""
