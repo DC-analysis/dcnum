@@ -11,6 +11,10 @@
  - ref: remove unreachable branch for non-array basin mappings in
    `BackgroundCopy`
  - tests: 100% coverage for `dcnum.feat.feat_background`
+ - ref: remove unreachable check for zero contour moments in
+   `moments_based_features`
+ - tests: 100% coverage for `dcnum.feat.gate`, `dcnum.feat.feat_contour`,
+   and `dcnum.feat.feat_texture`
 0.31.3
  - fix: "basinmap1" of the internal sparsemed background basin had the
    shape (1, N) when the output events matched the input frames (e.g. one

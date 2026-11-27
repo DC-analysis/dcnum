@@ -88,12 +88,11 @@ def moments_based_features(
         # convex hull
         cont_cvx = np.squeeze(cv2.convexHull(cont_raw))
 
+        # Note that `mu_raw["m00"]` and `mu_cvx["m00"]` are not zero,
+        # because the contour area is not zero (see `not_valid` above)
+        # and the area of the convex hull is not smaller.
         mu_cvx = cv2.moments(cont_cvx)
         arc_cvx = np.float64(cv2.arcLength(cont_cvx, True))
-
-        if mu_cvx["m00"] == 0 or mu_raw["m00"] == 0:
-            # contour size too small
-            continue
 
         # bounding box
         _x, _y, w, h = cv2.boundingRect(cont_raw)

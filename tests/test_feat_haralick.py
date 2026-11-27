@@ -1,6 +1,7 @@
 import h5py
 import hdf5plugin  # noqa: F401 (loads the HDF5 compression filters)
 import numpy as np
+import pytest
 
 from dcnum.feat import feat_texture
 
@@ -114,3 +115,14 @@ def test_simple_mask_image():
         mask=masks,
     )
     assert np.allclose(tex["tex_con_avg"][0], 27.75)
+
+
+def test_haralick_missing_image_data():
+    """Either `image_corr` or `image` and `image_bg` are required"""
+    mask = np.zeros((1, 80, 250), dtype=bool)
+    mask[0, 30:50, 100:150] = True
+    image = np.full((1, 80, 250), 100, dtype=np.uint8)
+    with pytest.raises(ValueError, match="Please specify either"):
+        feat_texture.haralick_texture_features(mask=mask)
+    with pytest.raises(ValueError, match="Please specify either"):
+        feat_texture.haralick_texture_features(mask=mask, image=image)
