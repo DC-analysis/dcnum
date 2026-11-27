@@ -19,6 +19,11 @@
    failed when run on their own)
  - tests: 100% coverage for `dcnum.feat.queue_event_extractor` (including
    box gating of events with online gates)
+ - tests: make sure that the feature extraction stays reproducible
+   (reference values of all scalar features, identical results with
+   threads, processes, and different numbers of workers)
+ - tests: request single-threaded computation in `conftest.py` before
+   numpy is imported (debug-mode results differed in the last bits)
 0.31.3
  - fix: "basinmap1" of the internal sparsemed background basin had the
    shape (1, N) when the output events matched the input frames (e.g. one
