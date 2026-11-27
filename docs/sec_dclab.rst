@@ -53,9 +53,9 @@ and how it accesses the data:
      - Ancillary features (e.g. volume or Young's modulus) are computed
        on demand if the required data are available.
    * - Basins
-     - Only file-based basins (local HDF5 files) and internal basins;
-       other basin types are ignored. Internal basins are searched
-       first.
+     - Only file-based basins (local HDF5 files) and internal basins
+       (including chopped image data, "h5datasetchop"); other basin
+       types are ignored. Internal basins are searched first.
      - All basin types (file, internal, remote: DCOR, S3, HTTP).
    * - Subsets of events
      - ``index_mapping`` (an integer, slice, or list of indices) selects
@@ -154,3 +154,40 @@ without the checks and conveniences of dclab:
      - Files opened by the writer use a larger chunk cache (10 MiB per
        dataset) to allow partial writes of chunks.
      - Default h5py chunk cache.
+
+
+.. _sec_dclab_compress:
+
+compress and dclab-compress
+---------------------------
+:func:`.write.compression.compress` writes a compressed copy of an .rtdc
+file, like ``dclab-compress``. With ``crop_event_images=True``, the
+"image" feature is stored as chopped image data (only the pixels around
+the events), like ``dclab-compress --crop-event-images``. The chopped
+data are identical to those written by dclab, so both packages can read
+them.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 20 40 40
+
+   * - Aspect
+     - :func:`.write.compression.compress`
+     - ``dclab-compress``
+   * - Parallelization
+     - The data are compressed in parallel worker processes
+       (``num_procs``); the main process writes the compressed chunks.
+     - Single process.
+   * - File basins
+     - All features of the file basins of the input file are written to
+       the output file; ``basin_paths`` only gives the locations of
+       basin files (e.g. if they were moved).
+     - Only the features of the basin files given with ``-b`` are
+       written to the output file.
+   * - Cropping
+     - Only "image"; methods "dilation" (default) and "box".
+     - "image" (via the command line); methods "dilation" (default) and
+       "box".
+   * - Compression
+     - Zstandard (levels 1 to 9) or none, with Fletcher-32 checksums.
+     - Zstandard (level 5) with Fletcher-32 checksums.

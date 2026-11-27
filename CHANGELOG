@@ -2,7 +2,15 @@
  - feat: support reading chopped image data (internal "h5datasetchop"
    basins written by `dclab-compress --crop-event-images`); the pipeline
    accepts chopped input data and logs a warning
+ - feat: `dcnum.write.compress` writes a compressed copy of an .rtdc file
+   in parallel, including the features of its file basins, optionally
+   with cropped event images (same format and data as
+   `dclab-compress --crop-event-images`)
  - enh: support the basin mapping "same" (written by dclab)
+ - ref: new `dcnum.write.get_compression_kwargs` (also used by
+   `DCNumPipelineJob`)
+ - tests: compare compression results with dclab (optional test
+   dependency)
 
 0.31.4
  - fix: the pipeline stopped with "Universal workers failed to spawn"

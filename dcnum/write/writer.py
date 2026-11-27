@@ -4,6 +4,7 @@ from __future__ import annotations
 import hashlib
 import json
 import pathlib
+import re
 from typing import Any
 import warnings
 
@@ -652,6 +653,37 @@ def copy_metadata(h5_src: h5py.File,  # type: ignore
                                       f"dcnum {version}"]
                         soft_strgs = [s for s in soft_strgs if s is not None]
                         ds.attrs["software"] = " | ".join(soft_strgs)
+
+
+def get_compression_kwargs(compression: str = "zstd-5") -> dict:
+    """Return HDF5 Dataset keyword arguments for a compression setting
+
+    Parameters
+    ----------
+    compression: str
+        either "none" (no compression) or "zstd-1" (fast) to "zstd-9"
+        (small files) for Zstandard compression
+
+    Returns
+    -------
+    ds_kwds: dict
+        keyword arguments for :meth:`h5py.Group.create_dataset`
+        (including fletcher32 checksums)
+    """
+    cp = str(compression).lower().strip()
+    ds_kw: dict[str, Any] = {"fletcher32": True}
+    if cp == "none":
+        # No compression
+        ds_kw["compression"] = None
+        ds_kw["compression_opts"] = None
+    elif re.match("^zstd-[1-9]$", cp):
+        # Zstandard compression
+        clevel = int(cp[-1])
+        for key, val in dict(hdf5plugin.Zstd(clevel=clevel)).items():
+            ds_kw[key] = val
+    else:
+        raise ValueError(f"Unsupported compression setting '{cp}'")
+    return ds_kw
 
 
 def set_default_filter_kwargs(ds_kwds: dict | None = None,
