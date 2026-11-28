@@ -9,6 +9,7 @@ import json
 import logging
 import multiprocessing as mp
 import pathlib
+import time
 from typing import Literal
 import uuid
 
@@ -29,6 +30,12 @@ CROP_REQUIRED_FEATURES = ["frame", "image_bg", "mask", "size_x", "size_y"]
 
 #: Approximate size of the uncompressed data processed in one worker job
 JOB_SIZE_BYTES = 16 * 1024 ** 2
+
+#: HDF5 filter ID of Zstandard compression
+ZSTD_FILTER_ID = 32015
+
+#: Compression level of the Zstandard HDF5 filter without parameters
+ZSTD_DEFAULT_LEVEL = 3
 
 #: HDF5Data instance of the input file in the worker processes
 _worker_hd: HDF5Data | None = None
@@ -51,6 +58,17 @@ def compress(path_in: pathlib.Path | str,
     file contains all data of the measurement. Internal basins (e.g. a
     mapped "image_bg" feature) are kept as internal basins and the basin
     definitions of the input file are copied.
+
+    Features that are already compressed with Zstandard at the requested
+    or a higher compression level are copied without compressing them
+    again (this also applies to all features if `compression` is
+    "none"). Features from mapped basins and chopped data are always
+    compressed.
+
+    The "dcnum-compress" log in the output file contains the parameters
+    and the wall-clock time of the compression, the time spent
+    compressing the data in memory (summed over all worker processes),
+    and the time spent writing the data to disk.
 
     Parameters
     ----------
@@ -98,6 +116,7 @@ def compress(path_in: pathlib.Path | str,
         basins), if a path in `basin_paths` is not a file basin of the
         input file, or if features required for cropping are missing
     """
+    t0 = time.perf_counter()
     path_in = pathlib.Path(path_in)
     path_out = pathlib.Path(path_out)
     if path_out.exists():
@@ -138,16 +157,24 @@ def compress(path_in: pathlib.Path | str,
                 initializer=_init_worker,
                 initargs=(hd_worker,))
         with executor, h5py.File(path_temp, "w", libver="latest") as h5out:
-            Compressor(hd=hd,
-                       h5out=h5out,
-                       executor=executor,
-                       num_procs=num_procs,
-                       ds_kwds=ds_kwds,
-                       crop_event_images=crop_event_images,
-                       crop_method=crop_method,
-                       pad_um=pad_um,
-                       progress_callback=progress_callback,
-                       ).run()
+            compressor = Compressor(hd=hd,
+                                    h5out=h5out,
+                                    executor=executor,
+                                    num_procs=num_procs,
+                                    ds_kwds=ds_kwds,
+                                    crop_event_images=crop_event_images,
+                                    crop_method=crop_method,
+                                    pad_um=pad_um,
+                                    progress_callback=progress_callback,
+                                    )
+            compressor.run()
+            timing = {
+                "time wall clock [s]": round(time.perf_counter() - t0, 2),
+                "time compression in memory (sum over workers) [s]":
+                    round(compressor.time_compress, 2),
+                "time writing to disk [s]": round(compressor.time_write, 2),
+            }
+            logger.info(f"Compressed {path_in} to {path_out}: {timing}")
             store_compress_log(
                 hd=hd,
                 h5out=h5out,
@@ -157,7 +184,8 @@ def compress(path_in: pathlib.Path | str,
                         "crop_method": crop_method,
                         "pad_um": pad_um,
                         "basin_paths": [str(p) for p in basin_paths or []],
-                        })
+                        "copied features": compressor.features_copied,
+                        } | timing)
     except BaseException:
         path_temp.unlink(missing_ok=True)
         raise
@@ -201,12 +229,22 @@ class Compressor:
         self.pending_writes: deque[tuple] = deque()
         self.bytes_total = 0
         self.bytes_done = 0
+        #: time spent compressing data in memory (sum over all workers)
+        self.time_compress = 0.0
+        #: time spent writing data to the output file
+        self.time_write = 0.0
+        #: features copied from the input without compressing them again
+        self.features_copied: list[str] = []
+        #: Zstandard compression level of the output (0 for no compression)
+        self.zstd_level = get_zstd_level_kwargs(ds_kwds)
 
     def run(self):
         """Compress all data"""
         h5in = self.h5in
         h5out = self.h5out
+        t0 = time.perf_counter()
         copy_metadata(h5_src=h5in, h5_dst=h5out)
+        self.time_write += time.perf_counter() - t0
 
         # Basins of the input file
         internal_features = set()
@@ -258,7 +296,13 @@ class Compressor:
                 get_feature_data(self.hd, "image"))
 
         for feat in features:
-            self.compress_feature(feat)
+            data = get_feature_data(self.hd, feat)
+            if self.is_copyable(data):
+                self.copy_dataset(data, feat)
+                self.features_copied.append(feat)
+                self.add_progress(sizes[feat])
+            else:
+                self.compress_feature(feat)
         if self.crop_event_images:
             self.compress_chopped_image()
         self.wait_for_writes(0)
@@ -348,6 +392,7 @@ class Compressor:
         for cid in caches:
             flush(cid, final=True)
 
+        t0 = time.perf_counter()
         grp.create_dataset(
             name="index",
             data=index,
@@ -355,6 +400,7 @@ class Compressor:
             chunks=HDF5Writer.get_best_nd_chunks((5,), index.dtype),
             **self.ds_kwds)
         chop.store_chopped_basin(self.h5out, "image")
+        self.time_write += time.perf_counter() - t0
 
     def compress_feature(self, feat):
         """Write the feature `feat` to the "events" group"""
@@ -387,14 +433,36 @@ class Compressor:
             self.pending_writes.append((future, ds, start, stop - start,
                                         True))
 
+    def copy_dataset(self, ds, feat):
+        """Copy the dataset `ds` to the feature `feat` in the output"""
+        t0 = time.perf_counter()
+        h5py.h5o.copy(src_loc=ds.parent.id,
+                      src_name=ds.name.rsplit("/", 1)[1].encode(),
+                      dst_loc=self.h5out.require_group("events").id,
+                      dst_name=feat.encode())
+        self.time_write += time.perf_counter() - t0
+
     def copy_object(self, name):
         """Copy an HDF5 object (if it does not exist in the output)"""
         if name not in self.h5out:
+            t0 = time.perf_counter()
             group, obj = name.rsplit("/", 1)
             h5py.h5o.copy(src_loc=self.h5in[group].id,
                           src_name=obj.encode(),
                           dst_loc=self.h5out.require_group(group).id,
                           dst_name=obj.encode())
+            self.time_write += time.perf_counter() - t0
+
+    def is_copyable(self, data) -> bool:
+        """Whether feature data can be copied instead of compressed
+
+        This is the case for HDF5 datasets with all events (not mapped,
+        not chopped) that are already compressed with Zstandard at the
+        output compression level or a higher level.
+        """
+        return (isinstance(data, h5py.Dataset)
+                and len(data) == len(self.hd)
+                and get_zstd_level_dataset(data) >= self.zstd_level)
 
     def add_progress(self, num_bytes):
         self.bytes_done += num_bytes
@@ -404,7 +472,7 @@ class Compressor:
     def submit_write(self, ds, offset, data, account=True):
         """Compress `data` in a worker and write it to `ds` at `offset`"""
         self.wait_for_writes(self.max_pending)
-        future = self.executor.submit(compress_chunks,
+        future = self.executor.submit(_worker_compress_array,
                                       data=data,
                                       chunk_size=ds.chunks[0],
                                       ds_kwds=self.ds_kwds)
@@ -414,7 +482,11 @@ class Compressor:
         """Write the compressed data until `max_pending` jobs are left"""
         while len(self.pending_writes) > max_pending:
             future, ds, offset, num, account = self.pending_writes.popleft()
-            write_raw_chunks(ds, offset, future.result())
+            time_compress, raw_chunks = future.result()
+            self.time_compress += time_compress
+            t0 = time.perf_counter()
+            write_raw_chunks(ds, offset, raw_chunks)
+            self.time_write += time.perf_counter() - t0
             if account:
                 self.add_progress(num * get_data_size(ds) // len(ds))
 
@@ -511,6 +583,30 @@ def get_feature_data(hd: HDF5Data, feat: str):
         return hd.get_image_cache(feat).h5ds
     else:
         return hd[feat]
+
+
+def get_zstd_level_dataset(ds: h5py.Dataset) -> int:  # type: ignore
+    """Return the Zstandard compression level of an HDF5 dataset
+
+    Returns 0 if the dataset is not compressed with Zstandard.
+    """
+    dcpl = ds.id.get_create_plist()
+    for ii in range(dcpl.get_nfilters()):
+        filter_id, _, cd_values, _ = dcpl.get_filter(ii)
+        if filter_id == ZSTD_FILTER_ID:
+            return int(cd_values[0]) if len(cd_values) else ZSTD_DEFAULT_LEVEL
+    return 0
+
+
+def get_zstd_level_kwargs(ds_kwds: dict) -> int:
+    """Return the Zstandard compression level of dataset keyword arguments
+
+    Returns 0 if the keyword arguments do not define Zstandard compression.
+    """
+    if ds_kwds.get("compression") == ZSTD_FILTER_ID:
+        opts = ds_kwds.get("compression_opts")
+        return int(opts[0]) if opts else ZSTD_DEFAULT_LEVEL
+    return 0
 
 
 def get_input_data(path_in: pathlib.Path,
@@ -636,7 +732,19 @@ def _worker_chop_image(start, stop, shapes, pad_um, crop_method):
     return offsets, chopped
 
 
+def _worker_compress_array(data, chunk_size, ds_kwds):
+    """Compress `data`, return the compression time and the raw chunks"""
+    t0 = time.perf_counter()
+    raw_chunks = compress_chunks(data, chunk_size=chunk_size,
+                                 ds_kwds=ds_kwds)
+    return time.perf_counter() - t0, raw_chunks
+
+
 def _worker_compress_feature(feat, start, stop, chunk_size, ds_kwds):
-    """Compress the data of `feat` from `start` to `stop`"""
+    """Compress the data of `feat` from `start` to `stop`
+
+    Returns the compression time and the raw chunks.
+    """
     data = get_feature_data(_get_worker_hd(), feat)[start:stop]
-    return compress_chunks(data, chunk_size=chunk_size, ds_kwds=ds_kwds)
+    return _worker_compress_array(data, chunk_size=chunk_size,
+                                  ds_kwds=ds_kwds)

@@ -190,4 +190,12 @@ them.
        "box".
    * - Compression
      - Zstandard (levels 1 to 9) or none, with Fletcher-32 checksums.
+       Features that are already compressed with Zstandard at the same or
+       a higher level are copied without compressing them again.
      - Zstandard (level 5) with Fletcher-32 checksums.
+   * - Log
+     - "dcnum-compress" log with the parameters, the wall-clock time,
+       the compression time (summed over the worker processes), and the
+       time spent writing to disk.
+     - "dclab-compress" log with the input files, the date, and the
+       system, Python, and library versions (no timing information).

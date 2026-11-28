@@ -6,6 +6,8 @@ import pytest
 
 from dcnum import logic, read, write
 from dcnum.write import chop
+from dcnum.write.compression import (
+    get_zstd_level_dataset, get_zstd_level_kwargs)
 
 from helper_methods import extract_data, find_data, retrieve_data
 
@@ -171,26 +173,88 @@ def test_compress_chopped_input_without_cropping(tmp_path):
         assert np.array_equal(hd.mask[:], hr.mask[:])
 
 
-@pytest.mark.parametrize("compression,filter_id", [
-    ("none", None),
-    ("zstd-1", "32015"),
-    ("ZSTD-9", "32015"),
+def write_recompressed_file(path_in, path_out, ds_kwds):
+    """Copy an .rtdc file with all event features compressed anew"""
+    with h5py.File(path_in) as h5, h5py.File(path_out, "w") as hout:
+        hout.attrs.update(h5.attrs)
+        for feat in h5["events"]:
+            data = h5["events"][feat][:]
+            hout.create_dataset(f"events/{feat}", data=data,
+                                chunks=(10,) + data.shape[1:], **ds_kwds)
+    return path_out
+
+
+@pytest.mark.parametrize("input_kwds,compression,expected_level", [
+    # The input data are already compressed well enough: copy.
+    ({"compression": 32015, "compression_opts": (5,)}, "zstd-1", 5),
+    ({"compression": 32015, "compression_opts": (5,)}, "zstd-5", 5),
+    ({"compression": 32015, "compression_opts": (5,)}, "none", 5),
+    ({"compression": 32015}, "zstd-3", 3),  # default level 3
+    ({}, "none", 0),
+    # The input data are not compressed well enough: compress.
+    ({"compression": 32015, "compression_opts": (5,)}, "ZSTD-9", 9),
+    ({"compression": 32015}, "zstd-4", 4),
+    ({}, "zstd-1", 1),
+    ({"compression": "gzip"}, "zstd-2", 2),
 ])
-def test_compress_compression(tmp_path, compression, filter_id):
-    path_in = retrieve_data("fmt-hdf5_cytoshot_full-features_2023.zip")
+def test_compress_compression(tmp_path, input_kwds, compression,
+                              expected_level):
+    """Features are only compressed if the input compression is weaker"""
+    path_orig = retrieve_data("fmt-hdf5_cytoshot_full-features_2023.zip")
+    path_in = write_recompressed_file(path_orig, tmp_path / "in.rtdc",
+                                      input_kwds)
     path_out = tmp_path / "out.rtdc"
     write.compress(path_in, path_out, compression=compression, num_procs=1)
+    copied = expected_level == get_zstd_level_kwargs(input_kwds)
     with h5py.File(path_out) as h5, h5py.File(path_in) as h5in:
-        for feat in ["deform", "image", "mask"]:
-            ds = h5["events"][feat]
-            assert ds.fletcher32
-            filters = ds._filters
-            if filter_id is None:
-                assert "32015" not in filters
-            else:
-                assert filters[filter_id][0] == int(compression[-1])
-            assert np.array_equal(ds[:], h5in["events"][feat][:])
         assert sorted(h5["events"].keys()) == sorted(h5in["events"].keys())
+        for feat in h5in["events"]:
+            ds = h5["events"][feat]
+            assert np.array_equal(ds[:], h5in["events"][feat][:])
+            assert get_zstd_level_dataset(ds) == expected_level
+            if copied:
+                # same chunks as the input file
+                assert ds.chunks == h5in["events"][feat].chunks
+            else:
+                assert ds.fletcher32
+                assert ds.chunks != h5in["events"][feat].chunks
+    with read.HDF5Data(path_out) as hd:
+        log = json.loads("\n".join(hd.logs["dcnum-compress"]))
+        if copied:
+            assert log["copied features"] == sorted(hd.h5["events"].keys())
+        else:
+            assert log["copied features"] == []
+
+
+def test_compress_copy_basin_features(tmp_path):
+    """Features of unmapped basins are copied, mapped ones compressed"""
+    _, path_tap = get_tap_output(tmp_path)
+    path_out = tmp_path / "out.rtdc"
+    write.compress(path_tap, path_out, num_procs=1)
+    with read.HDF5Data(path_out) as hd, read.HDF5Data(path_tap) as ht:
+        log = json.loads("\n".join(hd.logs["dcnum-compress"]))
+        # The tap output refers to the input with a basin mapping.
+        assert ht.basins[1]["mapping"] is not None
+        assert "image" not in log["copied features"]
+        assert "frame" not in log["copied features"]
+        assert "deform" in log["copied features"]
+        assert np.array_equal(hd.image[:], ht.image[:])
+
+
+def test_compress_timing_log(tmp_path):
+    path_in = retrieve_data("fmt-hdf5_cytoshot_full-features_2023.zip")
+    path_out = tmp_path / "out.rtdc"
+    write.compress(path_in, path_out, crop_event_images=True,
+                   compression="zstd-9", num_procs=1)
+    with read.HDF5Data(path_out) as hd:
+        log = json.loads("\n".join(hd.logs["dcnum-compress"]))
+    t_wall = log["time wall clock [s]"]
+    t_comp = log["time compression in memory (sum over workers) [s]"]
+    t_write = log["time writing to disk [s]"]
+    assert t_comp > 0
+    assert t_write > 0
+    # with only one process, the times add up
+    assert t_wall >= t_comp + t_write - 0.02
 
 
 def test_compress_errors(tmp_path):
@@ -385,7 +449,9 @@ def test_compress_cleanup_on_error(tmp_path, monkeypatch):
     path_in = retrieve_data("fmt-hdf5_cytoshot_full-features_2023.zip")
     path_out = tmp_path / "out.rtdc"
     with pytest.raises(RuntimeError, match="Compression failed!"):
-        write.compress(path_in, path_out, num_procs=1)
+        # The input data are compressed with zstd-5.
+        write.compress(path_in, path_out, compression="zstd-9",
+                       num_procs=1)
     assert not list(tmp_path.iterdir())
 
 
