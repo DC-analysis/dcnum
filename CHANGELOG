@@ -7,6 +7,11 @@
    with cropped event images (same format and data as
    `dclab-compress --crop-event-images`)
  - enh: support the basin mapping "same" (written by dclab)
+ - enh: `dcnum.write.compress` copies features that are already compressed
+   with Zstandard at the requested or a higher level instead of compressing
+   them again
+ - enh: `dcnum.write.compress` stores the wall-clock time, the compression
+   time, and the writing time in the "dcnum-compress" log
  - ref: new `dcnum.write.get_compression_kwargs` (also used by
    `DCNumPipelineJob`)
  - tests: compare compression results with dclab (optional test
