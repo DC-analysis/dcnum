@@ -6,19 +6,16 @@ import copy
 import inspect
 import logging
 import pathlib
-import re
 from typing import Any, Literal
 
-from ..common import LazyLoader, cpu_count
+from ..common import cpu_count
 from ..feat import QueueEventExtractor
 from ..feat.feat_background.base import get_available_background_methods
 from ..feat.gate import Gate
 from ..meta.ppid import compute_pipeline_hash, DCNUM_PPID_GENERATION
 from ..read import HDF5Data
 from ..segm import get_segmenters
-
-
-hdf5plugin = LazyLoader("hdf5plugin")
+from ..write.writer import get_compression_kwargs
 
 
 class DCNumPipelineJob:
@@ -185,21 +182,7 @@ class DCNumPipelineJob:
     def get_hdf5_dataset_kwargs(self) -> dict:
         """Validate and return output HDF5 Dataset keyword arguments
         """
-        cp = str(self.kwargs["compression"]).lower().strip()
-        ds_kw: dict[str, Any] = {"fletcher32": True}
-        if cp == "none":
-            # No compression
-            ds_kw["compression"] = None
-            ds_kw["compression_opts"] = None
-        elif re.match("^zstd-[1-9]$", cp):
-            # Zstandard compression
-            clevel = int(cp[-1])
-            for key, val in dict(hdf5plugin.Zstd(clevel=clevel)).items():
-                ds_kw[key] = val
-        else:
-            raise ValueError(f"Unsupported compression setting '{cp}'")
-
-        return ds_kw
+        return get_compression_kwargs(self.kwargs["compression"])
 
     def get_ppid(self, ret_hash=False, ret_dict=False):
         """Return the pipeline identifier of this job
